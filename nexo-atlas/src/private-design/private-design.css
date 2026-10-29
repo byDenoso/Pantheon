@@ -1,0 +1,218 @@
+/* NEXO · private design layer.
+   Additive and scoped: everything lives under `.pw.pd` (add the class `pd` to the workspace root) and is meant to load AFTER workspace.css.
+   It restyles the existing presentation classes and adds the `pd-*` classes used by the components in this folder. No data, no behaviour.
+   Identity inherited from the public site: Nunito Black titles, Barlow text, one blue (#1E5BFF) on white or black, wide gutters, hairlines, gas art. */
+
+/* ------------------------------------------------------------------ tokens */
+.pw.pd{
+  --pd-blue:#1e5bff;            /* action, current, accents */
+  --pd-on-blue:#ffffff;
+  --pd-bg:#000000; --pd-surface:#070c16; --pd-surface-2:#0d1526; --pd-ink:#f2f6fd; --pd-ink-2:#a9b5c9; --pd-line:#1b2a45; --pd-edge:#5d6f93; --pd-blue-ink:#8aabff;
+  --pd-shadow:none; --pd-shadow-hover:0 0 0 1px var(--pd-blue);
+  --pd-gas:url('../atlas/assets/expansion-dark-v1.webp'); --pd-gas-blend:screen; --pd-gas-opacity:.85;
+  --pd-radius:14px; --pd-radius-s:8px; --pd-max:1440px; --pd-gutter:clamp(16px,5.3vw,76px);
+  --pd-title:'Atlas Rounded','Nunito',ui-rounded,system-ui,sans-serif; --pd-body:'Atlas Barlow','Barlow',system-ui,sans-serif; --pd-mono:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  --pd-quick:.14s; --pd-base:.2s; --pd-ease:cubic-bezier(.2,.7,.2,1);
+  --pd-sl:env(safe-area-inset-left,0px); --pd-sr:env(safe-area-inset-right,0px); --pd-sb:env(safe-area-inset-bottom,0px);
+  /* the workspace's own variables follow the tokens, so its existing rules stay coherent */
+  --pw-bg:var(--pd-bg); --pw-surface:var(--pd-surface-2); --pw-text:var(--pd-ink); --pw-muted:var(--pd-ink-2); --pw-line:var(--pd-line); --pw-edge:var(--pd-edge); --pw-blue:var(--pd-blue-ink); --pw-action:var(--pd-blue);
+  --pw-title:var(--pd-title); --pw-body:var(--pd-body); --pw-head:72px;
+  font-family:var(--pd-body);
+}
+.pw.pd[data-theme=light]{
+  --pd-bg:#ffffff; --pd-surface:#ffffff; --pd-surface-2:#f3f6fd; --pd-ink:#0a1220; --pd-ink-2:#48566c; --pd-line:#d3ddf0; --pd-edge:#6b7a94; --pd-blue-ink:#1e5bff;
+  --pd-shadow:0 1px 2px rgba(10,18,32,.05),0 10px 28px rgba(10,18,32,.06); --pd-shadow-hover:0 1px 2px rgba(10,18,32,.06),0 16px 36px rgba(30,91,255,.16);
+  --pd-gas:url('../atlas/assets/cmb-light-v1.webp'); --pd-gas-blend:multiply; --pd-gas-opacity:.38;
+}
+
+/* ------------------------------------------------------------------ shell: same header language as the public site */
+.pw.pd .pw-header{height:var(--pw-head);gap:clamp(18px,3vw,44px);padding:0 calc(var(--pd-gutter) + var(--pd-sr)) 0 calc(var(--pd-gutter) + var(--pd-sl));max-width:none;border-bottom:1px solid var(--pd-line);background:var(--pd-bg)}
+.pw.pd .pw-brand{font:900 30px/1 var(--pd-title);gap:16px;letter-spacing:-.01em!important}
+.pw.pd .pw-brand small{font:400 14px/1.2 var(--pd-body);color:var(--pd-ink-2);margin-top:8px}
+.pw.pd .pw-header nav{gap:clamp(16px,2.2vw,30px)}
+.pw.pd .pw-header nav a{font-size:17px;font-weight:500;color:var(--pd-ink-2)}
+.pw.pd .pw-header nav a[aria-current=page]{color:var(--pd-ink);border-bottom-color:var(--pd-blue)}
+.pw.pd .pw-content{position:relative;background:var(--pd-bg)}
+.pw.pd :focus-visible{outline:3px solid var(--pd-blue-ink);outline-offset:3px;border-radius:4px}
+.pw.pd [data-private-heading]:focus,.pw.pd [data-private-heading]:focus-visible{outline:none}
+
+/* gas band at the top of each page: the public hero's art. It is kept OUT from behind the text — to the right of the title column on wide
+   screens, a strip above the title on small ones — because text over the gas does not hold 4.5:1 (measured). */
+.pw.pd .pw-content:not(.pw-web-content)::before{content:'';position:absolute;top:0;right:0;left:58%;height:440px;pointer-events:none;z-index:0;
+  background:var(--pd-gas) 60% 40%/cover no-repeat;mix-blend-mode:var(--pd-gas-blend);opacity:var(--pd-gas-opacity);transform-origin:100% 0;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 38%),linear-gradient(to bottom,#000 38%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent 0,#000 38%),linear-gradient(to bottom,#000 38%,transparent 100%);mask-composite:intersect}
+.pw.pd .pw-page,.pw.pd .pw-source,.pw.pd .pw-coverage{position:relative;z-index:1}
+.pw.pd .pw-page{max-width:var(--pd-max);padding:clamp(36px,6vw,76px) calc(var(--pd-gutter) + var(--pd-sr)) 56px calc(var(--pd-gutter) + var(--pd-sl))}
+.pw.pd .pw-source{max-width:var(--pd-max);padding:22px calc(var(--pd-gutter) + var(--pd-sr)) calc(30px + var(--pd-sb)) calc(var(--pd-gutter) + var(--pd-sl));font-size:14px}
+.pw.pd .pw-coverage{margin:16px calc(var(--pd-gutter) + var(--pd-sr)) 0 calc(var(--pd-gutter) + var(--pd-sl))!important;padding:14px 18px!important;border:1px solid var(--pd-line);border-left:4px solid var(--pd-blue);border-radius:var(--pd-radius-s);background:var(--pd-surface)}
+
+/* page title: eyebrow, large rounded title, lead — the public hero's copy block */
+.pw.pd .pw-page-title{max-width:min(880px,54%);margin-bottom:clamp(32px,5vw,60px)}
+.pw.pd .pw-trail{font-size:13px;font-weight:500;letter-spacing:.06em!important;text-transform:uppercase!important;color:var(--pd-blue-ink);margin-bottom:10px!important}
+.pw.pd .pw-trail a{color:inherit;min-height:44px;text-transform:uppercase!important;letter-spacing:.06em!important}
+.pw.pd .pw-page h1{font-size:clamp(38px,5.45vw,80px);line-height:1.04;letter-spacing:-.03em!important;margin:0 0 22px}
+.pw.pd .pw-page h1[data-long]{font-size:clamp(26px,3.2vw,44px);line-height:1.1;letter-spacing:-.02em!important}
+.pw.pd .pw-lead{font-size:clamp(19px,1.9vw,24px);line-height:1.4;color:var(--pd-ink-2);max-width:56ch}
+.pw.pd .pw-page h2{font-size:clamp(24px,2.4vw,32px);letter-spacing:-.02em!important}
+
+/* ------------------------------------------------------------------ cards */
+/* one card recipe for every grouped surface: solid surface, hairline, generous padding, quiet lift on hover when it is a link */
+.pw.pd .pw-index>li,.pw.pd .pw-rows>li,.pw.pd .pw-block,.pw.pd .pw-outline,.pw.pd .pd-card{background:var(--pd-surface);border:1px solid var(--pd-line);border-radius:var(--pd-radius);box-shadow:var(--pd-shadow)}
+
+/* domains index: card grid, the whole card is the link */
+.pw.pd .pw-index{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:20px}
+.pw.pd .pw-index>li{position:relative;padding:28px 28px 26px;border-top:1px solid var(--pd-line)}
+.pw.pd .pw-index>li:last-child{border-bottom:1px solid var(--pd-line)}
+.pw.pd .pw-index h2{font-size:clamp(28px,2.6vw,38px);margin-bottom:12px}
+.pw.pd .pw-index h2 a{display:flex;justify-content:space-between;align-items:baseline;gap:16px;min-height:44px;color:var(--pd-ink)}
+.pw.pd .pw-index h2 a::after{content:'';position:absolute;inset:0;border-radius:var(--pd-radius)}
+.pw.pd .pw-index h2 a span{color:var(--pd-blue-ink)}
+.pw.pd .pw-index-lead{font-size:18px;color:var(--pd-ink-2)}
+.pw.pd .pw-facts{font-size:17px}
+.pw.pd .pw-index .pw-pairs{margin-top:18px;padding-top:16px;border-top:1px solid var(--pd-line)}
+.pw.pd .pw-index .pw-pairs>div{grid-template-columns:1fr;gap:2px}
+
+/* rows (tests, operation items): stacked cards */
+.pw.pd .pw-rows{display:grid;gap:14px;max-width:1040px}
+.pw.pd .pw-rows>li{position:relative;max-width:none;padding:24px 26px;border-bottom:1px solid var(--pd-line)}
+.pw.pd .pw-rows h3{font-size:clamp(20px,1.8vw,24px);letter-spacing:-.015em!important}
+.pw.pd .pw-rows>li:has(>h3>a) h3 a::after{content:'';position:absolute;inset:0;border-radius:var(--pd-radius)}
+.pw.pd .pw-path{font-size:13px!important;letter-spacing:.04em!important;color:var(--pd-blue-ink)}
+.pw.pd .pw-states{gap:6px 32px;padding-top:12px;margin-top:14px!important;border-top:1px solid var(--pd-line)}
+.pw.pd .pw-ops>li{padding:28px}
+
+/* test page: each block is a card; the label column stays */
+.pw.pd .pw-block{max-width:1040px;padding:28px;margin-bottom:14px;border-top:1px solid var(--pd-line)}
+.pw.pd .pw-two{max-width:1040px;gap:14px;border-top:0}
+.pw.pd .pw-two>.pw-block{border:1px solid var(--pd-line);margin-bottom:14px}
+.pw.pd .pw-two>.pw-block+.pw-block{border-top:1px solid var(--pd-line)}
+.pw.pd .pw-question{font-family:var(--pd-title);font-weight:900;letter-spacing:-.02em!important;font-size:clamp(22px,2.6vw,32px);line-height:1.18;max-width:30ch}
+.pw.pd .pw-outline{max-width:1040px;padding:28px;margin-bottom:28px}
+.pw.pd .pw-folds{max-width:1040px}
+.pw.pd .pw-outline .pw-folds{margin-bottom:0;border-bottom:0}
+.pw.pd .pw-raw{border-radius:var(--pd-radius-s);border-left:0;background:var(--pd-surface-2)}
+.pw.pd .pw-note{border-top:0;padding-top:0}
+.pw.pd .pw-empty{padding:40px 28px;border:1px dashed var(--pd-edge);border-radius:var(--pd-radius);max-width:1040px;color:var(--pd-ink-2)}
+
+/* tools, tabs, buttons */
+.pw.pd .pw-page input,.pw.pd .pw-page select,.pw.pd .pw-page textarea{border-radius:var(--pd-radius-s);min-height:48px;background:var(--pd-surface)}
+.pw.pd .pw-tabs{gap:4px 28px;margin-bottom:18px}
+.pw.pd .pw-tabs a,.pw.pd .pw-tabs button{min-height:48px;font-size:17px}
+.pw.pd .pw-tabs span{font-size:13px;font-weight:500;padding:2px 8px;border-radius:999px;background:var(--pd-surface-2);color:var(--pd-ink-2)}
+.pw.pd .pw-tabs [aria-current=page] span,.pw.pd .pw-tabs [aria-pressed=true] span{background:var(--pd-blue);color:var(--pd-on-blue)}
+.pw.pd .pw-button{border-radius:var(--pd-radius-s);min-height:46px;padding:10px 20px;font-weight:500;background:var(--pd-surface);border-color:var(--pd-edge)}
+.pw.pd .pw-button.pd-primary{background:var(--pd-blue);border-color:var(--pd-blue);color:var(--pd-on-blue)}
+.pw.pd .pw-button.pd-primary:hover{filter:brightness(1.12);color:var(--pd-on-blue)}
+.pw.pd .pw-decision{border-left-width:4px;border-radius:2px}
+
+/* ------------------------------------------------------------------ navigation component (PrivateNav) */
+.pw.pd .pd-nav{display:flex;align-items:stretch;gap:clamp(16px,2.2vw,30px);min-width:0;align-self:stretch;position:relative}
+.pw.pd .pd-nav-more{display:none;position:relative;align-items:stretch}
+.pw.pd .pd-nav-toggle{display:flex;align-items:center;gap:6px;min-height:44px;min-width:44px;padding:0 2px;border:0;border-bottom:3px solid transparent;border-top:3px solid transparent;background:none;color:var(--pd-ink-2);font:500 16px/1 var(--pd-body);cursor:pointer;white-space:nowrap}
+.pw.pd .pd-nav-toggle[data-current=true]{color:var(--pd-ink);border-bottom-color:var(--pd-blue)}
+.pw.pd .pd-nav-toggle::after{content:'';width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg)}
+.pw.pd .pd-nav-toggle[aria-expanded=true]::after{transform:translateY(2px) rotate(225deg)}
+.pw.pd .pd-nav-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:200px;margin:0;padding:6px;list-style:none;background:var(--pd-surface);border:1px solid var(--pd-line);border-radius:var(--pd-radius-s);box-shadow:0 18px 44px rgba(0,0,0,.28)}
+.pw.pd .pd-nav-menu a{display:flex;align-items:center;min-height:48px;padding:0 14px;border:0!important;border-radius:6px;color:var(--pd-ink)!important;font-size:17px;font-weight:500}
+.pw.pd .pd-nav-menu a:hover{background:var(--pd-surface-2);text-decoration:none}
+.pw.pd .pd-nav-menu a[aria-current=page]{color:var(--pd-blue-ink)!important;background:var(--pd-surface-2)}
+
+/* ------------------------------------------------------------------ board (AgentBoard) */
+.pw.pd .pd-board{display:grid;grid-template-columns:minmax(220px,280px) minmax(0,1fr);gap:28px;align-items:start;max-width:1240px}
+.pw.pd .pd-roster{position:sticky;top:20px;padding:20px;min-width:0}
+.pw.pd .pd-roster h2{font-size:20px;margin:0 0 4px}
+.pw.pd .pd-roster-note{font-size:14px;color:var(--pd-ink-2);margin:0 0 14px}
+.pw.pd .pd-roster ul{display:grid;gap:4px}
+.pw.pd .pd-agent{display:grid;grid-template-columns:40px minmax(0,1fr);gap:2px 12px;align-items:center;width:100%;min-height:56px;padding:8px 10px;border:1px solid transparent;border-radius:var(--pd-radius-s);background:none;color:var(--pd-ink);font:inherit;text-align:left;cursor:pointer}
+.pw.pd .pd-agent:hover{background:var(--pd-surface-2)}
+.pw.pd .pd-agent[aria-pressed=true]{border-color:var(--pd-blue);background:var(--pd-surface-2)}
+.pw.pd .pd-agent b{font-weight:500;font-size:16px;overflow-wrap:anywhere}.pw.pd .pd-agent small{grid-column:2;font-size:13px;color:var(--pd-ink-2)}
+.pw.pd .pd-mono{grid-row:span 2;display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--pd-blue);color:var(--pd-on-blue);font:900 15px/1 var(--pd-title);letter-spacing:0}
+.pw.pd .pd-mono[data-absent]{background:var(--pd-surface-2);color:var(--pd-ink-2);box-shadow:inset 0 0 0 1px var(--pd-edge)}
+.pw.pd .pd-feed{display:grid;gap:14px;min-width:0}
+.pw.pd .pd-feed-status{font-size:15px;color:var(--pd-ink-2);margin:0}
+.pw.pd .pd-post{padding:24px 26px;min-width:0}
+.pw.pd .pd-post-head{display:grid;grid-template-columns:40px minmax(0,1fr);gap:0 14px;align-items:center;margin-bottom:14px}
+.pw.pd .pd-post-who{font-weight:500;font-size:17px;margin:0!important;overflow-wrap:anywhere}.pw.pd .pd-post-who span{font-weight:400;color:var(--pd-ink-2)}
+.pw.pd .pd-post-when{grid-column:2;font-size:14px;color:var(--pd-ink-2);margin:0!important}
+.pw.pd .pd-post h3{font:900 clamp(20px,1.8vw,24px)/1.2 var(--pd-title)!important;letter-spacing:-.015em!important;color:var(--pd-ink);margin:0 0 8px;overflow-wrap:anywhere}
+.pw.pd .pd-post-body{font-size:17px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;max-width:72ch;margin:0}
+.pw.pd .pd-post-body[data-clamped]{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:7;overflow:hidden}
+.pw.pd .pd-more{margin-top:8px;min-height:44px;padding:0;border:0;background:none;color:var(--pd-blue-ink);font:500 16px/1 var(--pd-body);cursor:pointer}
+.pw.pd .pd-more:hover{text-decoration:underline;text-underline-offset:4px}
+.pw.pd .pd-post-meta{display:flex;flex-wrap:wrap;gap:6px 22px;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--pd-line);font-size:15px}
+.pw.pd .pd-post-meta>div{display:flex;gap:8px;align-items:baseline;min-width:0}.pw.pd .pd-post-meta dt{font-size:14px;color:var(--pd-ink-2);font-weight:500}.pw.pd .pd-post-meta dd{margin:0;overflow-wrap:anywhere}
+.pw.pd .pd-refs{display:flex;flex-wrap:wrap;gap:6px 14px;margin:12px 0 0;padding:0;list-style:none;font:400 13px/1.5 var(--pd-mono);color:var(--pd-ink-2)}
+.pw.pd .pd-refs li{overflow-wrap:anywhere}
+.pw.pd .pd-replies{margin:18px 0 0;padding:0 0 0 18px;border-left:3px solid var(--pd-line);display:grid;gap:18px;list-style:none}
+.pw.pd .pd-replies .pd-post-head{margin-bottom:8px}
+.pw.pd .pd-absent{color:var(--pd-ink-2);font-style:italic}
+.pw.pd .pd-filter{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+.pw.pd .pd-filter label{display:grid;gap:8px;font-size:15px;font-weight:500;color:var(--pd-ink-2);min-width:min(100%,220px)}
+
+/* ------------------------------------------------------------------ the web: only its surroundings. The engine, its layout and its controls are not touched */
+.pw.pd .pw-web-content{background:var(--pd-bg)}
+.pw.pd .pw-web-content .tc,.pw.pd .pw-web-content .tw{--surface:var(--pd-surface);--line:var(--pd-line);--secondary:var(--pd-ink-2)}
+@media(min-width:1100px){
+  /* on wide screens the viewer sits as a framed screen inside the page, like the art of the public hero */
+  .pw.pd .pw-web-content>.tc,.pw.pd .pw-web-content>.tw{inset:14px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);overflow:hidden}
+}
+
+/* ------------------------------------------------------------------ motion: quiet, optional */
+@media(prefers-reduced-motion:no-preference){
+  .pw.pd .pw-index>li,.pw.pd .pw-rows>li:has(>h3>a){transition:transform var(--pd-base) var(--pd-ease),border-color var(--pd-quick) ease,box-shadow var(--pd-base) ease}
+  .pw.pd .pw-index h2 a span{display:inline-block;transition:transform var(--pd-base) var(--pd-ease)}
+  .pw.pd .pd-agent,.pw.pd .pd-nav-menu a,.pw.pd .pd-nav-toggle{transition:background-color var(--pd-quick) ease,border-color var(--pd-quick) ease,color var(--pd-quick) ease}
+  .pw.pd .pd-nav-menu{animation:pd-drop var(--pd-base) var(--pd-ease)}
+  @media(hover:hover){
+    .pw.pd .pw-index>li:hover,.pw.pd .pw-rows>li:has(>h3>a):hover{transform:translateY(-2px)}
+    .pw.pd .pw-index>li:hover h2 a span{transform:translateX(5px)}
+  }
+  /* Preserve the existing dark expansion; the light CMB stays fixed. */
+  .pw.pd:not([data-theme=light]) .pw-content:not(.pw-web-content)::before{animation:pd-drift 90s ease-in-out infinite alternate}
+  .pw.pd[data-theme=light] .pw-content:not(.pw-web-content)::before{animation:none}
+}
+.pw.pd .pw-index>li:hover,.pw.pd .pw-index>li:focus-within,.pw.pd .pw-rows>li:has(>h3>a):hover,.pw.pd .pw-rows>li:has(>h3>a):focus-within{border-color:var(--pd-blue);box-shadow:var(--pd-shadow-hover)}
+.pw.pd .pw-index h2 a:focus-visible,.pw.pd .pw-rows h3 a:focus-visible{outline:none}
+.pw.pd .pw-index>li:has(a:focus-visible),.pw.pd .pw-rows>li:has(>h3>a:focus-visible){outline:3px solid var(--pd-blue-ink);outline-offset:3px}
+@keyframes pd-drop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+/* grows and slides away from the right edge only (origin top right), so it can never widen the scroll area */
+@keyframes pd-drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-2.5%,0,0) scale(1.08)}}
+html[data-motion=paused] .pw.pd .pw-content:not(.pw-web-content)::before{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.pw.pd *,.pw.pd .pw-content::before{animation:none!important;transition:none!important}}
+@media(forced-colors:active){.pw.pd .pw-content::before{display:none}.pw.pd .pd-agent[aria-pressed=true]{border-color:Highlight}}
+
+/* ------------------------------------------------------------------ small screens */
+@media(max-width:980px){
+  .pw.pd{--pw-head:64px}
+  .pw.pd .pw-brand small{display:none}
+  .pw.pd .pd-board{grid-template-columns:minmax(0,1fr);gap:18px}
+  /* no room beside the title: the gas becomes a strip above it */
+  .pw.pd .pw-content:not(.pw-web-content)::before{left:0;height:100px;-webkit-mask-image:linear-gradient(to bottom,#000 30%,transparent 100%);mask-image:linear-gradient(to bottom,#000 30%,transparent 100%)}
+  .pw.pd .pw-page{padding-top:112px}.pw.pd .pw-page-title{max-width:880px}
+
+  .pw.pd .pd-roster{position:static;padding:16px}
+  .pw.pd .pd-roster ul{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}
+  .pw.pd .pw-block{padding:22px}
+}
+@media(max-width:600px){
+  /* two rows: brand and the host's actions, then the areas. Three areas stay visible, the rest go under "Mais" */
+  .pw.pd{--pw-head:108px}
+  .pw.pd .pw-header{grid-template-rows:54px 54px;padding:0 calc(16px + var(--pd-sr)) 0 calc(16px + var(--pd-sl))}
+  .pw.pd .pw-brand{font-size:26px}
+  .pw.pd .pw-header nav{margin:0;padding:0;gap:18px;overflow:visible;justify-content:flex-start}
+  .pw.pd .pw-header nav:not(.pd-nav){overflow-x:auto;margin:0 -16px;padding:0 16px;gap:22px}
+  .pw.pd .pw-header nav a,.pw.pd .pd-nav-toggle{font-size:16px;min-height:48px}
+  .pw.pd .pd-nav [data-overflow]{display:none}
+  .pw.pd .pd-nav-more{display:flex;margin-left:auto}
+  .pw.pd .pw-page{padding-top:84px;padding-bottom:36px}
+  .pw.pd .pw-content:not(.pw-web-content)::before{height:74px}
+  .pw.pd .pw-index{gap:14px}.pw.pd .pw-index>li,.pw.pd .pw-rows>li,.pw.pd .pw-ops>li,.pw.pd .pd-post,.pw.pd .pw-outline{padding:20px 18px}
+  .pw.pd .pw-block{padding:20px 18px}
+  .pw.pd .pw-tabs{gap:0 20px}.pw.pd .pw-tabs a,.pw.pd .pw-tabs button{font-size:16px}
+  .pw.pd .pw-coverage{margin-top:12px!important}
+  /* the roster becomes one row that scrolls sideways, so the posts start on the first screen */
+  .pw.pd .pd-roster{padding:14px 0 10px}.pw.pd .pd-roster h2{padding:0 16px}.pw.pd .pd-roster-note{display:none}
+  .pw.pd .pd-roster ul{display:flex;gap:8px;overflow-x:auto;padding:8px 16px 6px;scroll-snap-type:x proximity;scrollbar-width:thin}
+  .pw.pd .pd-roster li{flex:0 0 auto;scroll-snap-align:start}.pw.pd .pd-agent{width:auto;max-width:240px;border-color:var(--pd-line)}
+}

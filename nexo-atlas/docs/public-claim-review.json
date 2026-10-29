@@ -1,0 +1,1079 @@
+{
+  "scope": "PUBLIC_FACT_REPHRASING_ONLY",
+  "count": 111,
+  "scientific_upgrade": false,
+  "canonical_source_binding_verified": false,
+  "changes": [
+    {
+      "index": 1,
+      "publicContentKey": "8ca52c6f5131bfe332d010f52eb9ec7e5bb3d284e3d19219c75989db68f67f15",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 2,
+      "publicContentKey": "a0f59ed6da54fea25de95d9f1ff91fea28541e2d9113c49e226949700a11c973",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 3,
+      "publicContentKey": "efdccd1eb8aa20a6458acdd4c507ae0c85988a643acbf68f27600f43759dccaa",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 4,
+      "publicContentKey": "b881e64d1c1e4aa568425165528d4fb57d8b9b5eafba1a1cbd5f6f95b70a04c9",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 5,
+      "publicContentKey": "83f0d2c652ccb023f2b1c04a51c6313bcdf6612dedb48a8ff7671c624ba89b9b",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 6,
+      "publicContentKey": "a049e739ca7897f9c40cf5cc297adcde709c54ae25f4653b77f766db322347da",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 7,
+      "publicContentKey": "0e435ac3850358c9f6b0099dfc0755900137a55b32704e06c8df608734a2f4ff",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 8,
+      "publicContentKey": "13f90a72d17812d8a4e8717558fe851a79d793e789252e4ad286811a1e46eeb3",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 9,
+      "publicContentKey": "afdd38bf05d2286bf18d88cfb75559f88ab4c3db680cdd64f3aa988eb2e48159",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 10,
+      "publicContentKey": "15e09e7f797dc0420ea5a20b06e5c4408282904e1947dab89680261fd67d7788",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 11,
+      "publicContentKey": "d3c1800bcacf55e0900b82cad3ba5c4eafb90a22ed46e297c01b9f9da3188ad8",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 12,
+      "publicContentKey": "be6ea7c26dafcf9b7cddafa80a053f796738160cc19223c00ca8456be0dc6596",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 13,
+      "publicContentKey": "d4dfab6e7acca0aa59140147314b7dc9439ee694c32120c4c2ebe13334f228b5",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 14,
+      "publicContentKey": "56f6f38cd7e82c5e13fe4176562951cbbe3f18ee5e3153b76c1597a72783d4e9",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 15,
+      "publicContentKey": "c484d7462bd6f8c2271abcf2b655941bde93ed1d11d6bdc7699d5726aa057359",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 16,
+      "publicContentKey": "fecdf253788b1a831d231214e31738ba73d7c75a3a3187b51bbe355195903f87",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 17,
+      "publicContentKey": "46ee6bd9ac9f788d38bed35d18f9f099fe6c9b65ea7b4705411b2913d3307e86",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 18,
+      "publicContentKey": "d477c0e32146e6596f12a16fa1835a86eae5c127cfea047bfc91d2e865ad280a",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 24,
+      "publicContentKey": "04ae778a4d552d1e6794ee18fd3e231430dbb3a19c0ff4278224ab2bfae94967",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 26,
+      "publicContentKey": "60aa4c4739a6542d9d108dbb43d809b64286d6b3cd4dcf8ac3cd78fcbd26b45b",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Dados e agrupamentos testados",
+        "Não identifica causa ou efeito sistemático específico"
+      ]
+    },
+    {
+      "index": 27,
+      "publicContentKey": "3f3a55d568c1b07f58484f0bbf5cb0a707989f78a17fb294616c473a0f423ea2",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 28,
+      "publicContentKey": "dd2e8bd8c6929b0e1ba050957b3b07c8840ab81444808b073201787b327e8f1f",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Dados e agrupamentos testados",
+        "Não identifica causa ou efeito sistemático específico"
+      ]
+    },
+    {
+      "index": 29,
+      "publicContentKey": "1245dca01ae625eaeca3f5f75c6f78476deff7d80e72909bb5c314717cf2100b",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Dados e agrupamentos testados",
+        "Não identifica causa ou efeito sistemático específico"
+      ]
+    },
+    {
+      "index": 30,
+      "publicContentKey": "bef101b52f333d3a8b364ff66db4c5d7e046680b8ba75df00eda8ce6a1576bc1",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 31,
+      "publicContentKey": "cba84fdcb2f735b1dcb02ef932e1345a0e020e71e1455d3fd80ec4ad2beba7f5",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 36,
+      "publicContentKey": "c26142ae9b6c3c43cb566ed11f75dcb0d4d4ddaa976e8481f3dc67ee5a3156f0",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 37,
+      "publicContentKey": "72a8ffad129c2fe2ffed9635c7b7c29b0bb199920a8a2d35175386dee6524596",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 38,
+      "publicContentKey": "83603c8df2bf1a9a5f3bc8a4d944d336aa1ef4414826a40249dd5ef1ef47a468",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 39,
+      "publicContentKey": "d0316faa194f2102aba25839cd5abbdf464bae421315eedbc040e9fab455e949",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 40,
+      "publicContentKey": "d4b5261cf329b4ea9038743672501b123ece3fe1ac259a013109daf5a52854dc",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 41,
+      "publicContentKey": "ed9d34b700c6c8bf7e1ff1c4c344f470b9455a145dc2ede9e9f2a80b3aede654",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 42,
+      "publicContentKey": "5a3111c1c5a77e57bd0ce7e2d1f9972426d9ad8c71bf678c060a28aefe560f3d",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 43,
+      "publicContentKey": "5b19ececd0d2dcaa677fece8196dc35527f448b3e2a8959f5b9f454a74bdadd4",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 44,
+      "publicContentKey": "0cc9e3ff513495176d796fc879924a743c5c3932fab2fafc5a467a7b70dbad09",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 45,
+      "publicContentKey": "2938e79dddd96190630c40c34345a831941ab7f80555c6bc54b6bc8df4355a29",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 46,
+      "publicContentKey": "c95580975083ea7bdc4464ee479d209094f4e01eacde0960ee64992933859b32",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 47,
+      "publicContentKey": "8a0659ff10eba4476d9ed71f03d7cf00b522fa98e4aea56832a69f07c1ff224d",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 48,
+      "publicContentKey": "df67541583e61486cb0f49d6a7305d9c988664e261dfb0a9554c2ba933386874",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 49,
+      "publicContentKey": "e6848152ff627489edcf6a288e53013194c22f5956d9a5a393f387aeb8cd449a",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 50,
+      "publicContentKey": "61a91ed55fb36c7c71c8d4139365cff17e3d6bc65735a2257ef09ef2873decf9",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 51,
+      "publicContentKey": "605a30afe5e5fef4a5158c8aae68d5686f9a97b8c42da8b181efcd5da646c79c",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 52,
+      "publicContentKey": "b46a068aa53521ab45aa7680431a3042260a595beffadeddb6f353b3a9eeb7bd",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 53,
+      "publicContentKey": "dd85de78da73d0fe9f06c0403a49b743b1f549b111829f7d694a09de500a3d79",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 54,
+      "publicContentKey": "4fcd9c2379697485a79a7caafd2f5bc0ceb545bdabb6e4cedbddfaf7eb36a7aa",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 55,
+      "publicContentKey": "cec0c2684c84b37839301914e6fca70d4fc2d8b219741b0605d60dbfb6f8b7dd",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 56,
+      "publicContentKey": "b3abd3a9a4d804bd232990b38e4adfbcea1124cc7ae83438264dbbca93f4b83f",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 57,
+      "publicContentKey": "8d25c209dd7964b6d126d5e2d298eb34b115e9a12d20522102cfec1f46cd00d9",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 58,
+      "publicContentKey": "c6b19e6f6924a1b2e5df1ad1f5944ba2715fcdc29cdafe3a28df12aea59314a7",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 59,
+      "publicContentKey": "14afbe4a9ab38d967d281025320f3188b334733a1e63d8fe72ef90d0f7c023f7",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 60,
+      "publicContentKey": "26a776b1c04cfdad0ff1e4e1dc557de51a0f923c4475e13f5da1f65c6630546c",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 61,
+      "publicContentKey": "f4b37c5de68e3e9a487496ba5182e1888b7a9df5f6aad85141672036a4c860ef",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 62,
+      "publicContentKey": "c54350bfc4fae7e2e13637564f793bccc398ac6577577ff54c3f40ee861c21bb",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 63,
+      "publicContentKey": "c3c889726a811d91174088336a626639c5b7f0c89c31e1291158b3cc1b838c95",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 64,
+      "publicContentKey": "298c2d64b63af8eb15ca4faf2e6ddb3d80b245b4cf132e4e70f4f02627232cab",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 65,
+      "publicContentKey": "e2af3da4dd6dd9e65a3433097838ab3b87a5d33cbc088a106d87e3a103444973",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 66,
+      "publicContentKey": "c23573c2e208a636aa7190b5c9e63fb74db9e3940f989b2a7af2c9453e2a98b8",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 67,
+      "publicContentKey": "430af26427276927b23745a449af384690e59a751d4bf74bf15cb8ea4a5e200b",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Escopo das compilações, faixas e priors da pergunta",
+        "Redução da melhora do ajuste, não probabilidade",
+        "Não estabelece dependência exclusiva de uma única faixa"
+      ]
+    },
+    {
+      "index": 69,
+      "publicContentKey": "6ec245abb9966f519e475b744419fe944c32257cd809a84fa1c7ed6acb57b056",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 70,
+      "publicContentKey": "54747dab060f77f78ae8867ddfceaa766b54173b0edde9543e322992ce9078e5",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 72,
+      "publicContentKey": "eed56d4c5b2e1fd448c0a10eac79ea79ab8eddb0efe8d8e5fb8c18205219c169",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 73,
+      "publicContentKey": "d6ab1f7a74e8a6d8850e4dd8b6aa0fa2566e4f039c9ad1b0db1c39dca321d437",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 74,
+      "publicContentKey": "2ea995cc40519c436b2863956e0db3f981b9738c5323577fc7bbc317ef9b2640",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Dados e agrupamentos testados",
+        "Não identifica causa ou efeito sistemático específico"
+      ]
+    },
+    {
+      "index": 77,
+      "publicContentKey": "74e29f4a95892873c8dfcd159364d07a09ad71efde38844dca8051d54da6b53d",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 78,
+      "publicContentKey": "64acab86872b48beb74f2b31c7622441807fa98b481b6084823bcb1efd952ad4",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 79,
+      "publicContentKey": "545061081a46235e7f36b506bec0f58048c2f27dc69fc35908dd28a739c9ded6",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Dados e agrupamentos testados",
+        "Não identifica causa ou efeito sistemático específico"
+      ]
+    },
+    {
+      "index": 83,
+      "publicContentKey": "7da386afd6c257bb8b9f3f78039dd6ad54274ca1cc56706daf71738d52f306c1",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 84,
+      "publicContentKey": "1292cef0b66f84dcc7f0890a3c1e2bedd8daf73998ebd6818312370daead39e7",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 85,
+      "publicContentKey": "ef1af819426dfa4725c928c933058bfbb6674db9fb35c68b52ff5137e5462c4f",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 87,
+      "publicContentKey": "6d14bad29cfc7dc8d7ab8868004b03518b5b928b003695ce1bf2484feba2cc37",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 88,
+      "publicContentKey": "8bb3051e2ed3d6a404ac88f407d6601ff0b3be763f8fe62e83f486578e2f1712",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 90,
+      "publicContentKey": "4fecb93abeedc06631b4090626c79a370bbe65eebf1d3caf1603dbf4f7052931",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 92,
+      "publicContentKey": "8c689401772d2398683cb8b9e9eff903dbf4cda66ef223160c21f52e5a72223d",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 94,
+      "publicContentKey": "ddeed70c49ea711f4524bc10764f625ce74fcd70c835b600aa4a019af613dd89",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 95,
+      "publicContentKey": "7de18a87cccc89fdbbc58cc4fc05cd62b40cbdeac917d129b6b4bc44a9f2534e",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 96,
+      "publicContentKey": "ae4f7ccc4a78991d19049cff146e908862c939859b62904cb01da89c98c85fe7",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 97,
+      "publicContentKey": "939ff3d54895e5881eb5564b9124186de91ded0b2b6e4c124e9d337cde539202",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 99,
+      "publicContentKey": "870588e726cfe50f11b8708750f49d14c0334744da62f5129da68a22bed5c1d3",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 100,
+      "publicContentKey": "3a9925295dc1cab3e1be2beeb61b6e14007c55e2ee0a446d97a83384d2b179b8",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 115,
+      "publicContentKey": "60a431a1dde3d54d5b5f214c3b632ad1e6918afc5ada5e6add6f3ac8ad778aaf",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 116,
+      "publicContentKey": "013e26f873f9442043d4404b0c7956dd9ab4d5fde61400a7281b5f788c36fa3c",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 119,
+      "publicContentKey": "e66608bd65d7daf9ae2cfa773b5ba37815e8b2ef19ff313efa40a80db97788d9",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 120,
+      "publicContentKey": "8eeed0b8dbdd663ced6925b043ece6e10d5273d142cee7a402e6a2228ef802b0",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 124,
+      "publicContentKey": "f10853b37c1080f4a2467e496a331d8f26fbfe9c67e3903f325599067cfacede",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 125,
+      "publicContentKey": "3c1e97af224c95f683bc760d1c29df9e4b68c044865ad002395e627391c65e27",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 126,
+      "publicContentKey": "0e32eb54a5c33074f98de2b028423c5935f1332508e3c2b9bd9be884dfc5b8f7",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 130,
+      "publicContentKey": "856a6f7eb8f64e1f98b66bfae987654edb89f5fd2d70bfa85a4ea745de1f85b8",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 131,
+      "publicContentKey": "e5bdc108024925f0415acf9d080dfc8850a8d0208645a22164b0199ccbb9e10b",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 132,
+      "publicContentKey": "dda6dfaa6ebb122be40ce9f77d440c0db0b0c15eebd54194b92a5c52b0cc91ec",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 135,
+      "publicContentKey": "d409c18d34c6325433d40d42a1b0e41ea0bb250c0f95516864cbf684b72425ee",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 136,
+      "publicContentKey": "967e24bcaf19f42d08251017f3bf19f61c5893508016b552b7ff5ab7aec92755",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 139,
+      "publicContentKey": "71b415d9997079ca9a7cbd5a22cf098ce1a87b47db41ad52a20de238a53e7ba2",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 140,
+      "publicContentKey": "c4760ba7692524b1bd7c62b2c5ea96ee08687408502a870da07cfe9e583f2e93",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 158,
+      "publicContentKey": "d3fd17ba2f39401fbabbddcc7daa8efbdde7c1734d30d67cf137422b778aae91",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 159,
+      "publicContentKey": "408ea04eddf86f2b9773c3e085437c870b7719f6e1c4f05e1cc69564fbe08186",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Direção da preferência, não significância global",
+        "Somente dados, agrupamentos e condições testados",
+        "Robustez interna, não detecção global"
+      ]
+    },
+    {
+      "index": 0,
+      "publicContentKey": "f9a566eb76c216fc7d3a1a7c87f1f1b9d98c0d340facdc0eaecf47f47ac2b5e4",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Non-exhaustive literature non-detection, not proof of novelty, priority, or physics. Do not count related searches as independent physical validation."
+      ]
+    },
+    {
+      "index": 33,
+      "publicContentKey": "aae6bb3f229261bf8525d096c6134d0fd60a1fdf30a2656413fc680b00cbd464",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Algebraic dependency result, scoped to the tested formulation. Does not reject holography as a whole."
+      ]
+    },
+    {
+      "index": 34,
+      "publicContentKey": "7107135c7635fad8ba1ce599fae417ea12f7de3c95d9d7c29a391e3fe755763a",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Partial compatibility is positive information; one missing observation class blocks the complete test."
+      ]
+    },
+    {
+      "index": 35,
+      "publicContentKey": "4bbc0f1abc884572fe5ddb7fed6f4c4ceaebdede491387d289efbbd9909d4ff1",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Required bibliographic coverage incomplete. Do not merge with row145 to silently declare this execution complete."
+      ]
+    },
+    {
+      "index": 142,
+      "publicContentKey": "8f0db15b59e1f35e8e5b8a0b02b024399c3c778e85c2534875bdab6d6fc46d9b",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Failure of a minimal construction to demonstrate protection is not impossibility of all supersymmetric completions."
+      ]
+    },
+    {
+      "index": 144,
+      "publicContentKey": "b84b746e73e1e51205f804a6f77237da4d96f08d3072a3ddb88e8573d6383226",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Scoped one-loop failure in minimal bosonic model; no exclusion of all symmetry-protected completions."
+      ]
+    },
+    {
+      "index": 145,
+      "publicContentKey": "206b2331b721cdaac486706f00daf8a1a8f078d00d6930396460c9ecdbf4bc12",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "20 papers and three neighborhoods delimit search coverage, not the universe of literature. Preregistration time is unknown in candidate canonical source."
+      ]
+    },
+    {
+      "index": 146,
+      "publicContentKey": "19bd9de24d432c16d957dc653ea792d7ae30449a7187a96d960b0b9f84ae211f",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Literature non-detection only. Full physical equivalence matters; no priority guarantee."
+      ]
+    },
+    {
+      "index": 156,
+      "publicContentKey": "fab82c27dd1f0e7879ac8cfb06682d5faf07dbfacbba6cc78ff5135ffee90fb1",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Classical/adiabatic, chosen normalization; neither radiative protection, origin of the energy scale, nor cosmological viability follows."
+      ]
+    },
+    {
+      "index": 157,
+      "publicContentKey": "147dbb4598440fb6319d1d994bcc608d9fcee5c086f078102f0102af48928fc9",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Retrospective five-bin influence analysis with diagonal published uncertainties; no causal diagnosis or prospective multiplicity correction."
+      ]
+    },
+    {
+      "index": 166,
+      "publicContentKey": "687c8ea40576682d0fb490d06451388c461f788650fa82df90de29891299ac11",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Compressed Gaussian fit improvement is not a physical dark-matter model validation or completed Lyman-alpha test."
+      ]
+    },
+    {
+      "index": 168,
+      "publicContentKey": "990297c204bc07e19f8e3a20652e47e49506d9d47b91467d96a977c3ad2a85d5",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Compatibility given the examined ranges is not model preference. Candidate source treats dwarf range as an imposed rival assumption, not a measurement."
+      ]
+    },
+    {
+      "index": 176,
+      "publicContentKey": "42b2169476a6ebe2618222da072895ee7191b0f39cd7948c4ecf814a07afa1b7",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Historical sample/snapshot only; do not generalize to current system-wide performance, future reliability, or scientific validity. Simulation correctness/stability is distinct from end-to-end operational reliability and external scientific correctness."
+      ]
+    },
+    {
+      "index": 181,
+      "publicContentKey": "d2b1d700a6cf4da8e1714eb66f6e5af37f398ed0738d6e73fc4172661a637078",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Historical sample/snapshot only; do not generalize to current system-wide performance, future reliability, or scientific validity. Direct reference absence, static transitive reachability, and demonstrated dynamic execution are separate claims."
+      ]
+    },
+    {
+      "index": 183,
+      "publicContentKey": "79fe5ae9167abc72e770c5ad7e8513c267e830cf35c9eda338d30de5b33b890a",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Historical sample/snapshot only; do not generalize to current system-wide performance, future reliability, or scientific validity. Rubric compliance measures explanation content in the sampled texts; not independent scientific validation or blinded inter-rater agreement."
+      ]
+    },
+    {
+      "index": 211,
+      "publicContentKey": "d9242ad8b96095df288ea8673161c3dc9a1d21b979d89fd668f5603a17dcbeb0",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Historical sample/snapshot only; do not generalize to current system-wide performance, future reliability, or scientific validity. The controlled timestamp-only intervention failed to solve the observed issue; do not generalize to all timestamp repairs."
+      ]
+    },
+    {
+      "index": 214,
+      "publicContentKey": "acab1999e4dfc156ff24a10bb3006a2e9b976a724194fbacfca68f3a7ce188fb",
+      "mode": "public_fact_rephrasing",
+      "retained_limits": [
+        "Historical sample/snapshot only; do not generalize to current system-wide performance, future reliability, or scientific validity. The prescribed evidence, sample size, executable method, or final verification is incomplete; retain the explicit inconclusive boundary. Simulation correctness/stability is distinct from end-to-end operational reliability and external scientific correctness."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+import {useEffect,type RefObject} from 'react';
+const surfaces='.nexo-visual-card,.atlas-question-group,.nexo-reading-card,.atlas-research-lines>li,.atlas-steps>li,.atlas-hero-art,.nexo-research-shortcut';
+/** Local pointer/scroll presentation only: no analytics, network or device sensors. */
+export function useVisitorMotion(root:RefObject<HTMLDivElement|null>,enabled:boolean){
+ useEffect(()=>{
+  const node=root.current;if(!node||!enabled)return;
+  const media=window.matchMedia('(prefers-reduced-motion: reduce)');if(media.matches)return;const finePointer=window.matchMedia('(hover:hover) and (pointer:fine)');
+  let raf=0,scanFrame=0,scrollFrame=0,pressTimer=0,active:HTMLElement|null=null,pressed:HTMLElement|null=null;
+  const known=new Set<HTMLElement>();
+  const observer='IntersectionObserver' in window?new IntersectionObserver(entries=>entries.forEach(entry=>{(entry.target as HTMLElement).dataset.inView=String(entry.isIntersecting);}),{threshold:.08}):null;
+  const scan=()=>{scanFrame=0;node.querySelectorAll<HTMLElement>(surfaces).forEach(el=>{if(known.has(el))return;known.add(el);el.classList.add('nexo-reactive');if(observer)observer.observe(el);else el.dataset.inView='true';});for(const el of known){if(!el.isConnected){observer?.unobserve(el);known.delete(el);}}};scan();
+  const changes=new MutationObserver(()=>{if(!scanFrame)scanFrame=requestAnimationFrame(scan);});changes.observe(node,{childList:true,subtree:true});
+  const reset=()=>{cancelAnimationFrame(raf);raf=0;if(active){active.removeAttribute('data-hover');for(const key of ['--tilt-x','--tilt-y','--pointer-x','--pointer-y'])active.style.removeProperty(key);active=null;}};
+  const move=(event:PointerEvent)=>{if(raf||document.hidden)return;if(event.pointerType!=='mouse'||!finePointer.matches)return;const target=(event.target as Element)?.closest<HTMLElement>(surfaces);if(!target||!node.contains(target)){if(active)reset();return;}const x=event.clientX,y=event.clientY;raf=requestAnimationFrame(()=>{raf=0;if(!target||!node.contains(target)){reset();return;}if(active!==target)reset();active=target;const r=target.getBoundingClientRect(),px=Math.max(0,Math.min(1,(x-r.left)/r.width)),py=Math.max(0,Math.min(1,(y-r.top)/r.height)),depth=target.classList.contains('atlas-hero-art')?6:2;target.style.setProperty('--spot-x',`${px*100}%`);target.style.setProperty('--spot-y',`${py*100}%`);target.dataset.hover='true';target.style.setProperty('--tilt-x',`${(0.5-py)*depth}deg`);target.style.setProperty('--tilt-y',`${(px-0.5)*depth}deg`);target.style.setProperty('--pointer-x',`${(px-.5)*28}px`);target.style.setProperty('--pointer-y',`${(py-.5)*28}px`);});};
+  const down=(event:PointerEvent)=>{move(event);pressed?.removeAttribute('data-pressed');pressed=(event.target as Element)?.closest<HTMLElement>(surfaces)??null;if(pressed){pressed.dataset.pressed='true';window.clearTimeout(pressTimer);pressTimer=window.setTimeout(()=>pressed?.removeAttribute('data-pressed'),650);}};
+  const scroll=()=>{if(scrollFrame||document.hidden)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;const total=document.documentElement.scrollHeight-window.innerHeight;node.style.setProperty('--read-progress',`${total>0?Math.max(0,Math.min(1,window.scrollY/total)):0}`);node.style.setProperty('--visitor-parallax',`${Math.min(60,window.scrollY*.025)}px`);});};
+  const hidden=()=>{if(document.hidden){reset();cancelAnimationFrame(raf);raf=0;}node.dataset.motionHidden=String(document.hidden);};
+  node.addEventListener('pointermove',move,{passive:true});node.addEventListener('pointerdown',down,{passive:true});node.addEventListener('pointerleave',reset);
+  window.addEventListener('scroll',scroll,{passive:true});document.addEventListener('visibilitychange',hidden);scroll();hidden();
+  return()=>{cancelAnimationFrame(raf);cancelAnimationFrame(scanFrame);cancelAnimationFrame(scrollFrame);window.clearTimeout(pressTimer);observer?.disconnect();changes.disconnect();node.removeEventListener('pointermove',move);node.removeEventListener('pointerdown',down);node.removeEventListener('pointerleave',reset);window.removeEventListener('scroll',scroll);document.removeEventListener('visibilitychange',hidden);reset();pressed?.removeAttribute('data-pressed');for(const el of known){el.classList.remove('nexo-reactive');el.removeAttribute('data-in-view');}node.style.removeProperty('--read-progress');node.style.removeProperty('--visitor-parallax');delete node.dataset.motionHidden;};
+ },[root,enabled]);
+}

@@ -1,0 +1,31 @@
+.science-workspace{display:grid;gap:12px}.science-tabs{display:flex;align-items:center;gap:3px;min-height:38px;padding:0 0 8px;border-bottom:1px solid var(--line);overflow:auto;scrollbar-width:none}.science-tabs button{height:29px;display:flex;align-items:center;gap:6px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:12px;white-space:nowrap}.science-tabs button span{font:10px/1 var(--font-mono,monospace);color:var(--quiet)}.science-tabs button.active{background:color-mix(in srgb,var(--accent) 10%,var(--panel));color:var(--accent);font-weight:600}
+.science-filterbar{position:sticky;top:48px;z-index:12;display:flex;align-items:center;gap:10px;min-height:42px;padding:5px 0;background:var(--bg);border-bottom:1px solid var(--line)}.science-filterbar label{display:flex;align-items:center;gap:7px;min-width:300px}.science-filterbar label span{font-size:11px;color:var(--quiet)}.science-filterbar input{height:30px;min-width:240px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-size:12px}.science-source{margin-left:auto;color:var(--quiet);font-size:11px}
+.science-table-wrap{max-height:calc(100vh - 210px);overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.science-table{width:100%;border-collapse:collapse;font-size:12px}.science-table th{position:sticky;top:0;z-index:2;height:34px;padding:0 10px;text-align:left;background:var(--raised);border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;white-space:nowrap}.science-table td{height:36px;padding:5px 10px;border-bottom:1px solid var(--line);vertical-align:middle}.science-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--raised) 36%,transparent)}.science-table tbody tr:hover{background:var(--hover)}.science-table td strong,.science-table td small{display:block}.science-table td small{margin-top:2px;color:var(--quiet);font:10px/1.2 var(--font-mono,monospace)}.science-num{font-variant-numeric:tabular-nums;font-family:var(--font-mono,monospace)}.science-no-value,.science-empty,.science-projection-missing{color:var(--quiet)}.science-projection-missing{min-height:92px;display:flex;align-items:center;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:12px}
+.science-graphics{display:grid;gap:10px}.science-graphics-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.science-graphics-toolbar>div{display:flex;gap:2px}.science-graphics-toolbar button{height:28px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);font-size:11px}.science-graphics-toolbar button.active{color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel));border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}.science-graphics-toolbar button:disabled{opacity:.45}.science-chart-source{margin:0;color:var(--quiet);font-size:11px}
+.science-plot-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.science-plot-wrap svg{display:block;width:100%;min-width:760px;max-height:68vh}.science-plot-bg{fill:var(--panel)}.science-plot-label,.science-plot-value,.science-plot-tick{fill:var(--muted);font:12px var(--font-ui,Arial)}.science-plot-value{font-family:var(--font-mono,monospace);font-variant-numeric:tabular-nums}.science-plot-error,.science-plot-axis{stroke:var(--line);stroke-width:2}.science-plot-dot{fill:var(--accent);stroke:var(--panel);stroke-width:2}
+@media(max-width:760px){.science-filterbar{top:86px;align-items:stretch;flex-direction:column}.science-filterbar label{min-width:0;width:100%}.science-filterbar input{min-width:0;flex:1}.science-source{margin-left:0}.science-table-wrap{max-height:none}.science-graphics .nexo-graph{height:calc(100dvh - 220px)}}
+/* Phone: each row becomes a card with labelled fields instead of a squeezed table. */
+@media(max-width:760px){
+  .science-table thead{display:none}
+  .science-table,.science-table tbody,.science-table tr,.science-table td{display:block;width:100%}
+  .science-table tr{margin:0 0 10px;padding:10px 12px;border:1px solid var(--obs-line,var(--line));background:color-mix(in srgb,var(--obs-void,#05070b) 70%,transparent)}
+  .science-table td{display:grid;grid-template-columns:92px 1fr;gap:8px;padding:6px 0;border:0;text-align:left;height:auto;max-height:none;overflow:visible;white-space:normal}
+  .science-table td>*{min-width:0;overflow-wrap:anywhere}
+  .science-table td:first-child small{display:none}
+  .science-table td[data-blank]{display:none}
+  .science-table td::before{content:attr(data-label);font:500 9.5px/1.5 var(--obs-mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--obs-dim,var(--muted))}
+  .science-table td:first-child{grid-template-columns:1fr;padding-bottom:8px}
+  .science-table td:first-child::before{display:none}
+  .science-table td.science-empty{grid-template-columns:1fr}
+  .science-table td.science-empty::before{display:none}
+}
+.science-status-filter{display:flex;flex-wrap:wrap;gap:5px;padding:8px 0}
+.science-status-filter button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:11px;cursor:pointer}
+.science-status-filter button span{color:var(--quiet);font-size:10px}
+.science-status-filter button:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.science-status-filter button.active{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 60%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
+.science-status-filter button.active span{color:var(--accent)}
+@media(max-width:760px){.science-status-filter{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.science-status-filter button{flex:none}}
+.science-row-open{cursor:pointer}
+.science-row-open:hover td{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.science-row-open:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}

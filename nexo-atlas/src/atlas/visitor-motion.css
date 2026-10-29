@@ -1,0 +1,69 @@
+/* Reactive presentation; scientific values remain fixed throughout motion. */
+.nexo-summary-figure{position:relative;margin:24px 0;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:linear-gradient(135deg,color-mix(in srgb,var(--cyan) 10%,var(--bg)),var(--bg) 70%);isolation:isolate}
+.nexo-stat-stage{position:relative;padding:30px 26px 24px;overflow:hidden;background-image:linear-gradient(color-mix(in srgb,var(--cyan) 8%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--cyan) 8%,transparent) 1px,transparent 1px);background-size:34px 34px}
+.nexo-stat-stage:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 25%,color-mix(in srgb,var(--cyan) 10%,transparent),transparent 75%);transform:translateX(-100%)}
+.nexo-stat-label{display:block;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-2);max-width:36ch}
+.nexo-stat-number{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:14px 0 12px;color:var(--cyan)}
+.nexo-stat-number strong{font-size:clamp(42px,7vw,86px);font-weight:650;line-height:1.04;letter-spacing:-.055em;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.nexo-stat-number>span{font-size:clamp(19px,3vw,30px);font-weight:500}
+.atlas-public-main .nexo-stat-context{font-size:16px;line-height:1.5;margin:12px 0 0;max-width:55ch;color:var(--fg)}
+.nexo-stat-interval{font-size:14px;display:flex;gap:10px;flex-wrap:wrap;color:var(--fg-2)}
+.nexo-stat-interval strong{color:var(--fg);font-weight:500}
+.nexo-comparison-bars{padding:6px 26px 24px}.nexo-comparison-bars>small{display:block;margin-top:14px;font-size:13px;color:var(--fg-2)}
+.nexo-single-bar{padding-block:6px}
+.atlas-app .nexo-bar-row{position:relative;display:block;width:100%;padding:16px 0;background:transparent;border:0;border-radius:0;text-align:left;color:var(--fg);min-height:72px;touch-action:pan-y}
+.nexo-bar-heading{display:flex;align-items:start;gap:18px;justify-content:space-between;font-size:14px;line-height:1.45;margin-bottom:12px}.nexo-bar-heading>span{min-width:0}.nexo-bar-heading strong{font-size:18px;font-variant-numeric:tabular-nums;flex-shrink:0;font-weight:600;color:var(--cyan)}
+.nexo-bar-track{position:relative;display:block;height:14px;border-radius:7px;background:color-mix(in srgb,var(--cyan) 10%,var(--bg));overflow:visible}
+.nexo-bar-fill{position:absolute;height:100%;left:var(--bar-start);width:var(--bar-size);border-radius:7px;background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 65%,var(--bg)),var(--cyan));transform-origin:left center}
+.nexo-bar-zero{position:absolute;left:var(--zero-x);top:-5px;bottom:-5px;width:1px;background:var(--fg-2);opacity:.5}
+.nexo-bar-interval{position:absolute;left:var(--interval-start);width:var(--interval-size);top:4px;height:6px;background:color-mix(in srgb,var(--cyan) 35%,var(--bg));border-inline:2px solid var(--cyan)}
+.nexo-bar-point{position:absolute;left:var(--point-x);top:0;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 6px color-mix(in srgb,var(--cyan) 12%,transparent)}
+.nexo-bar-row[aria-pressed=true] .nexo-bar-fill{box-shadow:0 0 24px color-mix(in srgb,var(--cyan) 32%,transparent)}
+.nexo-bar-bounds,.nexo-bar-scale{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--fg-2);margin-top:10px}.nexo-bar-bounds{justify-content:center}
+.nexo-technical-plot{border-top:1px solid var(--line);padding:0 20px}.nexo-technical-plot>summary,.nexo-figure-question>summary{cursor:pointer;min-height:48px;padding:14px 0;font-size:14px;color:var(--cyan)}
+.nexo-technical-plot[open]>summary{border-bottom:1px solid var(--line)}
+.nexo-figure-question{margin-bottom:8px}.nexo-figure-question p{font-size:15px;line-height:1.6}
+.nexo-result-limits.nexo-figure-limits{padding-block:0}.nexo-figure-limits>summary{cursor:pointer;min-height:48px;padding-block:12px;font-size:15px;color:var(--fg)}.nexo-figure-limits>summary:focus-visible{outline:2px solid var(--cyan);outline-offset:4px}.nexo-figure-limits[open]>ul{padding-bottom:16px}
+.atlas-public-main .nexo-visual-card{position:relative;padding:28px 22px;margin:20px 0 34px;border:1px solid var(--line);border-radius:24px;background:color-mix(in srgb,var(--bg) 95%,transparent);isolation:isolate}
+.atlas-public-main .nexo-visual-card h4{font-size:clamp(22px,3vw,30px);line-height:1.3;letter-spacing:-.025em;max-width:32ch;margin-bottom:12px}
+.nexo-reactive{position:relative;isolation:isolate;--spot-x:50%;--spot-y:50%;transform-style:preserve-3d}
+.nexo-reactive:after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;background:radial-gradient(450px circle at var(--spot-x) var(--spot-y),color-mix(in srgb,var(--cyan) 16%,transparent),transparent 65%);opacity:0}
+.nexo-reading-progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:200;pointer-events:none;transform:scaleX(var(--read-progress,0));transform-origin:left;background:var(--cyan);box-shadow:0 0 15px var(--cyan)}
+@media(prefers-reduced-motion:no-preference){
+ .atlas-app[data-area=public][data-cinema-paused=false] .nexo-reactive{transition:transform .22s,border-color .22s,box-shadow .22s}
+ .atlas-app[data-area=public][data-cinema-paused=false] .nexo-reactive[data-hover=true]{transform:perspective(1000px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));border-color:color-mix(in srgb,var(--cyan) 65%,var(--line));box-shadow:0 16px 50px color-mix(in srgb,var(--cyan) 10%,transparent)}
+ .atlas-app[data-cinema-paused=false] .nexo-reactive[data-hover=true]:after,.atlas-app[data-cinema-paused=false] .nexo-reactive[data-pressed=true]:after{opacity:1;transition:opacity .15s}
+ .atlas-app[data-cinema-paused=false] .nexo-reactive[data-in-view=true]{animation:nexo-surface-arrive .65s cubic-bezier(.16,1,.3,1) both}
+ .atlas-app[data-cinema-paused=false] .nexo-reactive[data-in-view=true] .nexo-bar-fill{animation:nexo-bar-arrive .9s cubic-bezier(.16,1,.3,1) var(--bar-delay,0ms) both}
+ .atlas-app[data-cinema-paused=false] .nexo-reactive[data-in-view=true] .nexo-stat-stage:after{animation:nexo-stat-sweep 5s ease-in-out infinite}
+ .atlas-app[data-cinema-paused=false] .nexo-stat-number{animation:nexo-value-arrive .5s cubic-bezier(.16,1,.3,1) both}
+ .atlas-app[data-area=public][data-cinema-paused=false] button,.atlas-app[data-area=public][data-cinema-paused=false] a{transition:transform .18s,box-shadow .18s,color .18s,background .18s}
+ .atlas-app[data-area=public][data-cinema-paused=false] button:active,.atlas-app[data-area=public][data-cinema-paused=false] a:active{transform:scale(.97)}
+ .atlas-app[data-area=public][data-cinema-paused=false] .nexo-hub-panel{animation:nexo-scene-enter .55s cubic-bezier(.16,1,.3,1) both}
+ .atlas-app[data-cinema-paused=false] .nexo-cosmic-backdrop{translate:0 var(--visitor-parallax,0px)}
+ @keyframes nexo-surface-arrive{from{opacity:.35;translate:0 32px}to{opacity:1;translate:0 0}}
+ @keyframes nexo-bar-arrive{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+ @keyframes nexo-value-arrive{from{opacity:.3;translate:0 14px;filter:blur(3px)}to{opacity:1;translate:0 0;filter:blur(0)}}
+ @keyframes nexo-stat-sweep{0%,20%{transform:translateX(-100%)}65%,100%{transform:translateX(100%)}}
+ @keyframes nexo-scene-enter{from{opacity:.2;translate:18px 0;filter:blur(4px)}to{opacity:1;translate:0 0;filter:blur(0)}}
+}
+.atlas-app[data-cinema-paused=true] .nexo-summary-figure *,.atlas-app[data-motion-hidden=true] .nexo-summary-figure *,.nexo-reactive[data-in-view=false] .nexo-summary-figure *{animation:none!important}
+.atlas-app[data-cinema-paused=true] .nexo-stat-stage:after,.atlas-app[data-motion-hidden=true] .nexo-stat-stage:after,.nexo-reactive[data-in-view=false] .nexo-stat-stage:after{animation:none!important}
+@media(max-width:600px){.atlas-public-main .nexo-visual-card{padding:20px 14px;border-radius:18px;margin-inline:-8px}.nexo-stat-stage{padding:24px 18px 20px}.nexo-comparison-bars{padding:4px 18px 22px}.nexo-stat-number strong{font-size:clamp(38px,12vw,68px)}.nexo-technical-plot{padding:0 12px}.nexo-bar-heading{font-size:14px}.nexo-figure-question p{overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){.nexo-reactive,.nexo-summary-figure *,.nexo-summary-figure *:after{animation:none!important;transition:none!important}.nexo-reading-progress{display:none}}
+/* Keep the gallery scannable; each plot labels its own configurations. */
+.nexo-visual-gallery{scroll-margin-top:120px;outline:none}
+.nexo-gallery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.nexo-gallery-grid.is-compact{grid-template-columns:1fr}
+.atlas-public-main .nexo-gallery-grid>.nexo-visual-card{margin:0;min-width:0;padding:24px 20px}
+.atlas-public-main .nexo-gallery-count{font-size:13px;color:var(--fg-2);font-variant-numeric:tabular-nums;margin-bottom:18px}
+.nexo-gallery-grid .nexo-stat-number strong{font-size:clamp(38px,4vw,60px)}
+.nexo-gallery-grid .nexo-stat-stage{padding:22px 18px}.nexo-gallery-grid .nexo-comparison-bars{padding:4px 18px 20px}
+.nexo-gallery-grid .nexo-technical-plot{padding-inline:12px}.nexo-gallery-grid .nexo-summary-figure{margin-block:18px}
+.nexo-gallery-grid .nexo-figure-sources{padding-left:18px}.nexo-gallery-grid .nexo-figure-sources a{font-size:14px;overflow-wrap:anywhere}
+@media(max-width:900px){.nexo-gallery-grid{grid-template-columns:1fr}.atlas-public-main .nexo-gallery-grid>.nexo-visual-card{margin-inline:0}}
+/* Reviewed comparisons retain categorical configurations and source-level context. */
+.nexo-comparison-heading{display:grid;gap:8px;padding:22px 18px 14px}.nexo-comparison-heading strong{font-size:17px;line-height:1.5}.nexo-comparison-heading span{font-size:13px;color:var(--fg-2)}
+.atlas-public-main .nexo-comparison-qualification{font-size:14px;line-height:1.65;color:var(--fg-2);overflow-wrap:anywhere}
+.nexo-comparison-sources{border-top:1px solid var(--line)}.nexo-comparison-sources summary{cursor:pointer;min-height:48px;padding-block:14px;font-size:14px;line-height:1.55;overflow-wrap:anywhere}.nexo-comparison-sources summary:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}.nexo-comparison-sources>ol{padding-left:22px}.nexo-comparison-sources>ol>li{border-top:1px solid var(--line);padding-left:4px}.nexo-comparison-sources p,.nexo-comparison-sources li{font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.nexo-comparison-card .nexo-bar-heading>span{overflow-wrap:anywhere}.nexo-comparison-card .nexo-bar-row{padding-block:18px}.nexo-comparison-card .nexo-bar-heading{gap:12px}

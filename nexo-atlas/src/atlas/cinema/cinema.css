@@ -1,0 +1,146 @@
+/* One cinematic stage, with text and the original web in a single
+   balanced hero surface. Lower sections share one continuous reading flow. */
+.atlas-app{position:relative;isolation:isolate}
+.nexo-cinema-backdrop{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:var(--bg);contain:strict}
+.nexo-cinema-backdrop img,.nexo-cinema-backdrop video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.nexo-cinema-video{visibility:hidden}
+.nexo-cinema-backdrop[data-mode="video"] .nexo-cinema-video{visibility:visible}
+.atlas-cinema-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;font-size:13px;cursor:pointer}
+.atlas-app .atlas-header{background:color-mix(in srgb,var(--bg) 97%,transparent)}
+.atlas-app[data-area="private"]>.atlas-main:not(.has-frame){background:color-mix(in srgb,var(--bg) 97%,transparent)}
+.atlas-app[data-area="private"] .atlas-session-bar{background:var(--bg)}
+
+/* The scrim spans the viewport, without edges around individual blocks. */
+.atlas-app[data-area="public"] .nexo-cinema-backdrop::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 12%,transparent),color-mix(in srgb,var(--bg) 28%,transparent));
+}
+.atlas-app[data-area="public"] .atlas-public-main{
+  --stage-gutter:clamp(24px,5.3vw,76px);
+  max-width:1440px;padding:0 var(--stage-gutter);
+}
+.atlas-app[data-area="public"] .atlas-public-main .atlas-hero{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:stretch;gap:clamp(28px,3vw,44px);
+  min-height:560px;margin:40px 0 88px;padding:clamp(32px,3.8vw,56px);
+  background:linear-gradient(110deg,color-mix(in srgb,var(--bg) 97%,transparent),color-mix(in srgb,var(--bg) 91%,transparent));
+  border:1px solid color-mix(in srgb,var(--line) 65%,transparent);border-radius:20px;overflow:hidden;
+}
+.atlas-app[data-area="public"] .atlas-hero-copy{
+  position:relative;z-index:2;isolation:auto;align-self:stretch;display:flex;flex-direction:column;justify-content:center;
+  width:100%;max-width:650px;min-width:0;padding:0;margin:0;
+  background:none;border:0;border-radius:0;box-shadow:none;
+}
+.atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow{margin-bottom:28px}
+.atlas-app[data-area="public"] .atlas-hero-copy h1{
+  margin:0 0 26px;font-size:clamp(40px,4.1vw,60px);line-height:1.08;letter-spacing:-.045em;
+}
+.atlas-app[data-area="public"] .atlas-hero-copy h1 span{display:block;max-width:100%;overflow-wrap:normal}
+.atlas-app[data-area="public"] .atlas-hero-lead{
+  max-width:39ch;margin:0 0 32px;font-size:clamp(20px,1.7vw,24px);line-height:1.5;
+}
+.atlas-app[data-area="public"] .atlas-hero-actions{gap:14px 28px}
+.atlas-app[data-area="public"] .atlas-hero-actions .atlas-btn{min-width:198px;font-size:18px}
+.atlas-app[data-area="public"] .atlas-text-action{font-size:18px;gap:24px}
+
+/* Preserve the original image and the living canvas, including their fallback.
+   Blending removes the image's white/black field; the edge mask is only a fade. */
+.atlas-app[data-area="public"] .atlas-hero-art{
+  position:relative;inset:auto;align-self:stretch;z-index:auto;
+  width:100%;min-width:0;height:auto;min-height:440px;margin:0;
+}
+.atlas-app[data-area="public"] .atlas-hero-picture{
+  position:absolute;inset:0 -10% 34px -10%;
+  background:none;border:0;border-radius:0;overflow:hidden;mix-blend-mode:multiply;
+  mask-image:radial-gradient(ellipse 64% 66% at 54% 49%,#000 35%,rgba(0,0,0,.92) 54%,transparent 79%);
+  -webkit-mask-image:radial-gradient(ellipse 64% 66% at 54% 49%,#000 35%,rgba(0,0,0,.92) 54%,transparent 79%);
+}
+.atlas-app[data-area="public"] .atlas-web-art{object-fit:cover;object-position:58% 50%;mix-blend-mode:normal}
+.atlas-app[data-area="public"] .atlas-web-motion{opacity:.18}
+:root[data-theme="dark"] .atlas-app[data-area="public"] .atlas-hero-picture{mix-blend-mode:screen}
+@media(prefers-color-scheme:dark){:root:not([data-theme]) .atlas-app[data-area="public"] .atlas-hero-picture{mix-blend-mode:screen}}
+.atlas-app[data-area="public"] .atlas-hero-art .atlas-note{
+  position:absolute;inset:auto 0 0;max-width:100%;margin:0;padding:8px 0;
+  background:none;border:0;text-align:center;font-size:12px;line-height:1.5;
+  color:var(--fg);text-shadow:0 1px 12px var(--bg),0 1px 3px var(--bg);
+}
+
+/* Research, methods and publications share one full-width reading surface.
+   The sections use spacing and fine rules, never floating white cards. */
+.atlas-app[data-area="public"] .atlas-public-content{position:relative;isolation:isolate;min-width:0}
+.atlas-app[data-area="public"] .atlas-public-content::before{
+  content:"";position:absolute;z-index:-1;top:-72px;bottom:0;
+  left:50%;width:100vw;transform:translateX(-50%);pointer-events:none;
+  background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--bg) 95%,transparent) 72px,color-mix(in srgb,var(--bg) 97%,transparent) 360px);
+}
+.atlas-app[data-area="public"] .atlas-public-main .atlas-section{
+  position:relative;min-width:0;background:none;padding:64px 0 72px;margin:0;
+  border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;
+}
+.atlas-app[data-area="public"] .atlas-public-main .atlas-method-section{gap:clamp(32px,5.5vw,80px);padding:72px 0 80px}
+.atlas-app[data-area="public"] .atlas-public-main .atlas-contact-section{padding-bottom:64px}
+.atlas-app[data-area="public"] .atlas-footer{background:color-mix(in srgb,var(--bg) 97%,transparent)}
+.atlas-app[data-area="public"] .atlas-test-search{min-width:0;max-width:660px}
+.atlas-app[data-area="public"] .atlas-test-search input{min-width:0;max-width:100%}
+
+@media(prefers-reduced-motion:no-preference){
+ .atlas-app[data-area="public"] .atlas-hero-copy{animation:nexo-cinema-enter .85s cubic-bezier(.2,.65,.2,1) both}
+ .atlas-app[data-area="public"] .atlas-hero-copy h1 span{animation:nexo-cinema-type 1s cubic-bezier(.2,.65,.2,1) both}
+ .atlas-app[data-area="public"] .atlas-hero-copy h1 span:nth-child(2){animation-delay:.13s}
+ .atlas-app[data-area="public"] .atlas-hero-copy h1 span:nth-child(3){animation-delay:.26s}
+ @keyframes nexo-cinema-enter{from{opacity:0;transform:translate3d(0,24px,0)}to{opacity:1;transform:none}}
+ @keyframes nexo-cinema-type{from{opacity:0;transform:translate3d(0,20px,0)}to{opacity:1;transform:none}}
+}
+@media(max-width:1100px) and (min-width:901px){
+ .atlas-app[data-area="public"] .atlas-hero-actions{gap:8px 20px}
+ .atlas-app[data-area="public"] .atlas-hero-actions .atlas-btn{min-width:180px;padding-inline:16px}
+ .atlas-app[data-area="public"] .atlas-text-action{gap:16px}
+}
+@media(max-width:900px){
+ .atlas-app[data-area="public"] .nexo-cinema-backdrop::after{
+   background:color-mix(in srgb,var(--bg) 18%,transparent);
+ }
+ .atlas-app[data-area="public"] .atlas-public-main{--stage-gutter:24px}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-hero{
+   display:flex;flex-direction:column;align-items:stretch;gap:0;min-height:0;margin:28px 0 64px;padding:32px;
+ }
+ .atlas-app[data-area="public"] .atlas-hero-copy{align-self:auto;width:100%;max-width:660px;padding:0;margin:0;box-shadow:none}
+ .atlas-app[data-area="public"] .atlas-hero-copy h1{font-size:clamp(34px,7.1vw,56px);margin-bottom:24px}
+ .atlas-app[data-area="public"] .atlas-hero-lead{max-width:45ch;font-size:22px}
+ .atlas-app[data-area="public"] .atlas-hero-art{height:clamp(300px,52vw,430px);min-height:0;margin:24px 0 0}
+ .atlas-app[data-area="public"] .atlas-hero-picture{inset:-12% -14% 16px;mask-image:radial-gradient(ellipse 65% 66% at 50% 50%,#000 36%,rgba(0,0,0,.92) 53%,transparent 78%);-webkit-mask-image:radial-gradient(ellipse 65% 66% at 50% 50%,#000 36%,rgba(0,0,0,.92) 53%,transparent 78%)}
+ .atlas-app[data-area="public"] .atlas-hero-art .atlas-note{inset:auto 0 0;text-align:center;max-width:100%}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-section{padding:48px 0 56px;margin:0}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-method-section{padding:56px 0 64px}
+ .atlas-app .atlas-controls{align-items:start}
+}
+@media(max-width:600px){
+ .atlas-app[data-area="public"] .atlas-public-main{--stage-gutter:20px}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-hero{margin:20px 0 56px;padding:24px 20px 18px;border-radius:16px}
+ .atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow{margin-bottom:22px;font-size:11px}
+ .atlas-app[data-area="public"] .atlas-hero-copy h1{font-size:clamp(28px,7.8vw,44px);line-height:1.1;letter-spacing:-.045em;margin-bottom:20px}
+ .atlas-app[data-area="public"] .atlas-hero-lead{font-size:18px;line-height:1.5;margin-bottom:24px}
+ .atlas-app[data-area="public"] .atlas-hero-actions{display:flex;align-items:stretch;gap:10px 18px}
+ .atlas-app[data-area="public"] .atlas-hero-actions .atlas-btn{flex:1 1 170px;min-width:0;width:auto;font-size:17px;min-height:52px;padding:12px 16px;gap:16px}
+ .atlas-app[data-area="public"] .atlas-text-action{flex:1 1 136px;width:auto;min-width:0;font-size:17px;min-height:52px;padding:12px 0;border:0;gap:16px;justify-content:space-between}
+ .atlas-app[data-area="public"] .atlas-hero-art{height:clamp(250px,68vw,340px);margin-top:18px}
+ .atlas-app[data-area="public"] .atlas-web-art{object-position:58% 50%}
+ .atlas-app[data-area="public"] .atlas-hero-art .atlas-note{font-size:11px;padding:8px 0}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-section{padding:40px 0 48px}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-method-section{display:block;padding:44px 0 52px}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-section h2{font-size:32px;margin-bottom:28px}
+ .atlas-app[data-area="public"] .atlas-public-main .atlas-section .atlas-eyebrow{margin-bottom:22px}
+ .atlas-app[data-area="public"] .atlas-research-lines{margin-top:28px}
+ .atlas-app[data-area="public"] .atlas-footer-in{margin-inline:20px}
+}
+@media(max-width:360px){
+ .atlas-app[data-area="public"] .atlas-public-main{--stage-gutter:18px}
+ .atlas-app[data-area="public"] .atlas-hero-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+ .atlas-app[data-area="public"] .atlas-hero-actions .atlas-btn,.atlas-app[data-area="public"] .atlas-text-action{width:100%}
+ .atlas-app[data-area="public"] .atlas-text-action{padding-inline:16px}
+ .atlas-app[data-area="public"] .atlas-hero-art{height:250px;margin-top:12px}
+}
+/* A full-width footer closes the shared surface; pagination can wrap at any width. */
+.atlas-app[data-area="public"] > footer.atlas-footer{background:color-mix(in srgb,var(--bg) 97%,transparent)}
+.atlas-app[data-area="public"] .atlas-test-pagination{flex-wrap:wrap}
+.atlas-app[data-area="public"] .atlas-test-pagination .atlas-btn{min-width:0;width:auto;font-size:16px;padding:12px 18px}

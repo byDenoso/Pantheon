@@ -1,0 +1,37 @@
+/* Phone-first chrome. The guarded frame retains its own single scroll surface. */
+.atlas-session-expiry{font-size:12px;line-height:1.3;color:var(--fg-2);margin:2px 0 0}
+.atlas-session-bar>div{min-width:0}
+.atlas-session-bar .atlas-btn{flex:none}
+.atlas-menu-backdrop{display:none}
+.atlas-app[data-area=private] .atlas-brand{min-width:0}
+.atlas-app[data-area=private] .atlas-brand small{overflow-wrap:anywhere}
+@media(max-width:900px){
+  .atlas-menu-backdrop{display:block;position:fixed;inset:0;z-index:29;border:0;border-radius:0;background:#0005;padding:0;cursor:default}
+  .atlas-app .atlas-header{position:relative;z-index:30;min-height:60px;padding:8px max(18px,env(safe-area-inset-right)) 8px max(18px,env(safe-area-inset-left));flex-wrap:nowrap;gap:12px;background:var(--bg)}
+  .atlas-app[data-area=public] .atlas-header{padding:8px 20px;min-height:60px;align-items:center}
+  .atlas-app .atlas-brand{font-size:24px;min-height:44px;align-items:center}
+  .atlas-app[data-area=private] .atlas-brand small{display:none}
+  .atlas-app .atlas-menu-toggle,.atlas-app[data-area=public] .atlas-menu-toggle{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:8px 10px;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--bg-2);color:var(--fg);font:500 16px/1.25 var(--font);cursor:pointer}
+  .atlas-app .atlas-header-menu,.atlas-app[data-area=public] .atlas-header-menu{display:none;position:absolute;left:0;right:0;top:100%;width:auto;margin:0;padding:18px 20px 22px;max-height:calc(100dvh - 80px);overflow-y:auto;overscroll-behavior:contain;border-block:1px solid var(--line);background:var(--bg);box-shadow:0 18px 28px #0003;z-index:40}
+  .atlas-app .atlas-header-menu.is-open,.atlas-app[data-area=public] .atlas-header-menu.is-open{display:grid;gap:16px;justify-items:stretch}
+  .atlas-app .atlas-controls{display:grid;gap:12px;justify-items:start;margin:0}
+  .atlas-app .atlas-nav{display:grid;gap:12px}
+  .atlas-app .atlas-nav a{display:flex;align-items:center;min-height:44px}
+  .atlas-app .atlas-seg button{min-height:44px;font-size:15px}
+  .atlas-app .atlas-toc{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin:0}
+  .atlas-app[data-area=public] .atlas-toc button{width:100%;padding:8px 0;text-align:left;font-size:17px}
+  .private-root.has-frame{padding:0;gap:0}
+  .private-root.has-frame>.atlas-session-bar{min-height:54px;padding:5px 16px;border-bottom:1px solid var(--line);flex-wrap:nowrap}
+  .private-root.has-frame>.atlas-session-bar h1{font-size:14px;line-height:1.2}
+  .atlas-session-bar .atlas-btn{background:transparent;border:1px solid var(--line);color:var(--fg);font-size:14px;padding:8px 14px}
+  .atlas-private-frame{border:0;border-radius:0}
+  .atlas-app[data-area=private]:has(.private-root.has-frame){height:100svh;height:100dvh;padding-top:env(safe-area-inset-top)}
+}
+@media(max-width:600px){
+  .atlas-app[data-area=public] .atlas-brand{font-size:27px}
+  .atlas-public-main{font-size:18px}
+  .atlas-public-main .atlas-section{scroll-margin-top:16px}
+  .atlas-public-main .atlas-test-search input{font-size:16px;min-height:48px}
+  .atlas-public-test{overflow-wrap:anywhere}
+  .atlas-app[data-area=public] .atlas-hero-actions .atlas-btn,.atlas-app[data-area=public] .atlas-text-action{min-height:52px}
+}

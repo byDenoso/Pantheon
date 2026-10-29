@@ -1,0 +1,64 @@
+/* Shared interaction feedback. Presentation only, including inside the guarded
+   private frame. Motion never changes document layout or graph coordinates. */
+.atlas-app{--interaction-blue:var(--cyan);--interaction-bg:var(--bg)}
+.pw{--interaction-blue:var(--pw-blue);--interaction-bg:var(--pw-bg)}
+:is(.atlas-app,.pw) :is(button:not(:disabled):not(.atlas-menu-backdrop),a[href],summary){
+  transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s ease,border-color .22s ease,background-color .22s ease,color .18s ease;
+}
+:is(.atlas-app,.pw) :is(input,select,textarea){transition:border-color .2s ease,box-shadow .2s ease}
+.atlas-app :is(.atlas-hero,.atlas-item,.atlas-public-test),
+.atlas-app :is(.atlas-research-lines,.atlas-steps)>li,
+.pw :is(.pw-index,.pw-rows)>li,.pw .pw-folds>details,.pw .pw-block{
+  transition:transform .28s cubic-bezier(.2,.7,.2,1),box-shadow .28s ease,border-color .22s ease,background-color .22s ease;
+}
+:is(.atlas-app,.pw) :is(button:not(:disabled):not(.atlas-menu-backdrop),a[href],summary):focus-visible{
+  outline:3px solid var(--interaction-blue);outline-offset:4px;
+  box-shadow:0 0 0 5px color-mix(in srgb,var(--interaction-blue) 12%,transparent);
+}
+:is(.atlas-app,.pw) :is(input,select,textarea):focus-visible{
+  border-color:var(--interaction-blue);box-shadow:0 0 0 4px color-mix(in srgb,var(--interaction-blue) 14%,transparent);
+}
+.atlas-app :is(.atlas-item,.atlas-public-test):focus-within,
+.pw :is(.pw-index,.pw-rows)>li:focus-within,.pw .pw-folds>details:focus-within{
+  box-shadow:inset 3px 0 var(--interaction-blue),0 8px 28px color-mix(in srgb,var(--interaction-blue) 8%,transparent);
+  border-color:color-mix(in srgb,var(--interaction-blue) 65%,transparent);
+}
+@media(hover:hover) and (pointer:fine){
+  :is(.atlas-app,.pw) :is(button:not(:disabled):not(.atlas-menu-backdrop),summary):hover{transform:translateY(-2px)}
+  :is(.atlas-app,.pw) a[href]:hover{color:var(--interaction-blue);text-decoration-thickness:2px;text-underline-offset:5px}
+  .atlas-app .atlas-btn:not(:disabled):hover,.pw .pw-button:not(:disabled):not(.atlas-menu-backdrop):hover{
+    box-shadow:0 8px 22px color-mix(in srgb,var(--interaction-blue) 28%,transparent);
+  }
+  :is(.atlas-app,.pw) :is(.atlas-cinema-toggle,.atlas-menu-toggle):not(:disabled):hover,
+  .atlas-app .atlas-seg button:hover,.pw .pw-tabs :is(a,button):hover{
+    background-color:color-mix(in srgb,var(--interaction-blue) 9%,var(--interaction-bg));
+    border-color:var(--interaction-blue);
+  }
+  .atlas-app .atlas-public-main .atlas-hero:hover{
+    border-color:color-mix(in srgb,var(--interaction-blue) 55%,transparent);
+    box-shadow:0 18px 56px color-mix(in srgb,var(--interaction-blue) 16%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--interaction-blue) 10%,transparent);
+  }
+  .atlas-app :is(.atlas-item,.atlas-public-test):hover,
+  .atlas-app :is(.atlas-research-lines,.atlas-steps)>li:hover,
+  .pw :is(.pw-index,.pw-rows)>li:hover,.pw .pw-folds>details:hover,.pw .pw-block:hover{
+    transform:translateY(-3px);
+    border-color:color-mix(in srgb,var(--interaction-blue) 60%,transparent);
+    background-color:color-mix(in srgb,var(--interaction-blue) 5%,transparent);
+    box-shadow:0 10px 30px color-mix(in srgb,var(--interaction-blue) 10%,transparent);
+  }
+  .atlas-app .atlas-hero-actions :is(button,a)>span{transition:transform .22s ease}
+  .atlas-app .atlas-hero-actions :is(button,a):hover>span{transform:translateX(5px)}
+  .atlas-app .atlas-mail>span{transition:transform .22s ease}
+  .atlas-app .atlas-mail:hover>span{transform:translate(3px,-3px)}
+}
+/* Press feedback also works on touch; hover is never required to reveal content. */
+:is(.atlas-app,.pw) :is(button:not(:disabled):not(.atlas-menu-backdrop),a[href],summary):active{transform:translateY(0) scale(.98)}
+@media(prefers-reduced-motion:reduce){
+  :is(.atlas-app,.pw) :is(button,a,summary,input,select,textarea),
+  .atlas-app :is(.atlas-hero,.atlas-item,.atlas-public-test),
+  .atlas-app :is(.atlas-research-lines,.atlas-steps)>li,
+  .pw :is(.pw-index,.pw-rows)>li,.pw .pw-folds>details,.pw .pw-block,
+  .atlas-app .atlas-hero-actions :is(button,a)>span,.atlas-app .atlas-mail>span{
+    transition:none!important;transform:none!important;
+  }
+}

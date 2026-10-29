@@ -1,0 +1,25 @@
+import { fixtureSource } from './fixture.ts';
+import { remoteSource } from './remote.ts';
+import { sourceKindForHost } from './select.ts';
+import type { SystemDataSource } from './source.ts';
+
+export { DataSourceError, assertSystemState } from './source.ts';
+export type { SystemDataSource } from './source.ts';
+export { fixtureSource } from './fixture.ts';
+export { remoteSource, SYSTEM_ENDPOINT } from './remote.ts';
+export { sourceKindForHost } from './select.ts';
+
+/**
+ * Migração do handoff original do frontend:
+ * `activeSource: SystemDataSource = fixtureSource` era a fronteira antes da integração.
+ * O teste de seleção de fonte agora prova o comportamento efetivo abaixo.
+ *
+ * Browser publicado -> estado remoto real.
+ * Node/localhost -> fixtures determinísticas para testes e regressão visual.
+ */
+// VITE_SYSTEM_SOURCE=remote previews a real system.json on localhost.
+const forcedRemote = import.meta.env?.VITE_SYSTEM_SOURCE === 'remote';
+const runtimeKind = typeof window === 'undefined' ? 'fixture' : forcedRemote ? 'remote' : sourceKindForHost(window.location.hostname);
+export const activeSource: SystemDataSource = runtimeKind === 'remote' ? remoteSource : fixtureSource;
+
+export const AVAILABLE_SOURCES: SystemDataSource[] = [fixtureSource, remoteSource];

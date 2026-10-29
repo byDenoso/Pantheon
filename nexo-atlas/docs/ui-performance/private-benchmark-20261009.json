@@ -1,0 +1,68 @@
+[
+  {
+    "tests": 500,
+    "trial": 0,
+    "oldGraphMs": 51.687967,
+    "newGraphMs": 3.468154999999996,
+    "oldColdPipelineMs": 451.41078000000005,
+    "newColdPipelineMs": 337.691998,
+    "oldRepeatPipelineMs": 356.274101,
+    "newRepeatPipelineMs": 11.69773599999985,
+    "repeatCacheReadMs": 0.2605630000000474
+  },
+  {
+    "tests": 500,
+    "trial": 1,
+    "oldGraphMs": 33.962361999999985,
+    "newGraphMs": 1.5573609999999007,
+    "oldColdPipelineMs": 348.996983,
+    "newColdPipelineMs": 289.0933839999998,
+    "oldRepeatPipelineMs": 307.366356,
+    "newRepeatPipelineMs": 8.182882000000063,
+    "repeatCacheReadMs": 0.09422200000017256
+  },
+  {
+    "tests": 500,
+    "trial": 2,
+    "oldGraphMs": 30.643363000000136,
+    "newGraphMs": 1.3679950000000645,
+    "oldColdPipelineMs": 346.6324219999997,
+    "newColdPipelineMs": 382.5065850000001,
+    "oldRepeatPipelineMs": 373.10187099999985,
+    "newRepeatPipelineMs": 7.863358999999946,
+    "repeatCacheReadMs": 0.11583400000017718
+  },
+  {
+    "tests": 1500,
+    "trial": 0,
+    "oldGraphMs": 252.99701600000026,
+    "newGraphMs": 3.5602639999997336,
+    "oldColdPipelineMs": 891.6603630000004,
+    "newColdPipelineMs": 634.968946,
+    "oldRepeatPipelineMs": 878.829495,
+    "newRepeatPipelineMs": 21.692376999999397,
+    "repeatCacheReadMs": 0.21880000000055588
+  },
+  {
+    "tests": 1500,
+    "trial": 1,
+    "oldGraphMs": 325.5743080000002,
+    "newGraphMs": 3.4109589999998207,
+    "oldColdPipelineMs": 875.7106539999995,
+    "newColdPipelineMs": 654.9586889999991,
+    "oldRepeatPipelineMs": 877.8090109999994,
+    "newRepeatPipelineMs": 28.236268999999083,
+    "repeatCacheReadMs": 0.4158580000002985
+  },
+  {
+    "tests": 1500,
+    "trial": 2,
+    "oldGraphMs": 251.48597999999947,
+    "newGraphMs": 5.309864999999263,
+    "oldColdPipelineMs": 883.0744679999989,
+    "newColdPipelineMs": 634.8560749999997,
+    "oldRepeatPipelineMs": 963.0058200000003,
+    "newRepeatPipelineMs": 19.748156999999992,
+    "repeatCacheReadMs": 0.22888599999896542
+  }
+]
