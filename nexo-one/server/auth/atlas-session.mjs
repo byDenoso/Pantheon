@@ -6,8 +6,10 @@ const COOKIE='__Host-atlas_session';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const HASH=/^scrypt\$[a-f0-9]{32}\$[a-f0-9]{128}$/;
 const cookie=value=>`${COOKIE}=${value}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${value?SESSION_SECONDS:0}`;
+const redisUrl=env=>env.NEXO_ATLAS_REDIS_URL||env.KV_REST_API_URL;
+const redisToken=env=>env.NEXO_ATLAS_REDIS_TOKEN||env.KV_REST_API_TOKEN;
 export function atlasConfigured(env){
-  try{return HASH.test(env.NEXO_ATLAS_PIN_HASH||'')&&new URL(env.NEXO_ATLAS_ORIGIN).origin===env.NEXO_ATLAS_ORIGIN&&new URL(env.NEXO_ATLAS_ORIGIN).protocol==='https:'&&new URL(env.NEXO_ATLAS_REDIS_URL).protocol==='https:'&&Boolean(env.NEXO_ATLAS_REDIS_TOKEN);}catch{return false;}
+  try{return HASH.test(env.NEXO_ATLAS_PIN_HASH||'')&&new URL(env.NEXO_ATLAS_ORIGIN).origin===env.NEXO_ATLAS_ORIGIN&&new URL(env.NEXO_ATLAS_ORIGIN).protocol==='https:'&&new URL(redisUrl(env)).protocol==='https:'&&Boolean(redisToken(env));}catch{return false;}
 }
 export function atlasSameOrigin(req,env){return req.headers?.origin===env.NEXO_ATLAS_ORIGIN&&(!req.headers?.['sec-fetch-site']||req.headers['sec-fetch-site']==='same-origin');}
 function sessionToken(req){
@@ -20,7 +22,7 @@ function sessionToken(req){
 // reservation counts every attempt (including successes) across all instances.
 export function atlasStore(env,fetcher=fetch){
   return async (...command)=>{
-    const response=await fetcher(env.NEXO_ATLAS_REDIS_URL,{method:'POST',redirect:'error',signal:AbortSignal.timeout(5000),headers:{Authorization:`Bearer ${env.NEXO_ATLAS_REDIS_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify(command)});
+    const response=await fetcher(redisUrl(env),{method:'POST',redirect:'error',signal:AbortSignal.timeout(5000),headers:{Authorization:`Bearer ${redisToken(env)}`,'Content-Type':'application/json'},body:JSON.stringify(command)});
     if(!response.ok)throw new Error('AUTH_STORE_UNAVAILABLE');
     const result=await response.json();
     if(!result||typeof result!=='object'||result.error||!Object.hasOwn(result,'result'))throw new Error('AUTH_STORE_UNAVAILABLE');

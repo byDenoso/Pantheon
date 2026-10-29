@@ -64,10 +64,13 @@ test('no external font or CDN reference is introduced by the new modules', () =>
   const walk = d => readdirSync(d).flatMap(n => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p]; });
   for (const f of [...walk(dir), join(src, 'main.tsx')].filter(f => /\.(?:ts|tsx|css)$/.test(f))) {
     let code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-    // User-initiated navigation to the canonical public catalogue is not an
-    // external asset, font, API call or automatic transfer.
+    // The approved public summary API and private login navigation are the
+    // only cross-origin connections. Neither loads fonts or CDN assets.
     if (f === join(src, 'atlas/ui/PublicApp.tsx')) {
-      code = code.replace("const PUBLIC_CATALOG_URL = 'https://nexoresearch.org/';", '');
+      code = code.replace("const PUBLIC_API_URL = 'https://nexo-one-two.vercel.app/api/atlas-public';", '');
+    }
+    if (f === join(src, 'atlas/ui/Shell.tsx')) {
+      code = code.replace("'https://nexo-one-two.vercel.app/#/privado'", "''");
     }
     assert.doesNotMatch(code, /https?:\/\//, f);
   }

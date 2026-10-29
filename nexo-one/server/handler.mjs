@@ -139,6 +139,13 @@ export default async function handler(req,res) {
   res.setHeader('CDN-Cache-Control','no-store');res.setHeader('Vercel-CDN-Cache-Control','no-store');
   const send=(value,status=200)=>{res.statusCode=status;res.end(JSON.stringify(value));};
   const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=path.startsWith('/api/atlas-private-assets/')?'atlas-private-asset':url.searchParams.get('route')||(path.endsWith('/mcp/status')?'mcp/status':path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
+  // Only the public campaign catalogue is readable from the static Pages site.
+  // Private routes retain their existing same-origin authentication boundary.
+  if(route==='atlas-public' && ['https://nexoresearch.org','https://www.nexoresearch.org','https://bydenoso.github.io'].includes(String(req.headers.origin||''))){
+    res.setHeader('Access-Control-Allow-Origin',req.headers.origin);
+    res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
+    if(req.method==='OPTIONS'){res.statusCode=204;return res.end();}
+  }
   if(route==='atlas-locale')res.setHeader('Vary','Authorization, Origin, Cookie, Accept-Language, X-Vercel-IP-Country');
   // Evaluate the privacy boundary before any adapter, cache or streaming read.
   try{

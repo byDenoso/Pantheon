@@ -1,9 +1,8 @@
 import {lazy, Suspense, useEffect, useState} from 'react';
 import {loadPublic, pick, type PublicState} from '../publicItems.ts';
-import {ApiError} from '../api.ts';
+import {ApiError, PUBLIC_PATH} from '../api.ts';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
-import PublicTestView from './PublicTestView.tsx';
 import PublicCampaignsView from './PublicCampaignsView.tsx';
 import Shell from './Shell.tsx';
 import {goToPublicSection} from '../publicNavigation.ts';
@@ -11,7 +10,7 @@ import '../public-presentation.css';
 
 const CosmicWebCanvas = lazy(() => import('./CosmicWebCanvas.tsx'));
 const STATIC_PUBLIC_SHELL = import.meta.env.VITE_STATIC_PUBLIC_SHELL === true;
-const PUBLIC_CATALOG_URL = 'https://nexoresearch.org/';
+const PUBLIC_API_URL = 'https://nexo-one-two.vercel.app/api/atlas-public';
 const art = new URL('../assets/cosmic-web.png', import.meta.url).href;
 
 export default function PublicApp() {
@@ -22,10 +21,9 @@ export default function PublicApp() {
 
   useEffect(() => { document.title = m.heroTitle; }, [m.heroTitle]);
   useEffect(() => {
-    // Pages hosts only the shell. The reviewed catalogue lives on the public site.
-    if (STATIC_PUBLIC_SHELL) return;
     const ac = new AbortController();
-    loadPublic((u, i) => fetch(u, i), ac.signal, `${import.meta.env.BASE_URL}public-campaigns.json`).then(s => { if (!ac.signal.aborted) setPub(s); })
+    // Pages reads only public summaries from the backend; credentials stay there.
+    loadPublic((u, i) => fetch(STATIC_PUBLIC_SHELL && u === PUBLIC_PATH ? PUBLIC_API_URL : u, i), ac.signal).then(s => { if (!ac.signal.aborted) setPub(s); })
       .catch(e => { if (!ac.signal.aborted && !(e instanceof ApiError && e.code === 'ABORTED')) setPub({status: 'unavailable', items: [], tests: []}); });
     return () => ac.abort();
   }, []);
@@ -72,15 +70,11 @@ export default function PublicApp() {
         <section className="atlas-section" id="s-works" tabIndex={-1} aria-labelledby="h-works">
           <p className="atlas-eyebrow"><span aria-hidden="true">03 / </span>{t.works.label}</p>
           <h2 id="h-works">{t.works.title}</h2>
-          {STATIC_PUBLIC_SHELL ? <div className="atlas-items atlas-catalog-access">
-            <p>{locale === 'pt-BR' ? 'Consulte os estudos, resultados e figuras no catálogo público do NEXO.' : 'Browse studies, results and figures in the NEXO public catalogue.'}</p>
-            <a className="atlas-btn atlas-catalog-link" href={PUBLIC_CATALOG_URL}>{locale === 'pt-BR' ? 'Acessar os trabalhos' : 'Explore the research'}<span aria-hidden="true">↗</span></a>
-          </div> : <div className="atlas-items" aria-live="polite" data-status={pub.status}>
+          {<div className="atlas-items" aria-live="polite" data-status={pub.status}>
             {pub.status === 'loading' && <p>{m.loading}</p>}
             {pub.status === 'unavailable' && <p className="atlas-empty">{m.unavailable}</p>}
             {pub.status === 'empty' && <p className="atlas-empty">{m.emptyTitle}</p>}
             {pub.campaigns !== undefined && <PublicCampaignsView campaigns={pub.campaigns} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage}/>}
-            {pub.status === 'ready' && pub.tests.map(test => <PublicTestView key={test.id} test={test} locale={locale}/>)}
             {pub.status === 'ready' && pub.items.map(it => (
               <article key={it.id} className="atlas-item">
                 <span className="atlas-kind">{m.kinds[it.kind]}</span>

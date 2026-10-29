@@ -3,7 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { sealStaticPublication } from './scripts/static-publication.mjs';
 
-const pagesBase = process.env.GITHUB_PAGES ? '/Pantheon/' : '/';
+// Relative assets support both /Pantheon/ and the nexoresearch.org root.
+const pagesBase = process.env.GITHUB_PAGES ? './' : '/';
 
 export default defineConfig(({command}) => ({
   resolve: command === 'build' ? {alias: [{find: /(?:\.\.\/|\.\/)+(?:data\/)?fixtures\/scenarios\.ts$/, replacement: fileURLToPath(new URL('./src/data/fixtures/production-empty.ts', import.meta.url))}]} : undefined,
