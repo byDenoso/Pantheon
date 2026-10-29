@@ -2,13 +2,14 @@ import {createPublicKey, verify} from 'node:crypto';
 
 // This verifier receives an ID token obtained by the server's OAuth flow.
 // It never treats identity headers supplied by the browser as proof.
-export async function verifyGoogleOwner(token, env, fetcher = fetch, now = Date.now()) {
+export async function verifyGoogleOwner(token, env, fetcher = fetch, now = Date.now(), nonce) {
   try {
     if (typeof token !== 'string' || token.length > 16384 || typeof env.GOOGLE_CLIENT_ID !== 'string' || !env.GOOGLE_CLIENT_ID || typeof env.NEXO_ATLAS_OWNER_SUB !== 'string' || !env.NEXO_ATLAS_OWNER_SUB) return null;
     const parts = token.split('.');
     if (parts.length !== 3 || parts.some(part => !/^[A-Za-z0-9_-]+$/.test(part))) return null;
     const header = JSON.parse(Buffer.from(parts[0], 'base64url'));
     const claims = JSON.parse(Buffer.from(parts[1], 'base64url'));
+    if (nonce !== undefined && (typeof nonce !== 'string' || !nonce || claims.nonce !== nonce)) return null;
     if (header.alg !== 'RS256' || typeof header.kid !== 'string' || !header.kid || header.kid.length > 256) return null;
     if (!['https://accounts.google.com','accounts.google.com'].includes(claims.iss) || claims.aud !== env.GOOGLE_CLIENT_ID || claims.sub !== env.NEXO_ATLAS_OWNER_SUB || !Number.isSafeInteger(claims.exp) || claims.exp <= Math.floor(now / 1000) || !Number.isSafeInteger(claims.iat) || claims.iat > Math.floor(now / 1000) + 60) return null;
     if (env.NEXO_ATLAS_OWNER_EMAIL && (claims.email_verified !== true || typeof claims.email !== 'string' || claims.email.toLowerCase() !== env.NEXO_ATLAS_OWNER_EMAIL.toLowerCase())) return null;
