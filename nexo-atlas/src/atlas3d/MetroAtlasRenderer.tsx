@@ -1,0 +1,2208 @@
+// The renderer owns its styles: it is mounted from Prova/Sistema/Ciência too, not only
+// from the Mapa (EmbeddedAtlas3D), so relying on that screen's import left it unstyled.
+import './atlas3d.css';
+import { atlasRouteParam } from './route-params.ts';
+import {
+  useEffect,
+  useMemo,
+  useRef
+} from 'react';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { SVGObject, SVGRenderer } from 'three/addons/renderers/SVGRenderer.js';
+import { Renderer as G6SvgRenderer } from '@antv/g-svg';
+import type { AtlasGraphLayer, AtlasMetroModel, AtlasMetroNode } from './atlasAdapter.ts';
+import { atlasHopDistances, visibleAtlasIds } from './atlasAdapter.ts';
+import { nearestVisibleAtlasAncestor, projectVisualCrossLinks } from './learningVisuals.ts';
+import {
+  buildMetroScreenLabelLayout,
+  metroLayoutPositions,
+  metroNodeSize,
+} from './metro2dLayout.ts';
+import { domainHex } from '../viewmodels/domainPalette.ts';
+import { domainLabel, label } from '../viewmodels/tokens.ts';
+
+type ViewMode = '2d' | '3d';
+type AtlasTheme = 'dark' | 'light';
+
+type Props = {
+  model: AtlasMetroModel;
+  expanded: ReadonlySet<string>;
+  visibleLayers: ReadonlySet<AtlasGraphLayer>;
+  selectedId: string | null;
+  showBeams: boolean;
+  viewMode: ViewMode;
+  theme: AtlasTheme;
+  fitNonce: number;
+  allIlluminated: boolean;
+  onActivate: (id: string) => void;
+  onReady?: () => void;
+};
+
+type G6Graph = {
+  setData: (data: unknown) => void;
+  render: () => Promise<void>;
+  fitView: (...args: any[]) => Promise<void> | void;
+  focusElement?: (...args: any[]) => Promise<void> | void;
+  getElementState: (id: string) => string[];
+  setElementState: (...args: any[]) => Promise<void> | void;
+  on: (event: string, callback: (event: any) => void) => void;
+  getZoom: () => number;
+  getViewportByCanvas: (point: [number, number]) => [number, number];
+  resize?: () => void;
+  getPluginInstance?: (key: string) => {
+    onRender?: { cancel?: () => void };
+    onTransform?: { cancel?: () => void };
+    renderMinimap?: () => void;
+    renderMask?: () => void;
+  } | undefined;
+  destroy?: () => void;
+};
+
+declare global {
+  interface Window {
+    G6?: { Graph: new (options: any) => G6Graph };
+  }
+}
+
+
+function relationStrength(data: any): number {
+  const weight = Number(data?.weight);
+  return Number.isFinite(weight) && weight > 0 ? .72 + Math.min(.28, Math.log2(1 + weight) * .12) : 1;
+}
+
+function domainColor(domain: string, theme: AtlasTheme): string {
+  return domainHex(domain, theme);
+}
+
+const TYPE_COLOR: Record<string, string> = {
+  hub: '#f8fafc',
+  subdomain: '#cbd5e1',
+  DOMAIN: '#f8fafc',
+  CAMPAIGN: '#b9a2e9',
+  ACTION: '#aa94d5',
+  EFFECT: '#c5b5e6',
+  CLAIM: '#9a80ce',
+  TEST: '#d1c4e9',
+  MEMORY: '#8b78b5',
+  CAPABILITY: '#aa95cf',
+  PROVIDER: '#c1b1df',
+  PROJECTION: '#94a3b8',
+  SIDE_QUEST: '#b49edb',
+  FILAMENT: '#c084fc',
+};
+
+function statusColor(status: string): string {
+  const value = status.toUpperCase();
+  if (/CONFLICT|FAILED|BLOCKED|REJECTED|MISSING/.test(value)) return '#ef4444';
+  if (/WATCH|AGING|STALE|DEGRADED|UNKNOWN|UNVERIFIED|INCONCLUSIVE/.test(value)) return '#f59e0b';
+  if (/LIVE|PASS|ACTIVE|RUNNING|APPLIED|PROMOTED|ELIGIBLE|SUCCEEDED/.test(value)) return '#22c55e';
+  return '#94a3b8';
+}
+
+const LEARNING_PALETTE_DARK: Record<string, string[]> = {
+  SCIENTIFIC_LEARNING_PIPELINE: ['#f59e0b', '#f6ad1b', '#e8910a', '#f3b64d'],
+  PROCEDURAL: ['#fbbf24', '#f7c948', '#eab308', '#ffd166'],
+  SEMANTIC: ['#fb923c', '#f97316', '#d97706', '#fdba74'],
+};
+
+const LEARNING_PALETTE_LIGHT: Record<string, string[]> = {
+  SCIENTIFIC_LEARNING_PIPELINE: ['#92400e', '#a16207', '#b45309', '#9a3412'],
+  PROCEDURAL: ['#854d0e', '#a16207', '#713f12', '#ca8a04'],
+  SEMANTIC: ['#9a3412', '#c2410c', '#b45309', '#7c2d12'],
+};
+
+function learningColor(
+  kind: string | null | undefined,
+  learningTheme: string | null | undefined,
+  theme: AtlasTheme,
+): string {
+  const palettes = theme === 'light' ? LEARNING_PALETTE_LIGHT : LEARNING_PALETTE_DARK;
+  const palette = palettes[kind || ''] || palettes.SCIENTIFIC_LEARNING_PIPELINE;
+  const seed = hashNumber(learningTheme || kind || 'learning');
+  return palette[seed % palette.length]!;
+}
+
+function learningDash(kind: string | null | undefined): number[] {
+  if (kind === 'SCIENTIFIC_LEARNING_PIPELINE') return [2, 4];
+  if (kind === 'PROCEDURAL') return [7, 4];
+  if (kind === 'SEMANTIC') return [10, 5];
+  return [2, 4];
+}
+
+function learningWidth(kind: string | null | undefined): number {
+  if (kind === 'SCIENTIFIC_LEARNING_PIPELINE') return 2.15;
+  if (kind === 'PROCEDURAL') return 1.7;
+  if (kind === 'SEMANTIC') return 1.9;
+  return 1.8;
+}
+
+function isAtlasReadback(): boolean {
+  return typeof window !== 'undefined'
+    && atlasRouteParam('readback') === '1';
+}
+
+function isCompactRenderer(container: HTMLElement): boolean {
+  return container.clientWidth <= 640
+    || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true);
+}
+
+function setRendererError(container: HTMLElement, code: string, message: string): void {
+  container.dataset.rendererError = code;
+  container.dataset.g6Ready = container.dataset.g6Ready || 'false';
+  container.dataset.threeReady = container.dataset.threeReady || 'false';
+  let error = container.querySelector<HTMLElement>('.atlas-render-error');
+  if (!error) {
+    error = document.createElement('div');
+    error.className = 'atlas-render-error';
+    container.appendChild(error);
+  }
+  error.dataset.errorCode = code;
+  error.textContent = message;
+}
+
+function clearRendererError(container: HTMLElement): void {
+  delete container.dataset.rendererError;
+  container.querySelector('.atlas-render-error')?.remove();
+}
+
+function getG6SvgOutput(container: HTMLElement): SVGSVGElement | null {
+  return [...container.querySelectorAll<SVGSVGElement>('svg')]
+    .find(svg => svg.querySelector('path') !== null) || null;
+}
+
+function createG6Graph(
+  Graph: new (options: any) => G6Graph,
+  options: any,
+): G6Graph | null {
+  try {
+    return new Graph(options);
+  } catch (error) {
+    const container = options.container as HTMLElement;
+    setRendererError(
+      container,
+      'G6_INIT_FAILED',
+      `O renderer 2D não conseguiu iniciar neste dispositivo. ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return null;
+  }
+}
+
+function stampG6Metrics(
+  container: HTMLElement,
+  data: { nodes: any[]; edges: any[] },
+  model: AtlasMetroModel,
+): void {
+  container.dataset.g6NodeCount = String(data.nodes.length);
+  const learningEdges = data.edges.filter((edge: any) => edge.data?.isLearning);
+  const logicalLearning = model.crossLinks.filter(link => link.isLearning);
+  container.dataset.g6LearningEdges = String(learningEdges.length);
+  container.dataset.g6LearningRecords = String(new Set(
+    logicalLearning.map(link => link.learningRef || link.id),
+  ).size);
+  container.dataset.g6LearningRelations = String(logicalLearning.length);
+  container.dataset.g6ScientificLearningEdges = String(
+    data.edges.filter((edge: any) => edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
+  );
+  container.dataset.g6ProceduralLearningEdges = String(
+    data.edges.filter((edge: any) => edge.data?.learningKind === 'PROCEDURAL').length,
+  );
+  container.dataset.g6SemanticLearningEdges = String(
+    data.edges.filter((edge: any) => edge.data?.learningKind === 'SEMANTIC').length,
+  );
+  container.dataset.g6PeerLearningEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /^PEER-DETECTION-GROUP-/i.test(String(edge.data?.learningRef || ''))
+    ).length,
+  );
+  container.dataset.g6SubdomainLearningEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.isLearning
+      && (/SUBDOMAIN$/.test(String(edge.data?.sourceAnchor || ''))
+        || /SUBDOMAIN$/.test(String(edge.data?.targetAnchor || '')))
+    ).length,
+  );
+  container.dataset.g6PeerSubdomainEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /SUBDOMAIN$/.test(String(edge.data?.targetAnchor || ''))
+    ).length,
+  );
+  container.dataset.g6HubLearningEdges = String(
+    data.edges.filter((edge: any) =>
+      edge.data?.isLearning
+      && (edge.data?.sourceAnchor === 'DOMAIN_HUB' || edge.data?.targetAnchor === 'DOMAIN_HUB')
+    ).length,
+  );
+  const exactEntityLearning = learningEdges.filter((edge: any) =>
+    edge.data?.sourceAnchor === 'EXACT_ENTITY' || edge.data?.targetAnchor === 'EXACT_ENTITY'
+  );
+  container.dataset.g6ExactEntityLearningEdges = String(exactEntityLearning.length);
+  container.dataset.g6DirectExactEntityLearningEdges = String(
+    exactEntityLearning.filter((edge: any) =>
+      (edge.data?.sourceAnchor === 'EXACT_ENTITY' && !edge.data?.sourceCollapsed)
+      || (edge.data?.targetAnchor === 'EXACT_ENTITY' && !edge.data?.targetCollapsed)
+    ).length,
+  );
+  container.dataset.g6CollapsedExactEntityLearningEdges = String(
+    exactEntityLearning.filter((edge: any) =>
+      (edge.data?.sourceAnchor === 'EXACT_ENTITY' && edge.data?.sourceCollapsed)
+      || (edge.data?.targetAnchor === 'EXACT_ENTITY' && edge.data?.targetCollapsed)
+    ).length,
+  );
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+}
+
+function readableToken(value: string, fallback: string): string {
+  const translated = label(value);
+  return translated !== value ? translated : /^[A-Z][A-Z0-9_]*$/.test(value) ? fallback : translated;
+}
+
+function tooltipHtml(
+  node: AtlasMetroNode | undefined,
+  expanded: ReadonlySet<string>,
+  theme: AtlasTheme,
+): string {
+  if (!node) return '';
+  const domain = domainColor(node.domain, theme);
+  const status = statusColor(node.status);
+  const expandable = node.childCount > 0
+    ? `${node.childCount} partes menores · ${expanded.has(node.id) ? 'mostradas' : 'recolhidas'}`
+    : 'sem partes menores';
+  const surface = theme === 'light' ? '#ffffff' : '#09111f';
+  const border = theme === 'light' ? '#cbd5e1' : '#24324a';
+  const text = theme === 'light' ? '#0f172a' : '#dbe7f5';
+  const muted = theme === 'light' ? '#475569' : '#8ea0b8';
+  const quiet = theme === 'light' ? '#64748b' : '#70829b';
+  return `
+    <div style="min-width:235px;padding:10px 11px;background:${surface};border:1px solid ${border};border-radius:10px;box-shadow:0 14px 34px rgba(15,23,42,.18);color:${text};font:12px/1.4 Inter,system-ui,sans-serif">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <span style="width:8px;height:8px;border-radius:999px;background:${domain};box-shadow:0 0 10px ${domain}"></span>
+        <strong style="font-size:13px">${escapeHtml(node.name)}</strong>
+      </div>
+      <div style="color:${muted};margin-bottom:7px">${escapeHtml(node.summary)}</div>
+      <div style="display:flex;gap:9px;color:${quiet};font-size:10px">
+        <span>${escapeHtml(domainLabel(node.domain))}</span>
+        <span>${escapeHtml(readableToken(node.entityType, 'Registro'))}</span>
+        <span style="color:${status}">${escapeHtml(readableToken(node.status, 'Estado em atualização'))}</span>
+        <span>${expandable}</span>
+      </div>
+    </div>`;
+}
+
+function buildG6Data(
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
+  showBeams: boolean,
+  width: number,
+  height: number,
+  compact = false,
+) {
+  const ids = visibleAtlasIds(model, expanded, visibleLayers);
+  const visible = new Set(ids);
+  const positions = metroLayoutPositions(model, ids, width, height);
+
+  const nodes = ids.map(id => {
+    const node = model.nodeMap.get(id)!;
+    const position = positions.get(id) || [width / 2, height / 2];
+    return {
+      id,
+      type: 'donut',
+      data: {
+        ...node,
+        expanded: expanded.has(id),
+      },
+      style: { x: position[0], y: position[1] },
+    };
+  });
+
+  const hierarchyEdges = ids.flatMap(id => {
+    const node = model.nodeMap.get(id);
+    if (!node?.parentId || !visible.has(node.parentId)) return [];
+    return [{
+      id: `hierarchy:${node.parentId}:${id}`,
+      source: node.parentId,
+      target: id,
+      type: 'line',
+      data: { kind: 'hierarchy', domain: node.domain, isLearning: false },
+    }];
+  });
+
+  const bridgeEdges = showBeams
+    ? projectVisualCrossLinks(model, model.crossLinks, visible)
+      .map(link => ({
+        id: link.id,
+        source: link.source,
+        target: link.target,
+        type: 'cubic',
+        data: {
+          kind: 'bridge',
+          label: link.label,
+          weight: link.weight,
+          aggregated: link.aggregated,
+          isLearning: link.isLearning,
+          learningScope: link.learningScope,
+          learningRef: link.learningRef,
+          learningKind: link.learningKind,
+          learningGroup: link.learningGroup,
+          learningTheme: link.learningTheme,
+          learningBasis: link.learningBasis,
+          sourceAnchor: link.sourceAnchor,
+          targetAnchor: link.targetAnchor,
+          bundleIndex: link.bundleIndex,
+          bundleCount: link.bundleCount,
+          visualCount: link.visualCount,
+          visualRefs: link.visualRefs,
+          logicalSource: link.logicalSource,
+          logicalTarget: link.logicalTarget,
+          sourceCollapsed: link.sourceCollapsed,
+          targetCollapsed: link.targetCollapsed,
+        },
+      }))
+    : [];
+
+  return {
+    nodes,
+    edges: [...hierarchyEdges, ...bridgeEdges],
+    positions,
+  };
+}
+
+function graphFocusLevels(model: AtlasMetroModel, visibleIds: string[], focusId: string | null): Map<string, number> {
+  const visible = new Set(visibleIds);
+  return atlasHopDistances(model, focusId, visible);
+}
+
+function applyG6Selection(
+  graph: G6Graph | null,
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  selectedId: string | null,
+  hoveredId: string | null = null,
+  showBeams = true,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
+  allIlluminated = false,
+) {
+  if (!graph) return;
+  const visible = visibleAtlasIds(model, expanded, visibleLayers);
+  const focusId = hoveredId || selectedId;
+  const levels = graphFocusLevels(model, visible, focusId);
+  const states: Record<string, string[]> = {};
+  for (const id of visible) {
+    const level = levels.get(id) ?? 3;
+    states[id] = allIlluminated
+      ? id === selectedId ? ['selected', 'illuminated'] : !focusId ? ['illuminated']
+        : level === 0 ? ['lit-focus-active'] : level === 1 ? ['lit-focus-neighbor']
+          : level === 2 ? ['lit-focus-related'] : ['lit-focus-muted']
+      : id === selectedId ? ['selected'] : level === 0 ? ['focus-active']
+        : level === 1 ? ['focus-neighbor'] : level === 2 ? ['focus-related'] : focusId ? ['focus-muted'] : [];
+  }
+  for (const id of visible) {
+    const node = model.nodeMap.get(id);
+    if (node?.parentId && visible.includes(node.parentId)) {
+      const a = levels.get(node.parentId) ?? 3, b = levels.get(id) ?? 3;
+      states['hierarchy:' + node.parentId + ':' + id] = allIlluminated
+        ? !focusId ? ['edge-illuminated'] : Math.max(a, b) <= 1 ? ['lit-edge-active']
+          : Math.max(a, b) === 2 ? ['lit-edge-related'] : ['lit-edge-muted']
+        : !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
+          : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
+    }
+  }
+  if (showBeams) for (const link of projectVisualCrossLinks(model, model.crossLinks, new Set(visible))) {
+    const a = levels.get(link.source) ?? 3, b = levels.get(link.target) ?? 3;
+    states[link.id] = allIlluminated
+      ? !focusId ? ['edge-illuminated'] : Math.max(a, b) <= 1 ? ['lit-edge-active']
+        : Math.max(a, b) === 2 ? ['lit-edge-related'] : ['lit-edge-muted']
+      : !focusId ? [] : Math.max(a, b) <= 1 ? ['edge-active']
+        : Math.max(a, b) === 2 ? ['edge-related'] : ['edge-muted'];
+  }
+  void graph.setElementState(states, false);
+}
+
+function countDomLabelCollisions(layer: HTMLElement): number {
+  const labels = [...layer.querySelectorAll<HTMLElement>('.atlas-screen-label')];
+  let collisions = 0;
+  for (let left = 0; left < labels.length; left += 1) {
+    const a = labels[left]!.getBoundingClientRect();
+    for (let right = left + 1; right < labels.length; right += 1) {
+      const b = labels[right]!.getBoundingClientRect();
+      const separated = a.right + 1 <= b.left
+        || a.left >= b.right + 1
+        || a.bottom + 1 <= b.top
+        || a.top >= b.bottom + 1;
+      if (!separated) collisions += 1;
+    }
+  }
+  return collisions;
+}
+
+function renderScreenLabels(
+  graph: G6Graph,
+  container: HTMLElement,
+  labelLayer: HTMLElement,
+  leaderLayer: SVGSVGElement,
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
+  selectedId: string | null,
+  hoveredId: string | null,
+  theme: AtlasTheme,
+) {
+  const rect = container.getBoundingClientRect();
+  const ids = visibleAtlasIds(model, expanded, visibleLayers);
+  const canvasPositions = metroLayoutPositions(model, ids, rect.width, rect.height);
+  const screenPositions = new Map<string, [number, number]>();
+
+  for (const id of ids) {
+    const position = canvasPositions.get(id);
+    if (!position) continue;
+    const viewport = graph.getViewportByCanvas(position);
+    screenPositions.set(id, [viewport[0], viewport[1]]);
+  }
+
+  const zoom = graph.getZoom();
+  const focusId = hoveredId || selectedId;
+  const levels = graphFocusLevels(model, ids, focusId);
+  const focusedIds = new Set([...levels].filter(([, level]) => level <= 1).map(([id]) => id));
+  const layout = buildMetroScreenLabelLayout(
+    model, ids, screenPositions, rect.width, rect.height, zoom, selectedId, hoveredId, focusedIds,
+  );
+
+  leaderLayer.innerHTML = [...layout.byId.values()]
+    .filter(spec => spec.visible && spec.leader)
+    .map(spec => {
+      const node = model.nodeMap.get(spec.id);
+      const color = domainColor(node?.domain || '', theme);
+      const leader = spec.leader!;
+      return `<line x1="${leader.x1.toFixed(1)}" y1="${leader.y1.toFixed(1)}" x2="${leader.x2.toFixed(1)}" y2="${leader.y2.toFixed(1)}" stroke="${color}" stroke-opacity=".42" stroke-width="1" vector-effect="non-scaling-stroke" />`;
+    })
+    .join('');
+
+  const renderedLabels = [...layout.byId.values()]
+    .filter(spec => spec.visible)
+    .map(spec => {
+      const node = model.nodeMap.get(spec.id)!;
+      const color = domainColor(node.domain, theme);
+      const stateClass = spec.id === selectedId ? ' selected' : spec.id === hoveredId ? ' hovered' : '';
+      const typeClass = node.entityType === 'hub' ? ' hub' : node.entityType === 'subdomain' ? ' subdomain' : ' leaf';
+      return `<div class="atlas-screen-label${stateClass}${typeClass}" data-node-id="${escapeHtml(spec.id)}" title="${escapeHtml(node.name)}" style="left:${spec.left.toFixed(1)}px;top:${spec.top.toFixed(1)}px;width:${spec.width.toFixed(1)}px;height:${spec.height.toFixed(1)}px;--label-domain:${color};font-size:${spec.fontSize}px"><span>${escapeHtml(node.name)}</span></div>`;
+    })
+    .join('');
+  const densityNote = layout.hidden > 0
+    ? `<div class="atlas-label-density-note" data-hidden-labels="${layout.hidden}">+${layout.hidden} nomes sob demanda · aproxime para revelar</div>`
+    : '';
+  labelLayer.innerHTML = renderedLabels + densityNote;
+
+  container.dataset.g6LabelVisible = String(layout.visible);
+  container.dataset.g6LabelHidden = String(layout.hidden);
+  container.dataset.g6LabelCollisions = String(layout.collisions);
+  container.dataset.g6MaxSiblings = String(layout.maxSiblings);
+  container.dataset.g6LabelZoom = zoom.toFixed(3);
+  container.dataset.g6LabelPolicy = 'viewport-adaptive-v2';
+
+  if (isAtlasReadback()) {
+    // CI dump-dom can snapshot immediately after virtual time expires; publish
+    // diagnostic attributes synchronously so the production gate sees the same
+    // DOM that was just laid out.
+    container.dataset.g6LabelDomCollisions = String(countDomLabelCollisions(labelLayer));
+    container.dataset.g6LabelUiOverlaps = String(layout.uiZoneViolations);
+  } else {
+    container.dataset.g6LabelDomCollisions = 'runtime-skip';
+    container.dataset.g6LabelUiOverlaps = String(layout.uiZoneViolations);
+  }
+}
+
+function Metro2DView({
+  model,
+  expanded,
+  visibleLayers,
+  selectedId,
+  showBeams,
+  fitNonce,
+  onActivate,
+  onReady,
+  theme,
+  allIlluminated,
+}: Omit<Props, 'viewMode'>) {
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const labelLayerRef = useRef<HTMLDivElement | null>(null);
+  const leaderLayerRef = useRef<SVGSVGElement | null>(null);
+  const graphRef = useRef<G6Graph | null>(null);
+  const modelRef = useRef(model);
+  const expandedRef = useRef(expanded);
+  const selectedRef = useRef(selectedId);
+  const hoveredRef = useRef<string | null>(null);
+  const activateRef = useRef(onActivate);
+  const showBeamsRef = useRef(showBeams);
+  const visibleLayersRef = useRef(visibleLayers);
+  const illuminatedRef = useRef(allIlluminated);
+  const lastFitNonce = useRef(-1);
+  const initializedRef = useRef(false);
+  const lastStructureKeyRef = useRef('');
+  const onReadyRef = useRef(onReady);
+  const renderLabelsRef = useRef<() => void>(() => {});
+  const refreshRef = useRef<(fit: boolean) => Promise<void>>(async () => {});
+
+  modelRef.current = model;
+  expandedRef.current = expanded;
+  selectedRef.current = selectedId;
+  activateRef.current = onActivate;
+  showBeamsRef.current = showBeams;
+  visibleLayersRef.current = visibleLayers;
+  illuminatedRef.current = allIlluminated;
+  onReadyRef.current = onReady;
+
+  useEffect(() => {
+    const surface = surfaceRef.current;
+    const container = containerRef.current;
+    const labelLayer = labelLayerRef.current;
+    const leaderLayer = leaderLayerRef.current;
+    // ensureAtlasG6 publishes the npm-module namespace here before the Metro
+    // mounts, so G6 and @antv/g-svg share their @antv/g-lite runtime.
+    const Graph = window.G6?.Graph;
+    if (!surface || !container || !labelLayer || !leaderLayer || !Graph) {
+      if (container) {
+        container.dataset.g6Ready = 'false';
+        setRendererError(container, 'G6_MISSING', 'G6 não carregou. O Atlas mantém os dados, mas o renderer 2D ficou indisponível.');
+      }
+      return;
+    }
+
+    const initialRect = surface.getBoundingClientRect();
+    container.dataset.g6ViewportWidth = Math.round(initialRect.width).toString();
+    container.dataset.g6ViewportHeight = Math.round(initialRect.height).toString();
+    if (initialRect.width < 2 || initialRect.height < 2) {
+      container.dataset.g6Ready = 'false';
+      setRendererError(container, 'G6_ZERO_VIEWPORT', 'O Atlas recebeu uma área de desenho inválida. Reoriente a tela ou recarregue a página.');
+      return;
+    }
+
+    const compact = isCompactRenderer(container);
+    container.dataset.g6Profile = compact ? 'compact-touch' : 'desktop';
+    container.dataset.g6Theme = theme;
+    container.dataset.g6Renderer = 'svg';
+    const graph = createG6Graph(Graph, {
+      container,
+      renderer: () => new G6SvgRenderer(),
+      theme,
+      data: { nodes: [], edges: [] },
+      padding: compact ? [142, 22, 50, 22] : [86, 76, 76, 76],
+      zoomRange: [0.30, 3.2],
+      // SVG elements can be replaced during filtering; avoid deferred lifecycle callbacks.
+      animation: false,
+      behaviors: ['drag-canvas', 'zoom-canvas'],
+      node: {
+        type: 'donut',
+        animation: false,
+        style: {
+          size: (datum: any) => metroNodeSize(datum.data),
+          donuts: (datum: any) => [Math.max(8, Math.min(92, datum.data.mix || 50)), 100 - Math.max(8, Math.min(92, datum.data.mix || 50))],
+          donutPalette: (datum: any) => [
+            TYPE_COLOR[String(datum.data.entityType)] || (theme === 'light' ? '#334155' : '#94a3b8'),
+            domainColor(String(datum.data.domain), theme),
+          ],
+          innerR: (datum: any) => datum.data.entityType === 'hub' ? '58%' : '63%',
+          fill: 'transparent',
+          stroke: (datum: any) => statusColor(String(datum.data.status || '')),
+          lineWidth: (datum: any) => datum.data.entityType === 'hub' ? 3.6 : datum.data.entityType === 'subdomain' ? 2.5 : 2,
+          shadowColor: (datum: any) => domainColor(String(datum.data.domain), theme),
+          shadowBlur: (datum: any) => datum.data.entityType === 'hub' ? 9 : datum.data.entityType === 'subdomain' ? 3 : 1,
+          labelText: '',
+          cursor: 'pointer',
+        },
+        state: {
+          hover: {
+            lineWidth: 4,
+            halo: true,
+            haloStroke: '#e2e8f0',
+            haloStrokeOpacity: .24,
+            haloLineWidth: 8,
+          },
+          selected: {
+            lineWidth: 4,
+            halo: true,
+            haloStroke: '#ffffff',
+            haloStrokeOpacity: .30,
+            haloLineWidth: 10,
+          },
+          'focus-active': { opacity: 1 },
+          'focus-neighbor': { opacity: .96 },
+          'focus-related': { opacity: .48 },
+          'focus-muted': { opacity: .10 },
+          illuminated: { opacity: 1, shadowBlur: 13, shadowColor: '#8b5cf6' },
+          'lit-focus-active': { opacity: 1, shadowBlur: 16, shadowColor: '#a78bfa' },
+          'lit-focus-neighbor': { opacity: .98, shadowBlur: 12, shadowColor: '#8b5cf6' },
+          'lit-focus-related': { opacity: .84, shadowBlur: 9, shadowColor: '#8b5cf6' },
+          'lit-focus-muted': { opacity: .78, shadowBlur: 7, shadowColor: '#7c3aed' },
+        },
+      },
+      edge: {
+        animation: false,
+        state: {
+          'edge-active': { opacity: .92, lineWidth: 2.8 },
+          'edge-related': { opacity: .32, lineWidth: 1.4 },
+          'edge-muted': { opacity: .035, lineWidth: .7 },
+          'edge-illuminated': { opacity: .62, lineWidth: 1.45 },
+          'lit-edge-active': { opacity: 1, lineWidth: 3.2 },
+          'lit-edge-related': { opacity: .76, lineWidth: 2.2 },
+          'lit-edge-muted': { opacity: .40, lineWidth: 1.2 },
+        },
+        style: {
+          stroke: (datum: any) => datum.data?.isLearning
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme, theme)
+            : datum.data?.kind === 'bridge'
+              ? (theme === 'light' ? '#64748b' : '#91a4bd')
+              : domainColor(String(datum.data?.domain), theme),
+          lineWidth: (datum: any) => datum.data?.isLearning
+            ? (learningWidth(datum.data?.learningKind) + Math.min(2.1, Math.log2(Math.max(1, Number(datum.data?.visualCount || 1))) * .55)) * relationStrength(datum.data)
+            : (datum.data?.kind === 'bridge' ? 1.05 : 2.25) * relationStrength(datum.data),
+          opacity: (datum: any) => datum.data?.isLearning
+            ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? .38 : .30) * relationStrength(datum.data)
+            : (datum.data?.kind === 'bridge' ? .12 : .25) * relationStrength(datum.data),
+          lineDash: (datum: any) => datum.data?.isLearning
+            ? learningDash(datum.data?.learningKind)
+            : datum.data?.kind === 'bridge' ? [5, 6] : [],
+          shadowColor: (datum: any) => datum.data?.isLearning
+            ? learningColor(datum.data?.learningKind, datum.data?.learningTheme, theme)
+            : 'transparent',
+          shadowBlur: (datum: any) => datum.data?.isLearning
+            ? (datum.data?.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE' ? 11 : 7)
+            : 0,
+          curveOffset: (datum: any) => {
+            if (!datum.data?.isLearning && Number(datum.data?.bundleCount || 1) <= 1) return 0;
+            const count = Math.max(1, Number(datum.data?.bundleCount || 1));
+            const index = Number(datum.data?.bundleIndex || 0);
+            const centered = index - (count - 1) / 2;
+            return centered * 18;
+          },
+          curvePosition: .5,
+          endArrow: false,
+        },
+      },
+      plugins: compact ? [] : [
+        {
+          type: 'tooltip',
+          trigger: 'hover',
+          enable: (event: any) => event.targetType === 'node',
+          getContent: (_event: any, items: any[]) => {
+            const id = items?.[0]?.id || items?.[0]?.data?.id;
+            return tooltipHtml(modelRef.current.nodeMap.get(id), expandedRef.current, theme);
+          },
+          offset: [12, 12],
+        },
+        {
+          key: 'minimap',
+          type: 'minimap',
+          size: [176, 108],
+          // The G6 minimap creates a second canvas renderer by default. Give it
+          // the same SVG backend so the complete 2D surface stays vector-native.
+          renderer: new G6SvgRenderer(),
+        },
+      ],
+    });
+    if (!graph) return;
+    clearRendererError(container);
+
+    graphRef.current = graph;
+    // Set on unmount/theme change: frames and renders queued before that must
+    // not touch the destroyed G6 graph (it throws getData/getViewportByCanvas).
+    let disposed = false;
+
+    const scheduleLabels = () => {
+      cancelAnimationFrame((scheduleLabels as any).frame || 0);
+      (scheduleLabels as any).frame = requestAnimationFrame(() => {
+        if (disposed) return;
+        renderScreenLabels(
+          graph,
+          container,
+          labelLayer,
+          leaderLayer,
+          modelRef.current,
+          expandedRef.current,
+          visibleLayersRef.current,
+          selectedRef.current,
+          hoveredRef.current,
+          theme,
+        );
+      });
+    };
+    renderLabelsRef.current = scheduleLabels;
+
+    graph.on('node:pointerenter', event => {
+      const id = event.target?.id;
+      if (!id) return;
+      hoveredRef.current = id;
+      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, id, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
+      scheduleLabels();
+    });
+
+    graph.on('node:pointerleave', event => {
+      const id = event.target?.id;
+      if (!id) return;
+      hoveredRef.current = null;
+      applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, null, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
+      scheduleLabels();
+    });
+
+    graph.on('node:click', event => {
+      const id = event.target?.id;
+      if (id && modelRef.current.nodeMap.has(id)) activateRef.current(id);
+    });
+
+    graph.on('aftertransform', scheduleLabels);
+    graph.on('afterrender', () => {
+      scheduleLabels();
+      // G6 can complete a real SVG render in headless Chromium while the
+      // render() promise remains unsettled. Readiness belongs to the renderer
+      // event + materialized vector paths, not to that promise implementation detail.
+      requestAnimationFrame(() => {
+        if (graphRef.current !== graph) return;
+        const svg = getG6SvgOutput(container);
+        const ready = Boolean(svg);
+        container.dataset.g6Ready = ready ? 'true' : 'false';
+        if (!ready) return;
+        svg!.dataset.towerSvgNative = 'metro2d';
+        svg!.dataset.ready = 'true';
+        container.dataset.g6SvgPathCount = String(svg!.querySelectorAll('path').length);
+        clearRendererError(container);
+        onReadyRef.current?.();
+      });
+    });
+
+    let refreshSequence = 0;
+    const refresh = async (fit: boolean) => {
+      if (disposed) return;
+      const sequence = ++refreshSequence;
+      const rect = container.getBoundingClientRect();
+      container.dataset.g6Ready = 'false';
+      const data = buildG6Data(
+        modelRef.current,
+        expandedRef.current,
+        visibleLayersRef.current,
+        showBeamsRef.current,
+        rect.width,
+        rect.height,
+        compact,
+      );
+      graph.setData({ nodes: data.nodes, edges: data.edges });
+      stampG6Metrics(container, data, modelRef.current);
+      container.dataset.g6ViewportWidth = Math.round(rect.width).toString();
+      container.dataset.g6ViewportHeight = Math.round(rect.height).toString();
+
+      try {
+        const renderTask = Promise.resolve(graph.render()).then(() => 'resolved' as const);
+        const renderTimeoutMs = isAtlasReadback() ? 450 : compact ? 900 : 1200;
+        const renderOutcome = await Promise.race([
+          renderTask,
+          new Promise<'timeout'>(resolve => window.setTimeout(() => resolve('timeout'), renderTimeoutMs)),
+        ]);
+        if (sequence !== refreshSequence) return;
+        const svg = getG6SvgOutput(container);
+        const svgReady = Boolean(svg);
+        if (renderOutcome === 'timeout' && !svgReady) {
+          throw new Error('G6 render timeout sem SVG vetorial materializado');
+        }
+        if (!svgReady) {
+          throw new Error('G6 render sem SVG vetorial materializado');
+        }
+        svg!.dataset.towerSvgNative = 'metro2d';
+        svg!.dataset.ready = 'true';
+        container.dataset.g6SvgPathCount = String(svg!.querySelectorAll('path').length);
+        container.dataset.g6Ready = 'true';
+
+        applyG6Selection(graph, modelRef.current, expandedRef.current, selectedRef.current, hoveredRef.current, showBeamsRef.current, visibleLayersRef.current, illuminatedRef.current);
+
+        // Renderer readiness is a vector-output concern, not an animation concern. A
+        // stalled fit transition on touch/Safari must never keep the whole Atlas
+        // in a perpetual loading state after G6 has already drawn successfully.
+        const currentSvg = getG6SvgOutput(container);
+        container.dataset.g6Ready = currentSvg ? 'true' : 'false';
+        if (container.dataset.g6Ready === 'true') {
+          currentSvg!.dataset.towerSvgNative = 'metro2d';
+          currentSvg!.dataset.ready = 'true';
+          container.dataset.g6SvgPathCount = String(currentSvg!.querySelectorAll('path').length);
+          clearRendererError(container);
+          onReadyRef.current?.();
+        }
+
+        if (fit) {
+          const fitDuration = isAtlasReadback() ? 0 : compact ? 180 : 320;
+          const fitTask = Promise.resolve(graph.fitView(
+            { when: 'always', direction: 'both' },
+            { duration: fitDuration, easing: 'ease-out' },
+          ));
+          const fitTimeout = new Promise<void>(resolve => window.setTimeout(resolve, compact ? 700 : 1000));
+          await Promise.race([fitTask, fitTimeout]);
+          if (sequence !== refreshSequence) return;
+        }
+
+        scheduleLabels();
+      } catch (error) {
+        if (sequence !== refreshSequence) return;
+        container.dataset.g6Ready = 'false';
+        setRendererError(
+          container,
+          'G6_RENDER_FAILED',
+          `O renderer 2D falhou ao desenhar. ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    };
+    refreshRef.current = refresh;
+
+    let frame = 0;
+    let lastWidth = Math.round(surface.clientWidth);
+    let lastHeight = Math.round(surface.clientHeight);
+    const resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const width = Math.round(surface.clientWidth);
+        const height = Math.round(surface.clientHeight);
+        if (Math.abs(width - lastWidth) < 4 && Math.abs(height - lastHeight) < 4) return;
+        lastWidth = width;
+        lastHeight = height;
+        graph.resize?.();
+        void refresh(false);
+      });
+    });
+    void refresh(true).then(() => {
+      if (graphRef.current !== graph) return;
+      initializedRef.current = true;
+      lastStructureKeyRef.current = [
+        modelRef.current.revision,
+        [...expandedRef.current].sort().join('|'),
+        [...visibleLayersRef.current].sort().join('|'),
+      ].join('::');
+      resizeObserver.observe(surface);
+    });
+
+    return () => {
+      disposed = true;
+      refreshSequence += 1; // pending renders see a stale sequence and stop
+      initializedRef.current = false;
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame((scheduleLabels as any).frame || 0);
+      resizeObserver.disconnect();
+      refreshRef.current = async () => {};
+      // G6 5.1.1 unbinds the minimap but leaves its delayed callbacks queued.
+      // Cancel them before its context is destroyed during rapid mode changes.
+      const minimap = graph.getPluginInstance?.('minimap');
+      minimap?.onRender?.cancel?.();
+      minimap?.onTransform?.cancel?.();
+      // AntV's debounce has no cancel method; the queued callback dispatches
+      // these methods at execution time, so detach their work on this instance.
+      if (minimap) {
+        minimap.renderMinimap = () => {};
+        minimap.renderMask = () => {};
+      }
+      graph.destroy?.();
+      graphRef.current = null;
+      renderLabelsRef.current = () => {};
+    };
+  }, [theme]);
+
+  const expansionKey = useMemo(() => [...expanded].sort().join('|'), [expanded]);
+
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    const layerKey = [...visibleLayers].sort().join('|');
+    const structureKey = [model.revision, expansionKey, layerKey].join('::');
+    const fit = structureKey !== lastStructureKeyRef.current;
+    lastStructureKeyRef.current = structureKey;
+    void refreshRef.current(fit);
+  }, [model.revision, expansionKey, visibleLayers, showBeams, theme]);
+
+  useEffect(() => {
+    const graph = graphRef.current;
+    const container = containerRef.current;
+    if (!graph || !container || lastFitNonce.current === fitNonce) return;
+    lastFitNonce.current = fitNonce;
+    void Promise.resolve(graph.fitView(
+      { when: 'always', direction: 'both' },
+      { duration: isCompactRenderer(container) ? 160 : 280, easing: 'ease-in-out' },
+    )).then(() => renderLabelsRef.current());
+  }, [fitNonce]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container?.dataset.g6Ready !== 'true') return;
+    applyG6Selection(graphRef.current, model, expanded, selectedId, hoveredRef.current, showBeams, visibleLayers, allIlluminated);
+    renderLabelsRef.current();
+  }, [selectedId, model.revision, expansionKey, visibleLayers, showBeams, allIlluminated]);
+
+  return (
+    <div ref={surfaceRef} className="atlas-metro-surface" data-atlas-theme={theme} data-testid="atlas-metro-2d" data-illuminated={allIlluminated}>
+      <div ref={containerRef} id="atlas-metro-g6" className="atlas-g6-canvas" />
+      <svg ref={leaderLayerRef} className="atlas-label-leaders" aria-hidden="true" />
+      <div ref={labelLayerRef} className="atlas-label-overlay" aria-hidden="true" />
+    </div>
+  );
+}
+
+type SynapsePulse = {
+  particle: THREE.Group;
+  curve: THREE.Curve<THREE.Vector3>;
+  phase: number;
+  speed: number;
+  sourceId: string;
+  targetId: string;
+  core: THREE.Mesh;
+  glow: THREE.Mesh;
+  baseCoreOpacity: number;
+  baseGlowOpacity: number;
+};
+
+type ThreeRuntime = {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  renderer: SVGRenderer;
+  controls: OrbitControls;
+  content: THREE.Group | null;
+  raycaster: THREE.Raycaster;
+  pointer: THREE.Vector2;
+  interactive: THREE.Object3D[];
+  nodeGroups: Map<string, THREE.Group>;
+  worldPositions: Map<string, THREE.Vector3>;
+  hoveredId: string | null;
+  pointerDown: { x: number; y: number; button: number } | null;
+  frame: number;
+  hasFit: boolean;
+  pulses: SynapsePulse[];
+  billboards: SvgBillboard[];
+  focusModel: AtlasMetroModel | null;
+  visibleIds: string[];
+  zoomedLabels: boolean;
+  illuminated: boolean;
+};
+
+type SvgBillboard = SVGObject & {
+  inner: SVGGElement;
+  material: { opacity: number; depthTest: boolean };
+  userData: Record<string, unknown>;
+};
+
+function disposeThreeObject(root: THREE.Object3D) {
+  root.traverse(object => {
+    const mesh = object as THREE.Mesh;
+    mesh.geometry?.dispose?.();
+    const material = (mesh as any).material;
+    if (!material) return;
+    const materials = Array.isArray(material) ? material : [material];
+    for (const item of materials) {
+      if (item.map && item.map.userData?.atlasSharedTexture !== true) item.map.dispose?.();
+      item.dispose?.();
+    }
+  });
+}
+
+function hashNumber(value: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createOrganicGeometry(radius: number, seedKey: string, detail = 3): THREE.IcosahedronGeometry {
+  const geometry = new THREE.IcosahedronGeometry(radius, detail);
+  const position = geometry.getAttribute('position') as THREE.BufferAttribute;
+  const seed = (hashNumber(seedKey) % 10000) / 1000;
+  const vertex = new THREE.Vector3();
+
+  for (let index = 0; index < position.count; index += 1) {
+    vertex.fromBufferAttribute(position, index);
+    const normal = vertex.clone().normalize();
+    const waveA = Math.sin(normal.x * 7.1 + normal.y * 4.7 + seed);
+    const waveB = Math.cos(normal.z * 8.3 - normal.x * 3.9 + seed * .73);
+    const waveC = Math.sin((normal.x + normal.y - normal.z) * 5.2 + seed * 1.31);
+    const scale = 1 + waveA * .032 + waveB * .024 + waveC * .018;
+    vertex.multiplyScalar(scale);
+    position.setXYZ(index, vertex.x, vertex.y, vertex.z);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+let vectorBillboardSequence = 0;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgElement<T extends SVGElement>(name: string): T {
+  return document.createElementNS(SVG_NS, name) as T;
+}
+
+function makeBillboard(): SvgBillboard {
+  const root = svgElement<SVGGElement>('g');
+  const inner = svgElement<SVGGElement>('g');
+  root.appendChild(inner);
+  const object = new SVGObject(root) as SvgBillboard;
+  object.inner = inner;
+  object.material = { opacity: 1, depthTest: true };
+  object.userData = {};
+  return object;
+}
+
+function createGlowSprite(
+  colorValue: string | number,
+  diameter: number,
+  opacity: number,
+  theme: AtlasTheme = 'dark',
+): SvgBillboard {
+  const billboard = makeBillboard();
+  const defs = svgElement<SVGDefsElement>('defs');
+  const gradient = svgElement<SVGRadialGradientElement>('radialGradient');
+  const id = `atlas-glow-${vectorBillboardSequence++}`;
+  gradient.id = id;
+  gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+  gradient.setAttribute('cx', '0'); gradient.setAttribute('cy', '0'); gradient.setAttribute('r', '.5');
+  const color = new THREE.Color(colorValue).getStyle();
+  const stops = theme === 'light'
+    ? [[0, 'rgba(255,255,255,.78)', opacity], [.22, color, opacity * .8], [.62, color, opacity * .2], [1, color, 0]] as const
+    : [[0, 'rgba(255,255,255,.88)', opacity], [.2, color, opacity * .62], [.48, color, opacity * .21], [1, color, 0]] as const;
+  for (const [offset, stopColor, stopOpacity] of stops) {
+    const stop = svgElement<SVGStopElement>('stop');
+    stop.setAttribute('offset', String(offset));stop.setAttribute('stop-color', stopColor);stop.setAttribute('stop-opacity', String(stopOpacity));
+    gradient.appendChild(stop);
+  }
+  defs.appendChild(gradient);billboard.inner.appendChild(defs);
+  const circle = svgElement<SVGCircleElement>('circle');
+  circle.setAttribute('cx', '0');circle.setAttribute('cy', '0');circle.setAttribute('r', '.5');circle.setAttribute('fill', `url(#${id})`);
+  billboard.inner.appendChild(circle);
+  billboard.scale.set(diameter, diameter, 1);
+  billboard.material.opacity = opacity;
+  billboard.userData.baseOpacity = opacity;
+  billboard.userData.baseScale = diameter;
+  return billboard;
+}
+
+function synapseCurve(
+  source: THREE.Vector3,
+  target: THREE.Vector3,
+  key: string,
+  bridge: boolean,
+  learning = false,
+  bundleIndex = 0,
+  bundleCount = 1,
+): THREE.QuadraticBezierCurve3 {
+  const midpoint = source.clone().add(target).multiplyScalar(.5);
+  const direction = target.clone().sub(source);
+  const span = Math.max(1, direction.length());
+  direction.normalize();
+
+  const reference = Math.abs(direction.y) < .88
+    ? new THREE.Vector3(0, 1, 0)
+    : new THREE.Vector3(1, 0, 0);
+  const perpendicular = direction.clone().cross(reference).normalize();
+  const secondary = direction.clone().cross(perpendicular).normalize();
+  const seed = hashNumber(key);
+  const sign = seed % 2 === 0 ? 1 : -1;
+
+  if (learning && bundleCount > 1) {
+    const centered = bundleIndex - (bundleCount - 1) / 2;
+    const fan = centered / Math.max(1, (bundleCount - 1) / 2);
+    const lateral = Math.min(210, Math.max(64, span * .22));
+    const twist = Math.min(145, Math.max(38, span * .13));
+    midpoint.addScaledVector(perpendicular, lateral * fan);
+    midpoint.addScaledVector(secondary, twist * Math.sin((bundleIndex + 1) * 1.37));
+    midpoint.y += ((seed % 7) - 3) * 3.2;
+  } else {
+    const bundled = bridge && bundleCount > 1;
+    const bend = bundled ? Math.min(48, span * .09) : bridge ? 0 : Math.min(18, span * .035);
+    const vertical = bridge && !bundled ? 0 : ((seed % 9) - 4) * (bridge ? 1.5 : 1.2);
+    midpoint.addScaledVector(perpendicular, bend * (bundled ? bundleIndex - (bundleCount - 1) / 2 : sign));
+    midpoint.y += vertical;
+    if (bundled) midpoint.addScaledVector(secondary, Math.min(54, 14 + span * .045) * (seed % 3 === 0 ? -1 : 1));
+  }
+
+  return new THREE.QuadraticBezierCurve3(source, midpoint, target);
+}
+
+function addSynapse(
+  runtime: ThreeRuntime,
+  content: THREE.Group,
+  source: THREE.Vector3,
+  target: THREE.Vector3,
+  colorValue: string | number,
+  key: string,
+  bridge: boolean,
+  strength = 1,
+  learning = false,
+  bundleIndex = 0,
+  bundleCount = 1,
+  compact = false,
+  theme: AtlasTheme = 'dark',
+  sourceId = '',
+  targetId = '',
+) {
+  const curve = synapseCurve(source, target, key, bridge, learning, bundleIndex, bundleCount);
+  const span = source.distanceTo(target);
+  const segments = compact
+    ? Math.max(12, Math.min(30, Math.round(span / 11)))
+    : Math.max(18, Math.min(52, Math.round(span / 7)));
+  const radialSegments = compact ? 4 : 5;
+  const color = new THREE.Color(colorValue);
+  const edgeStrength = .72 + Math.min(.28, Math.log2(1 + Math.max(0, strength)) * .12);
+  const coreRadius = (learning ? .46 : bridge ? .34 : .48) * Math.max(.72, Math.min(1.45, strength));
+  const glowRadius = coreRadius * (learning ? 4.8 : 3.2);
+
+  const glow = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, segments, glowRadius, radialSegments, false),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: (learning ? (compact ? .16 : .20) : bridge ? (compact ? .075 : .055) : (compact ? .11 : .085)) * edgeStrength,
+      depthWrite: false,
+      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+    }),
+  );
+  glow.renderOrder = 2;
+  content.add(glow);
+
+  const core = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, segments, coreRadius, radialSegments, false),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: (learning ? (compact ? .42 : .36) : bridge ? (compact ? .16 : .12) : (compact ? .28 : .22)) * edgeStrength,
+      depthWrite: false,
+      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+    }),
+  );
+  core.renderOrder = 3;
+  content.add(core);
+
+  const particle = new THREE.Group();
+  const pulseCore = new THREE.Mesh(
+    new THREE.SphereGeometry(learning ? 1.8 : bridge ? 1.15 : 1.45, compact ? 8 : 10, compact ? 6 : 8),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: learning && compact ? .42 : .48,
+      depthWrite: false,
+      blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+    }),
+  );
+  particle.add(pulseCore);
+  const pulseGlow = createGlowSprite(
+    colorValue,
+    learning ? 18 : bridge ? 10 : 12,
+    learning ? (compact ? .32 : .30) : bridge ? (compact ? .18 : .14) : (compact ? .22 : .18),
+    theme,
+  );
+  pulseGlow.material.depthTest = false;
+  particle.add(pulseGlow);
+
+  const seed = hashNumber(key);
+  const phase = (seed % 1000) / 1000;
+  particle.position.copy(curve.getPointAt(phase));
+  content.add(particle);
+  runtime.pulses.push({
+    particle, curve, phase, sourceId, targetId,
+    core, glow,
+    baseCoreOpacity: (core.material as THREE.MeshBasicMaterial).opacity,
+    baseGlowOpacity: (glow.material as THREE.MeshBasicMaterial).opacity,
+    speed: learning ? .000072 + (seed % 7) * .000005
+      : bridge ? .000022 + (seed % 7) * .000002 : .000034 + (seed % 9) * .0000025,
+  });
+}
+
+function updateSynapsePulses(runtime: ThreeRuntime, now: number) {
+  for (const pulse of runtime.pulses) {
+    const t = (pulse.phase + now * pulse.speed) % 1;
+    pulse.particle.position.copy(pulse.curve.getPointAt(t));
+    const breathe = .84 + Math.sin((t + pulse.phase) * Math.PI * 2) * .16;
+    pulse.particle.scale.setScalar(breathe);
+  }
+}
+
+function createLabelSprite(
+  text: string,
+  domainColor: string,
+  isHub: boolean,
+  compact = false,
+  theme: AtlasTheme = 'dark',
+): SvgBillboard {
+  const sprite = makeBillboard();
+  sprite.renderOrder = 20;
+  const compactScale = compact ? 1.18 : 1;
+  const width = (isHub ? 118 : 90) * compactScale;
+  const height = (isHub ? 30 : 23) * compactScale;
+  const background = svgElement<SVGRectElement>('rect');
+  background.setAttribute('x', String(-width / 2));background.setAttribute('y', String(-height / 2));
+  background.setAttribute('width', String(width));background.setAttribute('height', String(height));
+  background.setAttribute('rx', String(height * .3));
+  background.setAttribute('fill', theme === 'light' ? 'rgba(255,255,255,.95)' : 'rgba(7,11,20,.90)');
+  background.setAttribute('stroke', domainColor);background.setAttribute('stroke-width', String(isHub ? 1.25 : .75));
+  sprite.inner.appendChild(background);
+  const label = svgElement<SVGTextElement>('text');
+  label.textContent = text.length > 28 ? `${text.slice(0, 27)}…` : text;
+  label.setAttribute('x', '0');label.setAttribute('y', '0');label.setAttribute('text-anchor', 'middle');
+  label.setAttribute('dominant-baseline', 'middle');label.setAttribute('fill', theme === 'light' ? '#0f172a' : '#e5edf8');
+  label.setAttribute('font-family', 'Inter, Arial, sans-serif');label.setAttribute('font-size', String(isHub ? 8 : 6.5));
+  label.setAttribute('font-weight', String(isHub ? 800 : 650));
+  sprite.inner.appendChild(label);
+  sprite.scale.set(1, 1, 1);
+  sprite.userData.baseScale = compactScale;
+  return sprite;
+}
+
+function nodeRadius3D(node: AtlasMetroNode): number {
+  const base = node.entityType === 'hub' ? 15 : node.entityType === 'subdomain' ? 9 : 6;
+  return base + Math.min(7, Math.sqrt(node.descendantCount + 1));
+}
+
+function threePositions(
+  model: AtlasMetroModel,
+  ids: string[],
+  width: number,
+  height: number,
+): Map<string, THREE.Vector3> {
+  const metro = metroLayoutPositions(model, ids, width, height);
+  const visible = new Set(ids);
+  const domainBaseZ: Record<string, number> = { NEXO: -520, SCIENCE: 0, OLYMPUS: 520 };
+  const depthStep = 150;
+  const scale = .72;
+  const out = new Map<string, THREE.Vector3>();
+
+  for (const id of ids) {
+    const node = model.nodeMap.get(id);
+    const position = metro.get(id);
+    if (!node || !position) continue;
+
+    let siblingZ = 0;
+    if (node.parentId) {
+      const siblings = (model.childrenMap.get(node.parentId) || []).filter(siblingId => visible.has(siblingId));
+      const siblingIndex = siblings.indexOf(id);
+      if (siblingIndex >= 0 && siblings.length > 1) {
+        const normalized = (siblingIndex / (siblings.length - 1)) * 2 - 1;
+        const siblingSpan = 48 + Math.min(280, (siblings.length - 1) * 18);
+        const parentPosition = metro.get(node.parentId);
+        const angle = parentPosition
+          ? Math.atan2(position[1] - parentPosition[1], position[0] - parentPosition[0])
+          : 0;
+        const phase = ((hashNumber(id) % 1000) / 1000) * Math.PI * 2;
+        siblingZ = normalized * siblingSpan
+          + Math.sin(angle * 1.7 + phase) * Math.min(92, siblingSpan * .36);
+      }
+    }
+
+    out.set(id, new THREE.Vector3(
+      (position[0] - width / 2) * scale,
+      -(position[1] - height / 2) * scale,
+      domainBaseZ[node.domain] + node.depth * depthStep + siblingZ,
+    ));
+  }
+  return out;
+}
+
+function threeDepthMetrics(model: AtlasMetroModel, ids: string[], positions: Map<string, THREE.Vector3>) {
+  const values = [...positions.values()].map(position => position.z);
+  const zSpan = values.length ? Math.max(...values) - Math.min(...values) : 0;
+  let maxSameLevelSpan = 0;
+  const groups = new Map<string, number[]>();
+
+  for (const id of ids) {
+    const node = model.nodeMap.get(id);
+    const position = positions.get(id);
+    if (!node || !position) continue;
+    const key = `${node.domain}|${node.parentId || 'ROOT'}|${node.depth}`;
+    const bucket = groups.get(key) || [];
+    bucket.push(position.z);
+    groups.set(key, bucket);
+  }
+
+  for (const bucket of groups.values()) {
+    if (bucket.length < 2) continue;
+    maxSameLevelSpan = Math.max(maxSameLevelSpan, Math.max(...bucket) - Math.min(...bucket));
+  }
+
+  return { zSpan, maxSameLevelSpan };
+}
+
+function threeFocusIds(
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  selectedId: string | null,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
+): string[] {
+  const visible = new Set(visibleAtlasIds(model, expanded, visibleLayers));
+  if (!selectedId || !visible.has(selectedId)) return [...visible];
+
+  const selected = model.nodeMap.get(selectedId);
+  if (!selected) return [...visible];
+
+  const focus = new Set<string>([selectedId]);
+  const children = (model.childrenMap.get(selectedId) || []).filter(id => visible.has(id));
+  if (children.length) {
+    children.forEach(id => focus.add(id));
+  } else if (selected.parentId && visible.has(selected.parentId)) {
+    focus.add(selected.parentId);
+  }
+
+  const seed = new Set(focus);
+  for (const link of model.crossLinks) {
+    if (!link.isLearning) continue;
+    if (seed.has(link.source) && visible.has(link.target)) focus.add(link.target);
+    if (seed.has(link.target) && visible.has(link.source)) focus.add(link.source);
+  }
+
+  return [...focus];
+}
+
+function applyThreeSelection(runtime: ThreeRuntime, selectedId: string | null) {
+  const focusId = runtime.hoveredId || selectedId;
+  const levels = runtime.focusModel ? graphFocusLevels(runtime.focusModel, runtime.visibleIds, focusId) : new Map<string, number>();
+  runtime.nodeGroups.forEach((group, id) => {
+    const selected = id === selectedId;
+    const hovered = id === runtime.hoveredId;
+    const level = levels.get(id) ?? 0;
+    const faded = Boolean(focusId) && level > 2;
+    const related = Boolean(focusId) && level === 2;
+    const selectionGlow = group.userData.selectionGlow as SvgBillboard | undefined;
+    const neuronGlow = group.userData.neuronGlow as SvgBillboard | undefined;
+    const core = group.userData.core as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhongMaterial> | undefined;
+
+    if (selectionGlow) {
+      selectionGlow.visible = selected;
+      selectionGlow.material.opacity = selected ? .52 : 0;
+    }
+    if (neuronGlow) {
+      const material = neuronGlow.material;
+      const baseOpacity = Number(neuronGlow.userData.baseOpacity || .10);
+      const litOpacity = Math.max(.32, baseOpacity * 2.8);
+      material.opacity = hovered || selected ? Math.max(.52, litOpacity) : faded
+        ? runtime.illuminated ? .46 : .012
+        : related ? runtime.illuminated ? litOpacity * .76 : baseOpacity * .42
+          : runtime.illuminated ? litOpacity : baseOpacity;
+      const baseScale = Number(neuronGlow.userData.baseScale || neuronGlow.scale.x);
+      const factor = hovered ? 1.14 : selected ? 1.08 : 1;
+      neuronGlow.scale.set(baseScale * factor, baseScale * factor, 1);
+    }
+    if (core) {
+      const base = Number(core.userData.baseEmissive || .14);
+      const litEmissive = Math.max(.48, base + .30);
+      core.material.emissiveIntensity = hovered || selected ? Math.max(.64, litEmissive) : faded
+        ? runtime.illuminated ? litEmissive * .62 : base * .32
+        : related ? runtime.illuminated ? litEmissive * .84 : base * .66
+          : runtime.illuminated ? litEmissive : base;
+      core.material.transparent = Boolean(focusId);
+      core.material.opacity = faded ? runtime.illuminated ? .82 : .12
+        : related ? runtime.illuminated ? .84 : .48 : 1;
+    }
+    const membrane = group.userData.membrane as THREE.Mesh | undefined;
+    if (membrane) (membrane.material as THREE.MeshBasicMaterial).opacity = faded
+      ? runtime.illuminated ? .082 : .012
+      : related ? runtime.illuminated ? .078 : .025
+        : Number(membrane.userData.baseOpacity || .045) * (runtime.illuminated ? 2.2 : 1);
+    const status = group.userData.statusNucleus as THREE.Mesh | undefined;
+    if (status) (status.material as THREE.MeshBasicMaterial).opacity = faded
+      ? runtime.illuminated ? .78 : .04
+      : related ? runtime.illuminated ? .72 : .40 : runtime.illuminated ? .96 : .86;
+    const label = group.userData.label as THREE.Sprite | undefined;
+    if (label) label.visible = id === selectedId || hovered || level <= 1 || group.userData.isHub === true
+      || (runtime.zoomedLabels && label.userData.entityType !== 'hub');
+  });
+  runtime.pulses.forEach(edge => {
+    const a = levels.get(edge.sourceId) ?? 3, b = levels.get(edge.targetId) ?? 3;
+    const edgeLevel = Math.max(a, b);
+    const factor = !focusId ? 1 : edgeLevel <= 1 ? 1 : edgeLevel === 2 ? (runtime.illuminated ? .68 : .34) : (runtime.illuminated ? .34 : .055);
+    (edge.core.material as THREE.MeshBasicMaterial).opacity = edge.baseCoreOpacity * factor * (runtime.illuminated ? 1.8 : 1);
+    (edge.glow.material as THREE.MeshBasicMaterial).opacity = edge.baseGlowOpacity * factor * (runtime.illuminated ? 2.8 : 1);
+    edge.particle.visible = !focusId || edgeLevel <= 2;
+  });
+}
+function threeFitInsets(runtime: ThreeRuntime) {
+  const canvas = runtime.renderer.domElement;
+  const width = Math.max(1, canvas.clientWidth || canvas.parentElement?.clientWidth || 1);
+  const height = Math.max(1, canvas.clientHeight || canvas.parentElement?.clientHeight || 1);
+  const container = canvas.parentElement as HTMLElement | null;
+  const compact = container ? isCompactRenderer(container) : width <= 640;
+  return compact
+    ? { width, height, top: 154, right: 12, bottom: 64, left: 12, compact }
+    : { width, height, top: 118, right: 24, bottom: 62, left: 24, compact };
+}
+
+function fitThree(
+  runtime: ThreeRuntime,
+  animated = true,
+  focusIds: readonly string[] | null = null,
+  scope: 'selection' | 'all' = focusIds?.length ? 'selection' : 'all',
+) {
+  if (!runtime.worldPositions.size) return;
+
+  const fitPositions = (focusIds || [])
+    .map(id => runtime.worldPositions.get(id))
+    .filter((position): position is THREE.Vector3 => Boolean(position));
+  const positions = fitPositions.length ? fitPositions : [...runtime.worldPositions.values()];
+  const box = new THREE.Box3();
+  positions.forEach(position => box.expandByPoint(position));
+  const center = box.getCenter(new THREE.Vector3());
+  const direction = new THREE.Vector3(.82, .54, 1.15).normalize();
+  const forward = direction.clone().multiplyScalar(-1);
+  const right = forward.clone().cross(runtime.camera.up).normalize();
+  const cameraUp = right.clone().cross(forward).normalize();
+
+  const projected = positions.map(position => {
+    const offset = position.clone().sub(center);
+    return {
+      x: Math.abs(offset.dot(right)),
+      y: offset.dot(cameraUp),
+      depth: offset.dot(direction),
+    };
+  });
+
+  const { width, height, top, right: insetRight, bottom, left, compact } = threeFitInsets(runtime);
+  const usableWidth = Math.max(80, width - left - insetRight);
+  const usableHeight = Math.max(120, height - top - bottom);
+  const widthFraction = Math.max(.24, usableWidth / width);
+  const heightFraction = Math.max(.24, usableHeight / height);
+  const fov = THREE.MathUtils.degToRad(runtime.camera.fov);
+  const tanVertical = Math.tan(fov / 2);
+  const tanHorizontal = tanVertical * Math.max(.35, runtime.camera.aspect);
+  const targetCoverage = compact ? .78 : .82;
+  const horizontalLimit = Math.max(.001, tanHorizontal * widthFraction * targetCoverage);
+  const verticalLimit = Math.max(.001, tanVertical * heightFraction * targetCoverage);
+  const paddingX = compact ? 42 : 52;
+  const paddingY = compact ? 34 : 44;
+  const nearMargin = compact ? 86 : 104;
+  const minimumDistance = compact ? 160 : 180;
+
+  // Solve the perspective constraint per actual node. The previous fit combined
+  // the deepest point with the widest point even when they were different nodes,
+  // which overestimated camera distance by 2–3× on layered graphs.
+  const solveDistance = (verticalShift: number) => {
+    let solved = minimumDistance;
+    for (const point of projected) {
+      solved = Math.max(
+        solved,
+        point.depth + nearMargin,
+        point.depth + (point.x + paddingX) / horizontalLimit,
+        point.depth + (Math.abs(point.y - verticalShift) + paddingY) / verticalLimit,
+      );
+    }
+    return solved;
+  };
+
+  let distance = solveDistance(0);
+  const safeCenterFactor = ((top - bottom) * tanVertical) / Math.max(1, height);
+  let verticalShift = distance * safeCenterFactor;
+  // The safe-area center shift depends on camera distance. Two fixed-point passes
+  // converge enough for this linear projection while keeping the fit deterministic.
+  for (let iteration = 0; iteration < 2; iteration += 1) {
+    distance = solveDistance(verticalShift);
+    verticalShift = distance * safeCenterFactor;
+  }
+
+  let coverage = 0;
+  for (const point of projected) {
+    const forwardDistance = Math.max(nearMargin, distance - point.depth);
+    coverage = Math.max(
+      coverage,
+      (point.x + paddingX) / Math.max(.001, forwardDistance * tanHorizontal * widthFraction),
+      (Math.abs(point.y - verticalShift) + paddingY) / Math.max(.001, forwardDistance * tanVertical * heightFraction),
+    );
+  }
+
+  const target = center.clone().addScaledVector(cameraUp, verticalShift);
+  const destination = target.clone().add(direction.clone().multiplyScalar(distance));
+
+  const container = runtime.renderer.domElement.parentElement as HTMLElement | null;
+  if (container) {
+    container.dataset.threeFitPolicy = 'perspective-point-safe-area-v6';
+    container.dataset.threeFitScope = scope;
+    container.dataset.threeFitNodeCount = String(positions.length);
+    container.dataset.threeFitDistance = distance.toFixed(1);
+    container.dataset.threeFitCoverage = coverage.toFixed(2);
+    container.dataset.threeFitTargetCoverage = targetCoverage.toFixed(2);
+    container.dataset.threeFitTopInset = String(top);
+    container.dataset.threeFitBottomInset = String(bottom);
+  }
+
+  if (!animated) {
+    runtime.camera.position.copy(destination);
+    runtime.controls.target.copy(target);
+    runtime.controls.update();
+    return;
+  }
+
+  const fromPosition = runtime.camera.position.clone();
+  const fromTarget = runtime.controls.target.clone();
+  const start = performance.now();
+  const duration = 360;
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    runtime.camera.position.lerpVectors(fromPosition, destination, eased);
+    runtime.controls.target.lerpVectors(fromTarget, target, eased);
+    runtime.controls.update();
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function renderAndMeasureThree(runtime: ThreeRuntime, container: HTMLElement): number {
+  runtime.controls.update();
+  updateSvgBillboards(runtime);
+  runtime.renderer.render(runtime.scene, runtime.camera);
+  const painted = runtime.renderer.domElement.querySelectorAll('path').length;
+  container.dataset.threePaintSamples = String(painted);
+  container.dataset.threeRenderer = 'svg';
+  container.dataset.threeReady = painted > 0 ? 'true' : 'false';
+  runtime.renderer.domElement.dataset.ready = container.dataset.threeReady;
+  runtime.renderer.domElement.dataset.renderCount = String(Number(runtime.renderer.domElement.dataset.renderCount || 0) + 1);
+  return painted;
+}
+
+function updateSvgBillboards(runtime: ThreeRuntime) {
+  const height = Math.max(1, runtime.renderer.domElement.clientHeight);
+  const focal = height / (2 * Math.tan(THREE.MathUtils.degToRad(runtime.camera.fov / 2)));
+  const worldPosition = new THREE.Vector3();
+  const worldScale = new THREE.Vector3();
+  runtime.scene.updateMatrixWorld(true);
+  for (const billboard of runtime.billboards) {
+    if (!billboard.visible) continue;
+    billboard.getWorldPosition(worldPosition);
+    billboard.getWorldScale(worldScale);
+    const distance = Math.max(.01, runtime.camera.position.distanceTo(worldPosition));
+    const factor = focal / distance;
+    billboard.inner.setAttribute('transform', `scale(${factor * worldScale.x} ${factor * worldScale.y})`);
+    billboard.inner.setAttribute('opacity', String(billboard.material.opacity));
+  }
+}
+
+function rebuildThree(
+  runtime: ThreeRuntime,
+  container: HTMLElement,
+  model: AtlasMetroModel,
+  expanded: ReadonlySet<string>,
+  visibleLayers: ReadonlySet<AtlasGraphLayer>,
+  selectedId: string | null,
+  showBeams: boolean,
+  theme: AtlasTheme,
+) {
+  if (runtime.content) {
+    runtime.scene.remove(runtime.content);
+    disposeThreeObject(runtime.content);
+  }
+  runtime.interactive = [];
+  runtime.nodeGroups.clear();
+  runtime.worldPositions.clear();
+  runtime.hoveredId = null;
+  runtime.pulses = [];
+
+  const ids = visibleAtlasIds(model, expanded, visibleLayers);
+  runtime.focusModel = model;
+  runtime.visibleIds = ids;
+  const visible = new Set(ids);
+  const compact = isCompactRenderer(container);
+  const showLeafLabels = !compact && ids.length <= 30;
+  const positions = threePositions(model, ids, Math.max(720, container.clientWidth), Math.max(560, container.clientHeight));
+  runtime.worldPositions = positions;
+  const depthMetrics = threeDepthMetrics(model, ids, positions);
+  container.dataset.threeZSpan = depthMetrics.zSpan.toFixed(1);
+  container.dataset.threeSameLevelZSpan = depthMetrics.maxSameLevelSpan.toFixed(1);
+  const selectedChildren = selectedId
+    ? (model.childrenMap.get(selectedId) || []).filter(id => visible.has(id) && positions.has(id))
+    : [];
+  const selectedZ = selectedChildren.map(id => positions.get(id)!.z);
+  const selectedSiblingZSpan = selectedZ.length > 1 ? Math.max(...selectedZ) - Math.min(...selectedZ) : 0;
+  container.dataset.threeSelectedSiblingCount = String(selectedChildren.length);
+  container.dataset.threeSelectedSiblingZSpan = selectedSiblingZSpan.toFixed(1);
+  container.dataset.threeDepthPolicy = 'domain-depth-sibling-v3';
+
+  const content = new THREE.Group();
+  runtime.content = content;
+  runtime.scene.add(content);
+
+  for (const id of ids) {
+    const node = model.nodeMap.get(id);
+    if (!node?.parentId || !visible.has(node.parentId)) continue;
+    const source = positions.get(node.parentId);
+    const target = positions.get(id);
+    if (!source || !target) continue;
+    addSynapse(
+      runtime,
+      content,
+      source,
+      target,
+      domainColor(node.domain, theme),
+      `hierarchy:${node.parentId}:${id}`,
+      false,
+      node.entityType === 'subdomain' ? 1.08 : .9,
+      false,
+      0,
+      1,
+      compact,
+      theme,
+      node.parentId,
+      id,
+    );
+  }
+
+  const visualCrossLinks = showBeams
+    ? projectVisualCrossLinks(model, model.crossLinks, visible)
+    : [];
+
+  if (showBeams) {
+    for (const link of visualCrossLinks) {
+      const source = positions.get(link.source);
+      const target = positions.get(link.target);
+      if (!source || !target) continue;
+      const sourceNode = model.nodeMap.get(link.source);
+      const targetNode = model.nodeMap.get(link.target);
+      const sourceColor = new THREE.Color(domainColor(sourceNode?.domain || '', theme));
+      const targetColor = new THREE.Color(domainColor(targetNode?.domain || '', theme));
+      const mixed = sourceColor.clone().lerp(targetColor, .5);
+      const color = link.isLearning ? new THREE.Color(learningColor(link.learningKind, link.learningTheme, theme)) : mixed;
+      addSynapse(
+        runtime,
+        content,
+        source,
+        target,
+        color.getHex(),
+        `bridge:${link.id}`,
+        true,
+        Math.max(.72, Math.min(link.isLearning ? 1.5 : 1.25, link.weight || 1)),
+        link.isLearning,
+        link.bundleIndex,
+        link.bundleCount,
+        compact,
+        theme,
+        link.source,
+        link.target,
+      );
+    }
+  }
+
+  const visibleLearning = model.crossLinks.filter(link => {
+    if (!link.isLearning) return false;
+    const source = nearestVisibleAtlasAncestor(model, link.source, visible);
+    const target = nearestVisibleAtlasAncestor(model, link.target, visible);
+    return Boolean(source && target && source !== target);
+  });
+  const visualLearning = visualCrossLinks.filter(link => link.isLearning);
+  const logicalLearning = model.crossLinks.filter(link => link.isLearning);
+  container.dataset.threeLearningSynapses = String(visibleLearning.length);
+  container.dataset.threeLearningVisualSynapses = String(visualLearning.length);
+  container.dataset.threeLearningRecords = String(new Set(
+    logicalLearning.map(link => link.learningRef || link.id),
+  ).size);
+  container.dataset.threeLearningRelations = String(logicalLearning.length);
+  container.dataset.threeScientificLearningSynapses = String(
+    visibleLearning.filter(link => link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE').length,
+  );
+  container.dataset.threeProceduralLearningSynapses = String(
+    visibleLearning.filter(link => link.learningKind === 'PROCEDURAL').length,
+  );
+  container.dataset.threeSemanticLearningSynapses = String(
+    visibleLearning.filter(link => link.learningKind === 'SEMANTIC').length,
+  );
+  container.dataset.threePeerLearningSynapses = String(
+    visibleLearning.filter(link =>
+      link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /^PEER-DETECTION-GROUP-/i.test(String(link.learningRef || ''))
+    ).length,
+  );
+  container.dataset.threeSubdomainLearningSynapses = String(
+    visibleLearning.filter(link =>
+      /SUBDOMAIN$/.test(String(link.sourceAnchor || ''))
+      || /SUBDOMAIN$/.test(String(link.targetAnchor || ''))
+    ).length,
+  );
+  container.dataset.threePeerSubdomainSynapses = String(
+    visibleLearning.filter(link =>
+      link.learningKind === 'SCIENTIFIC_LEARNING_PIPELINE'
+      && /SUBDOMAIN$/.test(String(link.targetAnchor || ''))
+    ).length,
+  );
+  const exactEntityVisual = visualLearning.filter(link =>
+    link.sourceAnchor === 'EXACT_ENTITY' || link.targetAnchor === 'EXACT_ENTITY'
+  );
+  container.dataset.threeExactEntityLearningSynapses = String(exactEntityVisual.length);
+  container.dataset.threeDirectExactEntityLearningSynapses = String(
+    exactEntityVisual.filter(link =>
+      (link.sourceAnchor === 'EXACT_ENTITY' && !link.sourceCollapsed)
+      || (link.targetAnchor === 'EXACT_ENTITY' && !link.targetCollapsed)
+    ).length,
+  );
+  container.dataset.threeCollapsedExactEntityLearningSynapses = String(
+    exactEntityVisual.filter(link =>
+      (link.sourceAnchor === 'EXACT_ENTITY' && link.sourceCollapsed)
+      || (link.targetAnchor === 'EXACT_ENTITY' && link.targetCollapsed)
+    ).length,
+  );
+
+  for (const id of ids) {
+    const node = model.nodeMap.get(id)!;
+    const position = positions.get(id);
+    if (!position) continue;
+    const radius = nodeRadius3D(node);
+    const group = new THREE.Group();
+    group.position.copy(position);
+    group.userData.nodeId = id;
+
+    const nodeDomainColor = domainColor(node.domain, theme);
+    const typeColor = TYPE_COLOR[String(node.entityType)] || '#cbd5e1';
+    const baseEmissiveDark = (node.entityType === 'hub' ? .42 : node.entityType === 'subdomain' ? .24 : .13)
+      + (compact ? .02 : 0);
+    const baseEmissive = theme === 'light' ? baseEmissiveDark * .42 : baseEmissiveDark;
+
+    const coreMaterial = new THREE.MeshPhongMaterial({
+      color: new THREE.Color(nodeDomainColor).lerp(new THREE.Color(typeColor), .20),
+      emissive: new THREE.Color(nodeDomainColor),
+      emissiveIntensity: baseEmissive,
+      shininess: 22,
+      specular: 0x18202a,
+    });
+    const core = new THREE.Mesh(createOrganicGeometry(radius, id, compact ? 2 : 3), coreMaterial);
+    core.userData = { nodeId: id, baseEmissive };
+    const organicSeed = hashNumber(id);
+    core.rotation.set(
+      ((organicSeed >> 2) % 31) / 31,
+      ((organicSeed >> 7) % 37) / 37,
+      ((organicSeed >> 12) % 41) / 41,
+    );
+    group.add(core);
+    runtime.interactive.push(core);
+
+    const membrane = new THREE.Mesh(
+      createOrganicGeometry(radius * 1.13, `${id}:membrane`, compact ? 2 : 3),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(nodeDomainColor),
+        transparent: true,
+        opacity: node.entityType === 'hub' ? .10 : .045,
+        depthWrite: false,
+        blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+        side: THREE.BackSide,
+      }),
+    );
+    group.add(membrane);
+
+    const neuronGlow = createGlowSprite(
+      nodeDomainColor,
+      radius * (node.entityType === 'hub' ? 4.5 : 3.2),
+      (node.entityType === 'hub' ? .30 : .095) + (compact ? .015 : 0),
+      theme,
+    );
+    neuronGlow.material.depthTest = false;
+    neuronGlow.userData.baseOpacity = (neuronGlow.material as THREE.SpriteMaterial).opacity;
+    neuronGlow.userData.baseScale = neuronGlow.scale.x;
+    neuronGlow.renderOrder = 8;
+    group.add(neuronGlow);
+
+    const statusNucleus = new THREE.Mesh(
+      new THREE.SphereGeometry(Math.max(1.4, radius * .18), compact ? 8 : 14, compact ? 6 : 10),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(statusColor(node.status)),
+        transparent: true,
+        opacity: .86,
+        depthWrite: false,
+        blending: theme === 'light' ? THREE.NormalBlending : THREE.AdditiveBlending,
+      }),
+    );
+    statusNucleus.renderOrder = 9;
+    group.add(statusNucleus);
+    group.userData.statusNucleus = statusNucleus;
+
+    const selectionGlow = createGlowSprite(
+      theme === 'light' ? '#0f172a' : '#ffffff',
+      radius * 7.2,
+      theme === 'light' ? .24 : .64,
+      theme,
+    );
+    selectionGlow.material.depthTest = false;
+    selectionGlow.visible = id === selectedId;
+    selectionGlow.renderOrder = 7;
+    group.add(selectionGlow);
+
+    if (showLeafLabels || node.entityType === 'hub' || (node.entityType === 'subdomain' && node.childCount > 0) || id === selectedId) {
+      const label = createLabelSprite(
+        node.name,
+        nodeDomainColor,
+        node.entityType === 'hub',
+        compact,
+        theme,
+      );
+      label.position.set(0, radius + (node.entityType === 'hub' ? 28 : 20), 0);
+      label.userData.entityType = node.entityType;
+      label.visible = node.entityType === 'hub' || id === selectedId || showLeafLabels;
+      group.add(label);
+      group.userData.label = label;
+    }
+
+    group.userData.core = core;
+    group.userData.isHub = node.entityType === 'hub';
+    membrane.userData.baseOpacity = node.entityType === 'hub' ? .10 : .045;
+    group.userData.membrane = membrane;
+    group.userData.neuronGlow = neuronGlow;
+    group.userData.selectionGlow = selectionGlow;
+    content.add(group);
+    runtime.nodeGroups.set(id, group);
+  }
+
+  applyThreeSelection(runtime, selectedId);
+  runtime.billboards = [];
+  runtime.scene.traverse(object => {
+    if (object instanceof SVGObject) runtime.billboards.push(object as SvgBillboard);
+  });
+}
+
+function hitThreeNode(runtime: ThreeRuntime, event: PointerEvent): string | null {
+  const rect = runtime.renderer.domElement.getBoundingClientRect();
+  runtime.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  runtime.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  runtime.raycaster.setFromCamera(runtime.pointer, runtime.camera);
+  const hit = runtime.raycaster.intersectObjects(runtime.interactive, false)[0];
+  return (hit?.object?.userData?.nodeId as string | undefined) || null;
+}
+
+function MetroThreeView({
+  model,
+  expanded,
+  visibleLayers,
+  selectedId,
+  showBeams,
+  fitNonce,
+  onActivate,
+  onReady,
+  theme,
+  allIlluminated,
+}: Omit<Props, 'viewMode'>) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const runtimeRef = useRef<ThreeRuntime | null>(null);
+  const modelRef = useRef(model);
+  const expandedRef = useRef(expanded);
+  const visibleLayersRef = useRef(visibleLayers);
+  const selectedRef = useRef(selectedId);
+  const activateRef = useRef(onActivate);
+  const showBeamsRef = useRef(showBeams);
+  const lastFitNonce = useRef(-1);
+  const lastFocusKey = useRef('');
+  const lastStructureKey = useRef('');
+  const onReadyRef = useRef(onReady);
+
+  modelRef.current = model;
+  expandedRef.current = expanded;
+  visibleLayersRef.current = visibleLayers;
+  selectedRef.current = selectedId;
+  activateRef.current = onActivate;
+  showBeamsRef.current = showBeams;
+  onReadyRef.current = onReady;
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const initialRect = container.getBoundingClientRect();
+    container.dataset.threeViewportWidth = Math.round(initialRect.width).toString();
+    container.dataset.threeViewportHeight = Math.round(initialRect.height).toString();
+    if (initialRect.width < 2 || initialRect.height < 2) {
+      setRendererError(container, 'THREE_ZERO_VIEWPORT', 'O modo 3D recebeu uma área de desenho inválida.');
+      return;
+    }
+
+    const compact = isCompactRenderer(container);
+    container.dataset.threeProfile = compact ? 'compact-touch' : 'desktop';
+    container.dataset.threeTheme = theme;
+    container.dataset.threeQuality = compact ? 'reduced-gpu' : 'full';
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(theme === 'light' ? 0xf5f7fb : 0x070b14, compact ? .00013 : .00017);
+    const camera = new THREE.PerspectiveCamera(compact ? 50 : 46, 1, 1, 6000);
+    camera.position.set(520, 360, 780);
+
+    let renderer: SVGRenderer;
+    try {
+      renderer = new SVGRenderer();
+    } catch (error) {
+      setRendererError(
+        container,
+        'SVG_INIT_FAILED',
+        `O renderer SVG 3D não conseguiu iniciar neste dispositivo. ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
+    renderer.setClearColor(new THREE.Color(theme === 'light' ? 0xf8fafc : 0x070b14), 0);
+    renderer.domElement.tabIndex = 0;
+    renderer.domElement.classList.add('atlas-three-svg');
+    renderer.domElement.dataset.renderer = 'three-svg';
+    renderer.domElement.dataset.towerSvgNative = 'metro3d';
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.outline = 'none';
+    renderer.domElement.style.touchAction = 'none';
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .075;
+    controls.rotateSpeed = .72;
+    controls.panSpeed = .82;
+    controls.zoomSpeed = .85;
+    controls.zoomToCursor = true;
+    controls.minDistance = 95;
+    controls.maxDistance = compact ? 3600 : 5200;
+    controls.screenSpacePanning = true;
+    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+    controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+    controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+
+    scene.add(new THREE.HemisphereLight(
+      theme === 'light' ? 0xffffff : 0xd7e8ff,
+      theme === 'light' ? 0xcbd5e1 : 0x111827,
+      theme === 'light' ? (compact ? 1.18 : 1.05) : (compact ? 1.62 : 1.38),
+    ));
+    const key = new THREE.DirectionalLight(0xffffff, compact ? 1.72 : 1.52);
+    key.position.set(400, 650, 500);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(
+      theme === 'light' ? 0x0284c7 : 0x6ee7ff,
+      theme === 'light' ? .46 : (compact ? .92 : .78),
+    );
+    rim.position.set(-520, -180, -360);
+    scene.add(rim);
+
+    const runtime: ThreeRuntime = {
+      scene, camera, renderer, controls,
+      content: null,
+      raycaster: new THREE.Raycaster(),
+      pointer: new THREE.Vector2(),
+      interactive: [],
+      nodeGroups: new Map(),
+      worldPositions: new Map(),
+      hoveredId: null,
+      pointerDown: null,
+      frame: 0,
+      hasFit: false,
+      pulses: [],
+      billboards: [],
+      focusModel: null,
+      visibleIds: [],
+      zoomedLabels: false,
+      illuminated: allIlluminated,
+    };
+    runtimeRef.current = runtime;
+
+    const resize = () => {
+      const width = Math.max(1, container.clientWidth);
+      const height = Math.max(1, container.clientHeight);
+      container.dataset.threeViewportWidth = Math.round(width).toString();
+      container.dataset.threeViewportHeight = Math.round(height).toString();
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    };
+    resize();
+    clearRendererError(container);
+
+    let resizeFrame = 0;
+    let lastWidth = Math.round(container.clientWidth);
+    let lastHeight = Math.round(container.clientHeight);
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        const width = Math.round(container.clientWidth);
+        const height = Math.round(container.clientHeight);
+        const widthDelta = Math.abs(width - lastWidth);
+        const heightDelta = Math.abs(height - lastHeight);
+        if (widthDelta < 4 && heightDelta < 4) return;
+
+        const orientationChanged = (width > height) !== (lastWidth > lastHeight);
+        const majorLayoutChange = orientationChanged
+          || widthDelta >= (compact ? 24 : 18)
+          || heightDelta >= (compact ? 56 : 28);
+
+        lastWidth = width;
+        lastHeight = height;
+        resize();
+
+        if (majorLayoutChange) {
+          rebuildThree(runtime, container, modelRef.current, expandedRef.current, visibleLayersRef.current, selectedRef.current, showBeamsRef.current, theme);
+          container.dataset.threeNodeCount = String(visibleAtlasIds(modelRef.current, expandedRef.current, visibleLayersRef.current).length);
+          container.dataset.threeSynapseCount = String(runtime.pulses.length);
+        }
+
+        fitThree(runtime, false, null, 'all');
+        lastFocusKey.current = `${modelRef.current.revision}|${[...expandedRef.current].sort().join('|')}|${selectedRef.current || ''}`;
+        renderAndMeasureThree(runtime, container);
+      });
+    });
+    observer.observe(container);
+
+    const tooltip = tooltipRef.current;
+    renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
+
+    const onPointerDown = (event: PointerEvent) => {
+      runtime.pointerDown = { x: event.clientX, y: event.clientY, button: event.button };
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      const id = hitThreeNode(runtime, event);
+      runtime.hoveredId = id;
+      applyThreeSelection(runtime, selectedRef.current);
+      if (!tooltip) return;
+      if (!id) {
+        tooltip.style.display = 'none';
+        renderer.domElement.style.cursor = 'grab';
+        return;
+      }
+      tooltip.innerHTML = tooltipHtml(modelRef.current.nodeMap.get(id), expandedRef.current, theme);
+      tooltip.style.display = 'block';
+      const rect = container.getBoundingClientRect();
+      tooltip.style.left = `${event.clientX - rect.left}px`;
+      tooltip.style.top = `${event.clientY - rect.top}px`;
+      renderer.domElement.style.cursor = 'pointer';
+    };
+    const onPointerLeave = () => {
+      runtime.hoveredId = null;
+      applyThreeSelection(runtime, selectedRef.current);
+      if (tooltip) tooltip.style.display = 'none';
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      const down = runtime.pointerDown;
+      runtime.pointerDown = null;
+      if (!down || down.button !== 0 || event.button !== 0) return;
+      if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6) return;
+      const id = hitThreeNode(runtime, event);
+      if (id && modelRef.current.nodeMap.has(id)) activateRef.current(id);
+    };
+
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    renderer.domElement.addEventListener('pointermove', onPointerMove);
+    renderer.domElement.addEventListener('pointerleave', onPointerLeave);
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
+
+    let lastFrameAt = 0;
+    const minimumFrameMs = 1000 / 24;
+    const animate = (now: number) => {
+      runtime.frame = requestAnimationFrame(animate);
+      if (document.hidden) return;
+      if (minimumFrameMs && now - lastFrameAt < minimumFrameMs) return;
+      lastFrameAt = now;
+      updateSynapsePulses(runtime, now);
+      controls.update();
+      const zoomedLabels = camera.position.distanceTo(controls.target) < 820;
+      if (zoomedLabels !== runtime.zoomedLabels) {
+        runtime.zoomedLabels = zoomedLabels;
+        applyThreeSelection(runtime, selectedRef.current);
+      }
+      updateSvgBillboards(runtime);
+      renderer.render(scene, camera);
+    };
+    runtime.frame = requestAnimationFrame(animate);
+
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(resizeFrame);
+      cancelAnimationFrame(runtime.frame);
+      renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+      renderer.domElement.removeEventListener('pointermove', onPointerMove);
+      renderer.domElement.removeEventListener('pointerleave', onPointerLeave);
+      renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      controls.dispose();
+      if (runtime.content) disposeThreeObject(runtime.content);
+      renderer.domElement.remove();
+      runtimeRef.current = null;
+    };
+  }, [theme]);
+
+  const expansionKey = useMemo(() => [...expanded].sort().join('|'), [expanded]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    const container = containerRef.current;
+    if (!runtime || !container) return;
+    rebuildThree(runtime, container, model, expanded, visibleLayers, selectedId, showBeams, theme);
+    container.dataset.threeNodeCount = String(visibleAtlasIds(model, expanded, visibleLayers).length);
+    container.dataset.threeSynapseCount = String(runtime.pulses.length);
+
+    const layerKey = [...visibleLayers].sort().join('|');
+    const structureKey = `${model.revision}|${expansionKey}|${layerKey}`;
+    const focusKey = `${structureKey}|${selectedId || ''}`;
+    const structureChanged = lastStructureKey.current !== structureKey;
+    if (!runtime.hasFit || structureChanged) {
+      const hadFit = runtime.hasFit;
+      runtime.hasFit = true;
+      fitThree(runtime, hadFit && structureChanged, null, 'all');
+      lastStructureKey.current = structureKey;
+      // Prevent the selection effect from immediately undoing the structural fit.
+      lastFocusKey.current = focusKey;
+    }
+
+    const painted = renderAndMeasureThree(runtime, container);
+    if (painted > 0 || !isAtlasReadback()) onReadyRef.current?.();
+  }, [model.revision, expansionKey, visibleLayers, showBeams, theme]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || lastFitNonce.current === fitNonce) return;
+    // fitNonce=0 is the initial render, not an explicit "fit all" request.
+    // The rebuild effect already fitted the selected semantic context. Letting
+    // this effect run on mount overwrote that camera with an all-nodes fit,
+    // which made QA selection and the visible camera disagree.
+    if (lastFitNonce.current < 0) {
+      lastFitNonce.current = fitNonce;
+      return;
+    }
+    lastFitNonce.current = fitNonce;
+    fitThree(runtime, true, null, 'all');
+  }, [fitNonce]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    applyThreeSelection(runtime, selectedId);
+    const focusKey = `${model.revision}|${expansionKey}|${[...visibleLayers].sort().join('|')}|${selectedId || ''}`;
+    if (lastFocusKey.current === focusKey) return;
+    fitThree(runtime, true, threeFocusIds(model, expanded, selectedId, visibleLayers), 'selection');
+    lastFocusKey.current = focusKey;
+  }, [selectedId, model.revision, expansionKey, visibleLayers]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    const container = containerRef.current;
+    if (!runtime || !container) return;
+    runtime.illuminated = allIlluminated;
+    container.dataset.illuminated = String(allIlluminated);
+    applyThreeSelection(runtime, selectedRef.current);
+    renderAndMeasureThree(runtime, container);
+  }, [allIlluminated]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="atlas-three-surface"
+      data-atlas-theme={theme}
+      data-testid="atlas-metro-3d"
+      data-three-visual="neural-synapse"
+      data-illuminated={allIlluminated}
+    >
+      <div ref={tooltipRef} className="atlas-three-tooltip" />
+    </div>
+  );
+}
+
+export function MetroAtlasRenderer(props: Props) {
+  return (
+    <div className="atlas-renderer" data-mode={props.viewMode}>
+      {props.viewMode === '2d' ? (
+        <div className="atlas-render-layer active" aria-hidden="false">
+          <Metro2DView {...props} />
+        </div>
+      ) : (
+        <div className="atlas-render-layer active" aria-hidden="false">
+          <MetroThreeView {...props} />
+        </div>
+      )}
+    </div>
+  );
+}

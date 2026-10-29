@@ -1,0 +1,2133 @@
+{
+  "summary": {
+    "inspectedTests": 215,
+    "suitableTests": 106,
+    "unsuitableTests": 109,
+    "plotCount": 112,
+    "familyCounts": {
+      "supernova_redshift_ablation": 51,
+      "theoretical_derived_scalar": 2,
+      "coordinate_validation": 1,
+      "literature_sample_count": 1,
+      "desi_fixed_point_chi_square": 9,
+      "erosita_ablation": 1,
+      "growth_fixed_expansion_chi_square": 5,
+      "dark_matter_interval": 1,
+      "operational_counts": 14,
+      "operational_proportions": 14,
+      "simulation_summary": 2,
+      "prediction_accuracy": 3,
+      "temporal_completeness": 1,
+      "delivery_range": 1
+    },
+    "pValueResults": 0,
+    "theoreticalScalarTests": [
+      33,
+      156
+    ],
+    "explicitRepeatedDesigns": [
+      [
+        58,
+        59
+      ],
+      [
+        60,
+        61
+      ],
+      [
+        62,
+        63
+      ]
+    ],
+    "sampleOrInterventionOnlyExcludedTests": [
+      171,
+      172,
+      173,
+      182,
+      194,
+      203,
+      204,
+      206,
+      211
+    ]
+  },
+  "sourceHashes": {
+    "public-tests.json": "a77870a4d47413a9a276ac786f419c92fd0d690054235372c417927da66225b4",
+    "public-editorial.json": "2cbf422f97e6df72b8e680c43b036162ab30fc5dd050ab95830ce41090dd59c1",
+    "public-editorial.mjs": "4eefc1ed5a88cfc7e9e5764a3005a50c6cc280faa58bf7b57bbf4e14f9b9c428"
+  },
+  "representedIndices": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    31,
+    33,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    141,
+    145,
+    147,
+    148,
+    149,
+    150,
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    157,
+    161,
+    162,
+    163,
+    164,
+    165,
+    168,
+    169,
+    170,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    183,
+    184,
+    185,
+    186,
+    188,
+    189,
+    190,
+    191,
+    192,
+    193,
+    195,
+    196,
+    197,
+    198,
+    199,
+    201,
+    202,
+    205,
+    207,
+    208,
+    209,
+    210,
+    212,
+    213,
+    214
+  ],
+  "unsuitable": {
+    "0": {
+      "originalIndex": 0,
+      "testNumber": 1,
+      "publicationKey": "f9a566eb76c216fc7d3a1a7c87f1f1b9d98c0d340facdc0eaecf47f47ac2b5e4",
+      "expectedResultPt": "A busca dirigida encontrou precedentes para os componentes, mas nenhum para a combinação completa na amostra examinada. A combinação permanece potencialmente nova; a busca não estabelece prioridade absoluta nem validade física.",
+      "question": {
+        "pt-BR": "A cadeia teórica holografia → escala meV → teoria efetiva local protegida já existe na literatura?",
+        "en": "Does the theoretical chain holography → meV scale → protected local effective theory already exist in the literature?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A busca dirigida encontrou precedentes para os componentes, mas nenhum para a combinação completa na amostra examinada. A combinação permanece potencialmente nova; a busca não estabelece prioridade absoluta nem validade física.",
+        "en": "The targeted search found precedents for the components but none for the complete combination in the sample examined. The combination remains potentially novel; the search establishes neither absolute priority nor physical validity."
+      },
+      "reason": {
+        "pt-BR": "Resultado bibliográfico qualitativo, sem tamanho de amostra ou contagem de achados.",
+        "en": "Qualitative literature result with no sample size or finding count."
+      }
+    },
+    "19": {
+      "originalIndex": 19,
+      "testNumber": 20,
+      "publicationKey": "c3b08bc3773da7f663d98a78819b452af50110869d85c1a07c03065048293a7d",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.3 ± 0.01, does the direction of the preference for varying dark energy survive the removal of blocks of galaxies and the Lyman-alpha forest?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "20": {
+      "originalIndex": 20,
+      "testNumber": 21,
+      "publicationKey": "5d5110567b487a1c701c975c5d8b5c6bc835b5570e58c2e5663156cc79d475f5",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.3 ± 0.01, does the direction of the preference for varying dark energy survive the removal of blocks of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "21": {
+      "originalIndex": 21,
+      "testNumber": 22,
+      "publicationKey": "bd9eec3d5b0b56340ad9cf36c2d9cf1844bc6c9ae2d8636efde323eb86f2bca6",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.3 ± 0.01, does the direction of the preference for varying dark energy survive the removal of blocks at the ends and center of the redshift interval?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "22": {
+      "originalIndex": 22,
+      "testNumber": 23,
+      "publicationKey": "d18efca7b4964a28461547274b2d16643abfe6024200cf1b6a95d5e4dd4429f4",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007, does the direction of the preference for varying dark energy survive the removal of blocks of galaxies and the Lyman-alpha forest?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "23": {
+      "originalIndex": 23,
+      "testNumber": 24,
+      "publicationKey": "2036cee38a68e267217d079cd7f91457387916e74cd03b137f3b48b15c81091a",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007, does the direction of the preference for varying dark energy survive the removal of blocks of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "24": {
+      "originalIndex": 24,
+      "testNumber": 25,
+      "publicationKey": "04ae778a4d552d1e6794ee18fd3e231430dbb3a19c0ff4278224ab2bfae94967",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007, does the direction of the preference for varying dark energy survive the removal of blocks at the ends and center of the redshift interval?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "25": {
+      "originalIndex": 25,
+      "testNumber": 26,
+      "publicationKey": "5617315a0f31a7418daa666ac4630787cb50aeebb8331fda3ae53ea6f6d63c8e",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,02, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.02, does the direction of the preference for varying dark energy survive the removal of blocks of galaxies and the Lyman-alpha forest?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "26": {
+      "originalIndex": 26,
+      "testNumber": 27,
+      "publicationKey": "60aa4c4739a6542d9d108dbb43d809b64286d6b3cd4dcf8ac3cd78fcbd26b45b",
+      "expectedResultPt": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,02, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.02, does the direction of the preference for varying dark energy survive the removal of blocks of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+        "en": "A large share of the fit improvement was concentrated in one tracer group in the tested configuration. This does not identify the cause or demonstrate a specific systematic effect."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "27": {
+      "originalIndex": 27,
+      "testNumber": 28,
+      "publicationKey": "3f3a55d568c1b07f58484f0bbf5cb0a707989f78a17fb294616c473a0f423ea2",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,02, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.02, does the direction of the preference for varying dark energy survive the removal of blocks at the ends and center of the redshift interval?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "28": {
+      "originalIndex": 28,
+      "testNumber": 29,
+      "publicationKey": "dd2e8bd8c6929b0e1ba050957b3b07c8840ab81444808b073201787b327e8f1f",
+      "expectedResultPt": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01, does the direction of the preference for varying dark energy survive the removal of blocks of galaxies and the Lyman-alpha forest?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+        "en": "A large share of the fit improvement was concentrated in one tracer group in the tested configuration. This does not identify the cause or demonstrate a specific systematic effect."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "29": {
+      "originalIndex": 29,
+      "testNumber": 30,
+      "publicationKey": "1245dca01ae625eaeca3f5f75c6f78476deff7d80e72909bb5c314717cf2100b",
+      "expectedResultPt": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01, does the direction of the preference for varying dark energy survive the removal of blocks of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+        "en": "A large share of the fit improvement was concentrated in one tracer group in the tested configuration. This does not identify the cause or demonstrate a specific systematic effect."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "30": {
+      "originalIndex": 30,
+      "testNumber": 31,
+      "publicationKey": "bef101b52f333d3a8b364ff66db4c5d7e046680b8ba75df00eda8ce6a1576bc1",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01, does the direction of the preference for varying dark energy survive the removal of blocks at the ends and center of the redshift interval?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "32": {
+      "originalIndex": 32,
+      "testNumber": 33,
+      "publicationKey": "f3ae6106b072cf3f711b2d610758b1a1da4375e5db489a0c461dc6acade998be",
+      "expectedResultPt": "A aproximação dos resumos publicados sugere uma preferência local por uma escala de corte, mas ela é sensível à conversão de limites unilaterais em gaussianas. Sem a inferência conjunta e a correção pela busca, não há detecção estabelecida.",
+      "question": {
+        "pt-BR": "A floresta Lyman-alfa e as galáxias satélites apontam juntas para uma matéria escura 'morna' ou ultraleve?",
+        "en": "Do the Lyman-alpha forest and satellite galaxies together point to 'warm' or ultralight dark matter?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A aproximação dos resumos publicados sugere uma preferência local por uma escala de corte, mas ela é sensível à conversão de limites unilaterais em gaussianas. Sem a inferência conjunta e a correção pela busca, não há detecção estabelecida.",
+        "en": "The approximation based on published summaries suggests a local preference for a cutoff scale, but it is sensitive to converting one-sided limits into Gaussians. Without joint inference and a correction for the search, no detection is established."
+      },
+      "reason": {
+        "pt-BR": "Preferência local qualitativa sem escala, estimativa, significância ou comparação numérica publicada.",
+        "en": "Qualitative local preference with no published scale, estimate, significance or numerical comparison."
+      }
+    },
+    "34": {
+      "originalIndex": 34,
+      "testNumber": 35,
+      "publicationKey": "7107135c7635fad8ba1ce599fae417ea12f7de3c95d9d7c29a391e3fe755763a",
+      "expectedResultPt": "A parte executada da comparação foi compatível, mas não incluiu uma das classes de observação exigidas. O teste completo de compatibilidade permanece inconclusivo.",
+      "question": {
+        "pt-BR": "A mesma lei de autointeração da matéria escura permite interações fortes em galáxias anãs e fracas em aglomerados?",
+        "en": "Does the same dark-matter self-interaction law allow strong interactions in dwarf galaxies and weak interactions in clusters?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A parte executada da comparação foi compatível, mas não incluiu uma das classes de observação exigidas. O teste completo de compatibilidade permanece inconclusivo.",
+        "en": "The executed part of the comparison was compatible, but omitted one required observation class. The complete compatibility test remains inconclusive."
+      },
+      "reason": {
+        "pt-BR": "Compatibilidade parcial qualitativa. Nenhum limite quantitativo das observações foi publicado.",
+        "en": "Qualitative partial compatibility. No quantitative observational constraints were published."
+      }
+    },
+    "35": {
+      "originalIndex": 35,
+      "testNumber": 36,
+      "publicationKey": "4bbc0f1abc884572fe5ddb7fed6f4c4ceaebdede491387d289efbbd9909d4ff1",
+      "expectedResultPt": "A busca encontrou precedentes parciais, mas não concluiu a cobertura bibliográfica exigida. A novidade da combinação permanece indeterminada neste teste.",
+      "question": {
+        "pt-BR": "A possível novidade da cadeia teórica completa resiste à busca nas referências e nos trabalhos que as citam?",
+        "en": "Does the potential novelty of the complete theoretical chain survive a search through the references and the works that cite them?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A busca encontrou precedentes parciais, mas não concluiu a cobertura bibliográfica exigida. A novidade da combinação permanece indeterminada neste teste.",
+        "en": "The search found partial precedents but did not complete the required bibliographic coverage. This test leaves the novelty of the combination undetermined."
+      },
+      "reason": {
+        "pt-BR": "Cobertura bibliográfica incompleta sem contagem de achados utilizável.",
+        "en": "Incomplete literature coverage without a usable finding count."
+      }
+    },
+    "68": {
+      "originalIndex": 68,
+      "testNumber": 69,
+      "publicationKey": "5afb9ff536551044e42c7240cdf811e25ce1b0ca4ef5f3805846cbd60fc3e594",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em DES-SN5YR e Union3 e BAO DESI DR1, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "Using DES-SN5YR and Union3 together with DESI DR1 BAO, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "69": {
+      "originalIndex": 69,
+      "testNumber": 70,
+      "publicationKey": "6ec245abb9966f519e475b744419fe944c32257cd809a84fa1c7ed6acb57b056",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "en": "In DES-SN5YR and Union3, does the preference for varying dark energy survive the removal of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "70": {
+      "originalIndex": 70,
+      "testNumber": 71,
+      "publicationKey": "54747dab060f77f78ae8867ddfceaa766b54173b0edde9543e322992ce9078e5",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In DES-SN5YR and Union3, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "71": {
+      "originalIndex": 71,
+      "testNumber": 72,
+      "publicationKey": "7a2411400b717a34845054fb7c0474655aa01e312695e9a782bfc4e742442ed1",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In DES-SN5YR and Union3, with Ωm = 0.3 ± 0.01, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "72": {
+      "originalIndex": 72,
+      "testNumber": 73,
+      "publicationKey": "eed56d4c5b2e1fd448c0a10eac79ea79ab8eddb0efe8d8e5fb8c18205219c169",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "73": {
+      "originalIndex": 73,
+      "testNumber": 74,
+      "publicationKey": "d6ab1f7a74e8a6d8850e4dd8b6aa0fa2566e4f039c9ad1b0db1c39dca321d437",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "74": {
+      "originalIndex": 74,
+      "testNumber": 75,
+      "publicationKey": "2ea995cc40519c436b2863956e0db3f981b9738c5323577fc7bbc317ef9b2640",
+      "expectedResultPt": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, does the preference for varying dark energy survive the removal of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+        "en": "A large share of the fit improvement was concentrated in one tracer group in the tested configuration. This does not identify the cause or demonstrate a specific systematic effect."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "75": {
+      "originalIndex": 75,
+      "testNumber": 76,
+      "publicationKey": "862f0281c2a5efc0fd2facfb17fe92ac4d98bca3865d06dc79663a3a2e105f3a",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "76": {
+      "originalIndex": 76,
+      "testNumber": 77,
+      "publicationKey": "47faf68e7100e181c2e922ed31a3947cb9be91213c5408b1185f097f8cfc5fec",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.3 ± 0.01, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "77": {
+      "originalIndex": 77,
+      "testNumber": 78,
+      "publicationKey": "74e29f4a95892873c8dfcd159364d07a09ad71efde38844dca8051d54da6b53d",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "78": {
+      "originalIndex": 78,
+      "testNumber": 79,
+      "publicationKey": "64acab86872b48beb74f2b31c7622441807fa98b481b6084823bcb1efd952ad4",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "79": {
+      "originalIndex": 79,
+      "testNumber": 80,
+      "publicationKey": "545061081a46235e7f36b506bec0f58048c2f27dc69fc35908dd28a739c9ded6",
+      "expectedResultPt": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "en": "In Pantheon+ and Union3, does the preference for varying dark energy survive the removal of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Grande parte da melhora do ajuste ficou concentrada em um grupo de traçadores na configuração testada. Isso não identifica a causa nem demonstra um efeito sistemático específico.",
+        "en": "A large share of the fit improvement was concentrated in one tracer group in the tested configuration. This does not identify the cause or demonstrate a specific systematic effect."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "80": {
+      "originalIndex": 80,
+      "testNumber": 81,
+      "publicationKey": "805c42f5d145532e2f7e6f050c49c00d05a0c2330a7740ee062f33ec630b3e96",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+ and Union3, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "81": {
+      "originalIndex": 81,
+      "testNumber": 82,
+      "publicationKey": "e424e13c3f721cef1a4cb9ba356d2c6d77285c57385d2c5dddd7c2c05ed8ade9",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "en": "In Pantheon+ and Union3, with Ωm = 0.3 ± 0.01, does the preference for varying dark energy survive the removal of low and high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "82": {
+      "originalIndex": 82,
+      "testNumber": 83,
+      "publicationKey": "1ab63760dc7cff95c66bcba2d7e3e8f2b6e3410308866ea8f49dd89bd88cbbe5",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+ and Union3, with Ωm = 0.3 ± 0.01, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "83": {
+      "originalIndex": 83,
+      "testNumber": 84,
+      "publicationKey": "7da386afd6c257bb8b9f3f78039dd6ad54274ca1cc56706daf71738d52f306c1",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+ and Union3, with Ωm = 0.315 ± 0.007, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "84": {
+      "originalIndex": 84,
+      "testNumber": 85,
+      "publicationKey": "1292cef0b66f84dcc7f0890a3c1e2bedd8daf73998ebd6818312370daead39e7",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "en": "In Pantheon+ and Union3, with Ωm = 0.33 ± 0.01, does the preference for varying dark energy survive the removal of red galaxies, emission-line galaxies, and quasars with Lyman-alpha?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "85": {
+      "originalIndex": 85,
+      "testNumber": 86,
+      "publicationKey": "ef1af819426dfa4725c928c933058bfbb6674db9fb35c68b52ff5137e5462c4f",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em DES-SN5YR e Union3, com Ωm = 0,3 ± 0,02?",
+        "en": "When removing quasars and the Lyman-alpha forest separately from DESI BAO, does the preference for varying dark energy remain in DES-SN5YR and Union3, with Ωm = 0.3 ± 0.02?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "86": {
+      "originalIndex": 86,
+      "testNumber": 87,
+      "publicationKey": "d9af9a49bccd28141d7c913e0c8019d16db6c381feef1f208da4151bf9c617ee",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing low and high redshift from DESI BAO, does the preference for varying dark energy remain in DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "87": {
+      "originalIndex": 87,
+      "testNumber": 88,
+      "publicationKey": "6d14bad29cfc7dc8d7ab8868004b03518b5b928b003695ce1bf2484feba2cc37",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing red galaxies, emission-line galaxies, and quasars with Lyman-alpha from DESI BAO, does the preference for varying dark energy remain in DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "88": {
+      "originalIndex": 88,
+      "testNumber": 89,
+      "publicationKey": "8bb3051e2ed3d6a404ac88f407d6601ff0b3be763f8fe62e83f486578e2f1712",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,02?",
+        "en": "When removing quasars and the Lyman-alpha forest separately from DESI BAO, does the preference for varying dark energy remain in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.3 ± 0.02?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "89": {
+      "originalIndex": 89,
+      "testNumber": 90,
+      "publicationKey": "48b0de7b64c1eb5bb3fe4ad36f1c940334efc8c432c179b2af1a794e3aad4d70",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing low and high redshift from DESI BAO, does the preference for varying dark energy remain in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "90": {
+      "originalIndex": 90,
+      "testNumber": 91,
+      "publicationKey": "4fecb93abeedc06631b4090626c79a370bbe65eebf1d3caf1603dbf4f7052931",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing red galaxies, emission-line galaxies, and quasars with Lyman-alpha from DESI BAO, does the preference for varying dark energy remain in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "91": {
+      "originalIndex": 91,
+      "testNumber": 92,
+      "publicationKey": "81ab8441afbd7f2a1c3cc09dcbc3a91e230fcec82755b462b2fdb0a18cf872d5",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,3 ± 0,01?",
+        "en": "When removing six tracer groups from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and DES-SN5YR, with Ωm = 0.3 ± 0.01?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "92": {
+      "originalIndex": 92,
+      "testNumber": 93,
+      "publicationKey": "8c689401772d2398683cb8b9e9eff903dbf4cda66ef223160c21f52e5a72223d",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,3 ± 0,02?",
+        "en": "When removing quasars and the Lyman-alpha forest separately from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and DES-SN5YR, with Ωm = 0.3 ± 0.02?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "93": {
+      "originalIndex": 93,
+      "testNumber": 94,
+      "publicationKey": "48bc35b061d73cc5621a308c727d98ae47f2db896a8d0133e996e3000a1c2d51",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing low and high redshift from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and DES-SN5YR, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "94": {
+      "originalIndex": 94,
+      "testNumber": 95,
+      "publicationKey": "ddeed70c49ea711f4524bc10764f625ce74fcd70c835b600aa4a019af613dd89",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing red galaxies, emission-line galaxies, and quasars with Lyman-alpha from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and DES-SN5YR, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "95": {
+      "originalIndex": 95,
+      "testNumber": 96,
+      "publicationKey": "7de18a87cccc89fdbbc58cc4fc05cd62b40cbdeac917d129b6b4bc44a9f2534e",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,315 ± 0,03?",
+        "en": "When removing six tracer groups from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and DES-SN5YR, with Ωm = 0.315 ± 0.03?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "96": {
+      "originalIndex": 96,
+      "testNumber": 97,
+      "publicationKey": "ae4f7ccc4a78991d19049cff146e908862c939859b62904cb01da89c98c85fe7",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,33 ± 0,01?",
+        "en": "When removing six tracer groups from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and DES-SN5YR, with Ωm = 0.33 ± 0.01?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "97": {
+      "originalIndex": 97,
+      "testNumber": 98,
+      "publicationKey": "939ff3d54895e5881eb5564b9124186de91ded0b2b6e4c124e9d337cde539202",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,3 ± 0,02?",
+        "en": "When removing quasars and the Lyman-alpha forest separately from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and Union3, with Ωm = 0.3 ± 0.02?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "98": {
+      "originalIndex": 98,
+      "testNumber": 99,
+      "publicationKey": "a8cbccb85ad0245c9e10d3452d522c56c9f68e4be9e39c220fd164b583dd7324",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing low and high redshift from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "99": {
+      "originalIndex": 99,
+      "testNumber": 100,
+      "publicationKey": "870588e726cfe50f11b8708750f49d14c0334744da62f5129da68a22bed5c1d3",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When removing red galaxies, emission-line galaxies, and quasars with Lyman-alpha from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "100": {
+      "originalIndex": 100,
+      "testNumber": 101,
+      "publicationKey": "3a9925295dc1cab3e1be2beeb61b6e14007c55e2ee0a446d97a83384d2b179b8",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,315 ± 0,03?",
+        "en": "When removing six tracer groups from DESI BAO, does the preference for varying dark energy remain in Pantheon+ and Union3, with Ωm = 0.315 ± 0.03?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "101": {
+      "originalIndex": 101,
+      "testNumber": 102,
+      "publicationKey": "d088265cbbfb736348e63f2dac7c07bb2c85eef95cd725a7c690fe1629240339",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 8?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007 and BAO calibration = 30 ± 8?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "102": {
+      "originalIndex": 102,
+      "testNumber": 103,
+      "publicationKey": "6d870d8899e7dcdd706255390a9570604c2d22a302d969762741406c36c05335",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 8?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01 and BAO calibration = 30 ± 8?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "103": {
+      "originalIndex": 103,
+      "testNumber": 104,
+      "publicationKey": "edf99f59229ab854b7505c85bb63864ab93b773e672f072aa84df8f35b750efb",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 2?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007 and BAO calibration = 30 ± 2?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "104": {
+      "originalIndex": 104,
+      "testNumber": 105,
+      "publicationKey": "db61ffc0344c370b42a2d697163961f1cbba0df50bb2685c2cd60413fccdb049",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 4?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007 and BAO calibration = 30 ± 4?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "105": {
+      "originalIndex": 105,
+      "testNumber": 106,
+      "publicationKey": "099740b53ff56a60e2ce88aee25c4050a5bd3937104b06e06c0955cdf2f172ea",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 8?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007 and BAO calibration = 30 ± 8?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "106": {
+      "originalIndex": 106,
+      "testNumber": 107,
+      "publicationKey": "938167f0c5ddcd3ee99720c8cb781f83ed881af3593e5ccd6c6f5af6f5716ddd",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 2?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01 and BAO calibration = 30 ± 2?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "107": {
+      "originalIndex": 107,
+      "testNumber": 108,
+      "publicationKey": "4d2821a2a8d03c57003b0997a3da5572674922be02c579ed7f969b5456a48b8b",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 4?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01 and BAO calibration = 30 ± 4?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "108": {
+      "originalIndex": 108,
+      "testNumber": 109,
+      "publicationKey": "0193ba025a1317cbfa9286798dcd7910ebd8a60d6ee8a6ae05f66e6eb357c4cd",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 8?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01 and BAO calibration = 30 ± 8?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The tracer groups had unequal influence. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "109": {
+      "originalIndex": 109,
+      "testNumber": 110,
+      "publicationKey": "089321fc048a0e950fb8bb1bd284f68a0d5ca439732c114e9a02faf35d39d3d1",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 8?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+ and Union3, with Ωm = 0.315 ± 0.007 and BAO calibration = 30 ± 8?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "110": {
+      "originalIndex": 110,
+      "testNumber": 111,
+      "publicationKey": "2781d61efa8e86cfd7a39a4489c2b1907a4d2744f2a2dd76d98352218a1f070c",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 8?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+ and Union3, with Ωm = 0.33 ± 0.01 and BAO calibration = 30 ± 8?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "111": {
+      "originalIndex": 111,
+      "testNumber": 112,
+      "publicationKey": "b832b87ff50eb91d152dbfa5b8450806913a6a4317ed869353a94643c8e8f89b",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "112": {
+      "originalIndex": 112,
+      "testNumber": 113,
+      "publicationKey": "740727f9f835ee8f8c5b99a4c23934419f240fb57826d2ff5b4341cd7afd2647",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+, DES-SN5YR and Union3, with Ωm = 0.33 ± 0.01?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "113": {
+      "originalIndex": 113,
+      "testNumber": 114,
+      "publicationKey": "90cec9a1487f1b67e805f7f8ee7ffa7aa05382e3031d27ac4eefb6b0fa182668",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in DES-SN5YR and Union3, with Ωm = 0.315 ± 0.007?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "114": {
+      "originalIndex": 114,
+      "testNumber": 115,
+      "publicationKey": "919f8d4450aceefbc0a21348dd9f857aac37fc4a21cdc132f26bd1185a3935ee",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01?",
+        "en": "When replacing DESI DR2 BAO with DR1, does the preference for varying dark energy persist in Pantheon+ and Union3, with Ωm = 0.33 ± 0.01?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "115": {
+      "originalIndex": 115,
+      "testNumber": 116,
+      "publicationKey": "60a431a1dde3d54d5b5f214c3b632ad1e6918afc5ada5e6add6f3ac8ad778aaf",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, com Ωm = 0,315 ± 0,03, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "en": "In Pantheon+ and Union3, with Ωm = 0.315 ± 0.03, does the preference for varying dark energy survive the removal of each of the seven DESI DR2 BAO bins?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "116": {
+      "originalIndex": 116,
+      "testNumber": 117,
+      "publicationKey": "013e26f873f9442043d4404b0c7956dd9ab4d5fde61400a7281b5f788c36fa3c",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "en": "In DES-SN5YR and Union3, does the preference for varying dark energy survive the removal of each of the seven DESI DR2 BAO bins?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "117": {
+      "originalIndex": 117,
+      "testNumber": 118,
+      "publicationKey": "2d114992724311368c3513b551506883eca0883c65d14de67c2af2f99447a32a",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 4 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "118": {
+      "originalIndex": 118,
+      "testNumber": 119,
+      "publicationKey": "643daf3488319fb50e064a83db71bd215b9260cd93a1d4b64dbd06282819a413",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "119": {
+      "originalIndex": 119,
+      "testNumber": 120,
+      "publicationKey": "e66608bd65d7daf9ae2cfa773b5ba37815e8b2ef19ff313efa40a80db97788d9",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.315 ± 0.007, does the preference for varying dark energy in DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "120": {
+      "originalIndex": 120,
+      "testNumber": 121,
+      "publicationKey": "8eeed0b8dbdd663ced6925b043ece6e10d5273d142cee7a402e6a2228ef802b0",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.33 ± 0.01, does the preference for varying dark energy in DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "121": {
+      "originalIndex": 121,
+      "testNumber": 122,
+      "publicationKey": "77abb11405bf9f64adaea0eaef5cb8868afd8cbff7c0525508a28c7aa239500e",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 2 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 2 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "122": {
+      "originalIndex": 122,
+      "testNumber": 123,
+      "publicationKey": "eb2ee5ec5ef18283e6acf60b16df3d3eab2dcec64b1e01028c787311f8b2622d",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 4 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "123": {
+      "originalIndex": 123,
+      "testNumber": 124,
+      "publicationKey": "c5a3e693db0f54233973d48e16443f306107b9b63800ec4f41671981a9dc1cd5",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "124": {
+      "originalIndex": 124,
+      "testNumber": 125,
+      "publicationKey": "f10853b37c1080f4a2467e496a331d8f26fbfe9c67e3903f325599067cfacede",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 2 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 2 and Ωm = 0.315 ± 0.007, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "125": {
+      "originalIndex": 125,
+      "testNumber": 126,
+      "publicationKey": "3c1e97af224c95f683bc760d1c29df9e4b68c044865ad002395e627391c65e27",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 4 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 4 and Ωm = 0.315 ± 0.007, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "126": {
+      "originalIndex": 126,
+      "testNumber": 127,
+      "publicationKey": "0e32eb54a5c33074f98de2b028423c5935f1332508e3c2b9bd9be884dfc5b8f7",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.315 ± 0.007, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "127": {
+      "originalIndex": 127,
+      "testNumber": 128,
+      "publicationKey": "07505ec8059de19bf4041db00132763c4e956d05a6fa12bbf054b57e6714622c",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 2 e Ωm = 0,315 ± 0,02, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 2 and Ωm = 0.315 ± 0.02, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "128": {
+      "originalIndex": 128,
+      "testNumber": 129,
+      "publicationKey": "b78e3708616c6134c2203c62a6d1fba692325a57fe894168e964f24975bc8410",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 4 e Ωm = 0,315 ± 0,02, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 4 and Ωm = 0.315 ± 0.02, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "129": {
+      "originalIndex": 129,
+      "testNumber": 130,
+      "publicationKey": "12410174a7dd1b115636711daf304f6368d471830b59dd86c37e27ada8964924",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,02, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.315 ± 0.02, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "130": {
+      "originalIndex": 130,
+      "testNumber": 131,
+      "publicationKey": "856a6f7eb8f64e1f98b66bfae987654edb89f5fd2d70bfa85a4ea745de1f85b8",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 2 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 2 and Ωm = 0.33 ± 0.01, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "131": {
+      "originalIndex": 131,
+      "testNumber": 132,
+      "publicationKey": "e5bdc108024925f0415acf9d080dfc8850a8d0208645a22164b0199ccbb9e10b",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 4 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 4 and Ωm = 0.33 ± 0.01, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "132": {
+      "originalIndex": 132,
+      "testNumber": 133,
+      "publicationKey": "dda6dfaa6ebb122be40ce9f77d440c0db0b0c15eebd54194b92a5c52b0cc91ec",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.33 ± 0.01, does the preference for varying dark energy in Pantheon+, DES-SN5YR and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "133": {
+      "originalIndex": 133,
+      "testNumber": 134,
+      "publicationKey": "982cf20e0f7ffcb2eaf297d5e739daa5e71b9a4dfdbd82c5247b8720eabb62cd",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 4 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in Pantheon+ and DES-SN5YR survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "134": {
+      "originalIndex": 134,
+      "testNumber": 135,
+      "publicationKey": "2fd8025ca131cf82eb8d889d9bca1ac3db2305bc56ccb46f60e32042726855cc",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in Pantheon+ and DES-SN5YR survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "135": {
+      "originalIndex": 135,
+      "testNumber": 136,
+      "publicationKey": "d409c18d34c6325433d40d42a1b0e41ea0bb250c0f95516864cbf684b72425ee",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.315 ± 0.007, does the preference for varying dark energy in Pantheon+ and DES-SN5YR survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "136": {
+      "originalIndex": 136,
+      "testNumber": 137,
+      "publicationKey": "967e24bcaf19f42d08251017f3bf19f61c5893508016b552b7ff5ab7aec92755",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.33 ± 0.01, does the preference for varying dark energy in Pantheon+ and DES-SN5YR survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "137": {
+      "originalIndex": 137,
+      "testNumber": 138,
+      "publicationKey": "8c808ae2b6dcbbf727314dea476e84595e23fd390b5ced3c5b91dadf00465415",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 4 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in Pantheon+ and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "138": {
+      "originalIndex": 138,
+      "testNumber": 139,
+      "publicationKey": "a97e9ee2b6ffab12bb1433fe1cc1c4d70d9139d5ff21a1fe698687b9379f8ebf",
+      "expectedResultPt": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.3 ± 0.01, does the preference for varying dark energy in Pantheon+ and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A influência dos grupos de traçadores foi desigual. O teste não estabeleceu nem independência completa de cada grupo nem dominância exclusiva de um único grupo.",
+        "en": "The influence of the tracer groups was uneven. The test established neither complete independence from each group nor exclusive dominance by a single group."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "139": {
+      "originalIndex": 139,
+      "testNumber": 140,
+      "publicationKey": "71b415d9997079ca9a7cbd5a22cf098ce1a87b47db41ad52a20de238a53e7ba2",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.315 ± 0.007, does the preference for varying dark energy in Pantheon+ and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "140": {
+      "originalIndex": 140,
+      "testNumber": 141,
+      "publicationKey": "c4760ba7692524b1bd7c62b2c5ea96ee08687408502a870da07cfe9e583f2e93",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "en": "With BAO calibration = 30 ± 8 and Ωm = 0.33 ± 0.01, does the preference for varying dark energy in Pantheon+ and Union3 survive the removal of each tracer block?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "142": {
+      "originalIndex": 142,
+      "testNumber": 143,
+      "publicationKey": "8f0db15b59e1f35e8e5b8a0b02b024399c3c778e85c2534875bdab6d6fc46d9b",
+      "expectedResultPt": "A estrutura supersimétrica mínima não demonstra proteção de R = 1. A conclusão completa depende de especificar os termos de Kähler, quebra de supersimetria e gravidade.",
+      "question": {
+        "pt-BR": "A supersimetria consegue proteger a compatibilização R=1 sem reintroduzir outro ajuste fino?",
+        "en": "Can supersymmetry protect the R=1 matching relation without reintroducing another fine-tuning?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A estrutura supersimétrica mínima não demonstra proteção de R = 1. A conclusão completa depende de especificar os termos de Kähler, quebra de supersimetria e gravidade.",
+        "en": "The minimal supersymmetric structure does not demonstrate protection of R = 1. A complete conclusion requires the Kähler, supersymmetry-breaking and gravity terms to be specified."
+      },
+      "reason": {
+        "pt-BR": "Conclusão teórica de proteção não demonstrada. R = 1 é a hipótese examinada, não resultado quantitativo medido.",
+        "en": "Theoretical conclusion that protection is unproven. R = 1 is the hypothesis examined, not a measured numerical result."
+      }
+    },
+    "143": {
+      "originalIndex": 143,
+      "testNumber": 144,
+      "publicationKey": "ac7dc23fc352331470d0aa4fa3d446694d2dfdc9dc97a60b1305aa619a128065",
+      "expectedResultPt": "Os resumos de calibração cruzada examinados não estabelecem uma diferença específica de alto redshift de pelo menos 3σ. A comparação hierárquica completa continua necessária.",
+      "question": {
+        "pt-BR": "As calibrações de lentes fracas (DES, KiDS, HSC) usadas pelo eROSITA discordam entre si em alto redshift?",
+        "en": "Do the weak-lensing calibrations (DES, KiDS, HSC) used by eROSITA disagree with one another at high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Os resumos de calibração cruzada examinados não estabelecem uma diferença específica de alto redshift de pelo menos 3σ. A comparação hierárquica completa continua necessária.",
+        "en": "The cross-calibration summaries examined do not establish a specific high-redshift difference of at least 3σ. A full hierarchical comparison is still needed."
+      },
+      "reason": {
+        "pt-BR": "3σ é o critério não estabelecido, não uma medida nem um limite numérico estimado para a diferença.",
+        "en": "3σ is an unestablished criterion, not a measurement or an estimated numerical bound on the difference."
+      }
+    },
+    "144": {
+      "originalIndex": 144,
+      "testNumber": 145,
+      "publicationKey": "b84b746e73e1e51205f804a6f77237da4d96f08d3072a3ddb88e8573d6383226",
+      "expectedResultPt": "No modelo bosônico mínimo, as correções de um laço alteram os coeficientes em proporções diferentes. A forma clássica, sozinha, não protege R = 1 contra essas correções.",
+      "question": {
+        "pt-BR": "As correções quânticas preservam R=1 no modelo bosônico mínimo?",
+        "en": "Do quantum corrections preserve R=1 in the minimal bosonic model?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "No modelo bosônico mínimo, as correções de um laço alteram os coeficientes em proporções diferentes. A forma clássica, sozinha, não protege R = 1 contra essas correções.",
+        "en": "In the minimal bosonic model, one-loop corrections alter the coefficients in different proportions. The classical form alone does not protect R = 1 against these corrections."
+      },
+      "reason": {
+        "pt-BR": "Correções descritas qualitativamente; não há valores dos coeficientes, correções ou deslocamento de R.",
+        "en": "Corrections described qualitatively; there are no values for the coefficients, corrections or shift in R."
+      }
+    },
+    "146": {
+      "originalIndex": 146,
+      "testNumber": 147,
+      "publicationKey": "19bd9de24d432c16d957dc653ea792d7ae30449a7187a96d960b0b9f84ae211f",
+      "expectedResultPt": "Nenhum trabalho recuperado na amostra reuniu as três etapas exigidas, embora tenham sido encontrados precedentes parciais. A novidade potencial da combinação resiste a esta busca, sem estabelecer prioridade absoluta.",
+      "question": {
+        "pt-BR": "Já existe na literatura a cadeia teórica completa que este teste procura?",
+        "en": "Does the complete theoretical chain sought by this test already exist in the literature?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Nenhum trabalho recuperado na amostra reuniu as três etapas exigidas, embora tenham sido encontrados precedentes parciais. A novidade potencial da combinação resiste a esta busca, sem estabelecer prioridade absoluta.",
+        "en": "No paper retrieved in the sample combined the three required stages, although partial precedents were found. The combination’s potential novelty survives this search, without establishing absolute priority."
+      },
+      "reason": {
+        "pt-BR": "Nenhum precedente completo na amostra, mas sem tamanho amostral; um ponto zero isolado ocultaria a cobertura desconhecida.",
+        "en": "No complete precedent in the sample, but no sample size; an isolated zero would conceal unknown coverage."
+      }
+    },
+    "158": {
+      "originalIndex": 158,
+      "testNumber": 159,
+      "publicationKey": "d3fd17ba2f39401fbabbddcc7daa8efbdde7c1734d30d67cf137422b778aae91",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "en": "In Pantheon+ and Union3, with Ωm = 0.315 ± 0.007, does the preference for varying dark energy survive the removal of each of the seven DESI DR2 BAO bins?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "159": {
+      "originalIndex": 159,
+      "testNumber": 160,
+      "publicationKey": "408ea04eddf86f2b9773c3e085437c870b7719f6e1c4f05e1cc69564fbe08186",
+      "expectedResultPt": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+      "question": {
+        "pt-BR": "Em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "en": "In Pantheon+ and Union3, with Ωm = 0.33 ± 0.01, does the preference for varying dark energy survive the removal of each of the seven DESI DR2 BAO bins?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A direção da preferência por energia escura variável persistiu em todas as retiradas de grupos testadas. Isso mostra robustez interna nos dados e agrupamentos analisados, sem estabelecer uma detecção global.",
+        "en": "The direction of the preference for varying dark energy persisted in every tested group removal. This shows internal robustness in the analyzed data and groupings, without establishing a global detection."
+      },
+      "reason": {
+        "pt-BR": "Resultado de retirada de blocos apenas qualitativo. Priors, calibrações, redshifts ou número de blocos na pergunta são entradas do teste; não há χ², efeito, incerteza ou valor por bloco publicado no resultado.",
+        "en": "Group-removal outcome is qualitative only. Priors, calibrations, redshifts or the number of bins in the question are test inputs; the result publishes no χ², effect, uncertainty or per-group value."
+      }
+    },
+    "160": {
+      "originalIndex": 160,
+      "testNumber": 161,
+      "publicationKey": "ff89edbcb67643d98b2f72cfce43810e322eed8f72dca2e1b575d63d89766fac",
+      "expectedResultPt": "Os resumos comparados não estabelecem duas anomalias independentes que exijam a mesma propriedade nova de matéria escura. A conclusão depende das calibrações e do tratamento dos dados.",
+      "question": {
+        "pt-BR": "Quais anomalias contra a matéria escura fria ainda sobrevivem depois de descontar gás, estrelas e erros de medição?",
+        "en": "Which anomalies challenging cold dark matter still survive after accounting for gas, stars, and measurement errors?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Os resumos comparados não estabelecem duas anomalias independentes que exijam a mesma propriedade nova de matéria escura. A conclusão depende das calibrações e do tratamento dos dados.",
+        "en": "The summaries compared do not establish two independent anomalies requiring the same new property of dark matter. The conclusion depends on calibrations and data treatment."
+      },
+      "reason": {
+        "pt-BR": "Não estabelecer duas anomalias não equivale a observar zero ou uma; nenhuma estimativa numérica foi publicada.",
+        "en": "Not establishing two anomalies does not mean observing zero or one; no numerical estimate was published."
+      }
+    },
+    "166": {
+      "originalIndex": 166,
+      "testNumber": 167,
+      "publicationKey": "687c8ea40576682d0fb490d06451388c461f788650fa82df90de29891299ac11",
+      "expectedResultPt": "Uma supressão comum melhora o ajuste dos resumos gaussianos de S8 analisados. Isso ainda não valida um mecanismo de matéria escura: faltam o vínculo com um modelo físico e a aplicação equivalente dos limites de Lyman-alfa.",
+      "question": {
+        "pt-BR": "Se a matéria escura 'apagar' um pouco da estrutura em escalas médias, isso resolve a diferença entre Planck e os levantamentos de lentes (S8)?",
+        "en": "If dark matter 'erases' some structure on intermediate scales, does this resolve the difference between Planck and lensing surveys (S8)?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Uma supressão comum melhora o ajuste dos resumos gaussianos de S8 analisados. Isso ainda não valida um mecanismo de matéria escura: faltam o vínculo com um modelo físico e a aplicação equivalente dos limites de Lyman-alfa.",
+        "en": "A common suppression improves the fit to the Gaussian S8 summaries analyzed. This does not yet validate a dark-matter mechanism: the link to a physical model and equivalent application of Lyman-alpha limits remain missing."
+      },
+      "reason": {
+        "pt-BR": "Melhora qualitativa sem valor de S8, supressão, χ² ou incerteza publicada.",
+        "en": "Qualitative improvement without published S8, suppression, χ² or uncertainty values."
+      }
+    },
+    "167": {
+      "originalIndex": 167,
+      "testNumber": 168,
+      "publicationKey": "60e9dfa9993f765c0f520847332dd3a032c62cb84cafc091107bcec1ff7b0ce0",
+      "expectedResultPt": "Os resumos analisados apontam menor crescimento em baixo redshift, mas a diferença não é suficiente para localizar com segurança o início de uma supressão física.",
+      "question": {
+        "pt-BR": "Se a supressão de crescimento associada à tensão de S8 for física, ela aparece só tarde no Universo ou já estava presente em alto redshift?",
+        "en": "If the growth suppression associated with the S8 tension is physical, does it emerge only late in the Universe, or was it already present at high redshift?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Os resumos analisados apontam menor crescimento em baixo redshift, mas a diferença não é suficiente para localizar com segurança o início de uma supressão física.",
+        "en": "The summaries analyzed indicate less growth at low redshift, but the difference is insufficient to reliably locate the onset of a physical suppression."
+      },
+      "reason": {
+        "pt-BR": "Tendência qualitativa sem crescimento, redshift de início ou incerteza quantitativa.",
+        "en": "Qualitative trend without numerical growth, onset redshift or uncertainty."
+      }
+    },
+    "171": {
+      "originalIndex": 171,
+      "testNumber": 172,
+      "publicationKey": "17b006ccbd53c2459ed580a24108348d7241da948f803f9df81b1182f4619829",
+      "expectedResultPt": "Não havia testes concluídos com previsão anterior elegível. O mínimo de 10 casos por grupo não foi atingido, impedindo comparar a calibração entre os grupos.",
+      "question": {
+        "pt-BR": "Exigindo ao menos 10 casos por grupo, a calibração das previsões difere entre testes com mais ou menos informação disponível?",
+        "en": "With at least 10 cases required in each group, does prediction calibration differ between tests with more or less information available?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Não havia testes concluídos com previsão anterior elegível. O mínimo de 10 casos por grupo não foi atingido, impedindo comparar a calibração entre os grupos.",
+        "en": "There were no completed tests with an eligible prior prediction. The minimum of 10 cases in each group was not met, preventing a comparison of calibration between groups."
+      },
+      "reason": {
+        "pt-BR": "O único número de resultado descreve disponibilidade amostral ou o tamanho da intervenção; a comparação ou o desfecho solicitado não tem valor numérico publicado. Excluído para evitar apresentar tamanho de amostra ou esforço como resultado do teste.",
+        "en": "The only result count describes sample availability or intervention size; the requested comparison or outcome has no published numerical value. Excluded to avoid presenting sample size or effort as the test outcome."
+      }
+    },
+    "172": {
+      "originalIndex": 172,
+      "testNumber": 173,
+      "publicationKey": "625b95f29739604c174d2f3339bd769d8560495416ad1d2d07156365ce4cb6d2",
+      "expectedResultPt": "Não havia testes concluídos com previsão anterior elegível. O mínimo de 15 casos por grupo não foi atingido, impedindo comparar a calibração entre os grupos.",
+      "question": {
+        "pt-BR": "Exigindo ao menos 15 casos por grupo, a calibração das previsões difere entre testes com mais ou menos informação disponível?",
+        "en": "With at least 15 cases required in each group, does prediction calibration differ between tests with more or less information available?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Não havia testes concluídos com previsão anterior elegível. O mínimo de 15 casos por grupo não foi atingido, impedindo comparar a calibração entre os grupos.",
+        "en": "There were no completed tests with an eligible prior prediction. The minimum of 15 cases in each group was not met, preventing a comparison of calibration between groups."
+      },
+      "reason": {
+        "pt-BR": "O único número de resultado descreve disponibilidade amostral ou o tamanho da intervenção; a comparação ou o desfecho solicitado não tem valor numérico publicado. Excluído para evitar apresentar tamanho de amostra ou esforço como resultado do teste.",
+        "en": "The only result count describes sample availability or intervention size; the requested comparison or outcome has no published numerical value. Excluded to avoid presenting sample size or effort as the test outcome."
+      }
+    },
+    "173": {
+      "originalIndex": 173,
+      "testNumber": 174,
+      "publicationKey": "8249daa80b6d6db28c57de1d41d0e5cc9735d8b39850a53a90c9ffa03acd2673",
+      "expectedResultPt": "Não havia testes concluídos com previsão anterior elegível. O mínimo de 5 casos por grupo não foi atingido, impedindo comparar a calibração entre os grupos.",
+      "question": {
+        "pt-BR": "Exigindo ao menos 5 casos por grupo, a calibração das previsões difere entre testes com mais ou menos informação disponível?",
+        "en": "With at least 5 cases required in each group, does prediction calibration differ between tests with more or less information available?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Não havia testes concluídos com previsão anterior elegível. O mínimo de 5 casos por grupo não foi atingido, impedindo comparar a calibração entre os grupos.",
+        "en": "There were no completed tests with an eligible prior prediction. The minimum of 5 cases in each group was not met, preventing a comparison of calibration between groups."
+      },
+      "reason": {
+        "pt-BR": "O único número de resultado descreve disponibilidade amostral ou o tamanho da intervenção; a comparação ou o desfecho solicitado não tem valor numérico publicado. Excluído para evitar apresentar tamanho de amostra ou esforço como resultado do teste.",
+        "en": "The only result count describes sample availability or intervention size; the requested comparison or outcome has no published numerical value. Excluded to avoid presenting sample size or effort as the test outcome."
+      }
+    },
+    "182": {
+      "originalIndex": 182,
+      "testNumber": 183,
+      "publicationKey": "9613b9de1ff529d9fd03eddbee7ceb6494ac07b3b89826d54367a678e3e151c0",
+      "expectedResultPt": "Foi encontrada uma referência compartilhada à cópia antiga, mas as cinco configurações não ofereciam código executável suficiente para rastrear seu uso. Não foi possível confirmar nem excluir o carregamento dinâmico.",
+      "question": {
+        "pt-BR": "Algum processo de inicialização consulta dinamicamente a cópia antiga das regras de execução?",
+        "en": "Does any initialization process dynamically consult the old copy of the execution rules?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Foi encontrada uma referência compartilhada à cópia antiga, mas as cinco configurações não ofereciam código executável suficiente para rastrear seu uso. Não foi possível confirmar nem excluir o carregamento dinâmico.",
+        "en": "A shared reference to the old copy was found, but the five configurations did not provide enough executable code to trace its use. Dynamic loading could neither be confirmed nor ruled out."
+      },
+      "reason": {
+        "pt-BR": "Cinco configurações é tamanho da inspeção, não contagem de carregamentos confirmados. O resultado de uso dinâmico é indeterminado.",
+        "en": "Five configurations is inspection size, not a count of confirmed loads. The dynamic-use outcome is undetermined."
+      }
+    },
+    "187": {
+      "originalIndex": 187,
+      "testNumber": 188,
+      "publicationKey": "ef995fbc9568fe87da14941d22f2376d5a4cef39842612633d83d70c7542826f",
+      "expectedResultPt": "Não havia três observações independentes com a separação temporal exigida. A persistência ao longo do tempo permaneceu sem conclusão.",
+      "question": {
+        "pt-BR": "As tarefas antigas continuam disponíveis para retomada em observações separadas no tempo?",
+        "en": "Do old tasks remain available to resume in observations separated in time?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Não havia três observações independentes com a separação temporal exigida. A persistência ao longo do tempo permaneceu sem conclusão.",
+        "en": "There were not three independent observations with the required temporal separation. Persistence over time remained unresolved."
+      },
+      "reason": {
+        "pt-BR": "Amostra temporal inferior à exigência de três, mas a contagem observada não é fornecida. Não substituir por zero.",
+        "en": "Temporal sample below the three-observation requirement, but the observed count is not supplied. Do not replace it with zero."
+      }
+    },
+    "194": {
+      "originalIndex": 194,
+      "testNumber": 195,
+      "publicationKey": "0e2dd3317c1e41fd83d1b429191be02deca4b5393a716d0248109742c2a75cbb",
+      "expectedResultPt": "A execução não pôde demonstrar independência porque a composição da amostra original não estava preservada. Havia 13 tarefas em duas áreas, mas não era possível identificar com segurança quais eram novas para a análise.",
+      "question": {
+        "pt-BR": "Em uma amostra independente e distribuída entre planos, a falta de dados ou vínculos ainda explica pelo menos 70% das interrupções?",
+        "en": "In an independent sample distributed across plans, does a lack of data or links still explain at least 70% of interruptions?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "A execução não pôde demonstrar independência porque a composição da amostra original não estava preservada. Havia 13 tarefas em duas áreas, mas não era possível identificar com segurança quais eram novas para a análise.",
+        "en": "The execution could not demonstrate independence because the composition of the original sample had not been preserved. There were 13 tasks in two areas, but it was not possible to reliably identify which were new to the analysis."
+      },
+      "reason": {
+        "pt-BR": "13 tarefas e duas áreas descrevem a amostra; a independência não foi quantificada e não há contagem de interrupções classificadas.",
+        "en": "13 tasks and two areas describe the sample; independence was not quantified and no classified interruption counts are available."
+      }
+    },
+    "200": {
+      "originalIndex": 200,
+      "testNumber": 201,
+      "publicationKey": "49281ab2d7c5696dd9b0009d0e9a3b05f815b2f6101e90c85022e5bf43d164e1",
+      "expectedResultPt": "Não havia amostra longitudinal suficiente para avaliar a sequência entre fornecimento de dados e retomada.",
+      "question": {
+        "pt-BR": "O fornecimento ou a vinculação de dados antecede a retomada de tarefas interrompidas?",
+        "en": "Does supplying or linking data precede the resumption of interrupted tasks?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Não havia amostra longitudinal suficiente para avaliar a sequência entre fornecimento de dados e retomada.",
+        "en": "There was no sufficient longitudinal sample to assess the sequence between supplying data and resumption."
+      },
+      "reason": {
+        "pt-BR": "Amostra longitudinal insuficiente, sem contagem observada nem estimativa da relação temporal.",
+        "en": "Insufficient longitudinal sample, without an observed count or an estimate of the temporal relationship."
+      }
+    },
+    "203": {
+      "originalIndex": 203,
+      "testNumber": 204,
+      "publicationKey": "087949a1d488fdbe6d16a141bfbdee737596763d7119ebda5fd5aaa960c1ea6c",
+      "expectedResultPt": "Foi possível recuperar uma distribuição normal padrão e 200 mil amostras, mas não a semente fixa. A documentação é insuficiente para confirmar ou refutar a reprodutibilidade.",
+      "question": {
+        "pt-BR": "O sistema reproduz o resultado em três execuções com parâmetros previamente definidos?",
+        "en": "Does the system reproduce the result in three runs with previously defined parameters?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Foi possível recuperar uma distribuição normal padrão e 200 mil amostras, mas não a semente fixa. A documentação é insuficiente para confirmar ou refutar a reprodutibilidade.",
+        "en": "A standard normal distribution and 200 thousand samples could be recovered, but not the fixed seed. The documentation is insufficient to confirm or refute reproducibility."
+      },
+      "reason": {
+        "pt-BR": "200 mil é um parâmetro recuperado da simulação, não resultado numérico. Semente ausente e reprodutibilidade não determinada.",
+        "en": "200,000 is a recovered simulation parameter, not a numerical result. The seed is missing and reproducibility undetermined."
+      }
+    },
+    "204": {
+      "originalIndex": 204,
+      "testNumber": 205,
+      "publicationKey": "8c6c58aae2d9a2f6b6094fa936bc5b61636e07c9a04fd952da36cf6b359e7b83",
+      "expectedResultPt": "Havia informação temporal nos eventos, mas nenhum caso com o cálculo anterior necessário à comparação. A exigência mínima era dez; não foi possível comparar a ordem temporal entre as duas fontes.",
+      "question": {
+        "pt-BR": "O tempo desde a chegada de hipóteses fica coerente quando se usam os horários dos eventos de registro?",
+        "en": "Does the time since hypotheses arrived become consistent when registration event timestamps are used?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Havia informação temporal nos eventos, mas nenhum caso com o cálculo anterior necessário à comparação. A exigência mínima era dez; não foi possível comparar a ordem temporal entre as duas fontes.",
+        "en": "The events contained temporal information, but no case had the prior calculation needed for comparison. The minimum requirement was ten; the temporal order could not be compared between the two sources."
+      },
+      "reason": {
+        "pt-BR": "O único número de resultado descreve disponibilidade amostral ou o tamanho da intervenção; a comparação ou o desfecho solicitado não tem valor numérico publicado. Excluído para evitar apresentar tamanho de amostra ou esforço como resultado do teste.",
+        "en": "The only result count describes sample availability or intervention size; the requested comparison or outcome has no published numerical value. Excluded to avoid presenting sample size or effort as the test outcome."
+      }
+    },
+    "206": {
+      "originalIndex": 206,
+      "testNumber": 207,
+      "publicationKey": "f86e72f5eebd7fad5d4b1d5eb4fbb81412721f027563fb5bb74f36fbcfeb6a50",
+      "expectedResultPt": "Havia horários nos eventos, mas nenhum caso com o cálculo temporal anterior necessário à comparação. O mínimo previsto era dez; a comparação de ordem temporal não pôde ser feita.",
+      "question": {
+        "pt-BR": "Os eventos de criação ou registro de hipóteses fornecem uma fonte de tempo coerente?",
+        "en": "Do hypothesis creation or registration events provide a consistent source of time information?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Havia horários nos eventos, mas nenhum caso com o cálculo temporal anterior necessário à comparação. O mínimo previsto era dez; a comparação de ordem temporal não pôde ser feita.",
+        "en": "The events had timestamps, but no case had the prior time calculation needed for comparison. The planned minimum was ten; the temporal order comparison could not be performed."
+      },
+      "reason": {
+        "pt-BR": "O único número de resultado descreve disponibilidade amostral ou o tamanho da intervenção; a comparação ou o desfecho solicitado não tem valor numérico publicado. Excluído para evitar apresentar tamanho de amostra ou esforço como resultado do teste.",
+        "en": "The only result count describes sample availability or intervention size; the requested comparison or outcome has no published numerical value. Excluded to avoid presenting sample size or effort as the test outcome."
+      }
+    },
+    "211": {
+      "originalIndex": 211,
+      "testNumber": 212,
+      "publicationKey": "d9242ad8b96095df288ea8673161c3dc9a1d21b979d89fd668f5603a17dcbeb0",
+      "expectedResultPt": "Preencher os 25 horários ausentes com base em eventos verificáveis não resolveu o problema nessa intervenção: o tempo calculado permaneceu indisponível e o alerta de inatividade continuou ativo.",
+      "question": {
+        "pt-BR": "Preencher somente os horários de criação ausentes corrige a medição do tempo desde novas hipóteses?",
+        "en": "Does filling in only the missing creation times correct the measurement of time since new hypotheses?"
+      },
+      "sourceExcerpt": {
+        "pt-BR": "Preencher os 25 horários ausentes com base em eventos verificáveis não resolveu o problema nessa intervenção: o tempo calculado permaneceu indisponível e o alerta de inatividade continuou ativo.",
+        "en": "Filling in the 25 missing timestamps using verifiable events did not solve the issue in this intervention: the calculated time remained unavailable and the inactivity alert remained active."
+      },
+      "reason": {
+        "pt-BR": "O único número de resultado descreve disponibilidade amostral ou o tamanho da intervenção; a comparação ou o desfecho solicitado não tem valor numérico publicado. Excluído para evitar apresentar tamanho de amostra ou esforço como resultado do teste.",
+        "en": "The only result count describes sample availability or intervention size; the requested comparison or outcome has no published numerical value. Excluded to avoid presenting sample size or effort as the test outcome."
+      }
+    }
+  },
+  "uniqueVisualSubjects": 106,
+  "uniquePlots": 112
+}

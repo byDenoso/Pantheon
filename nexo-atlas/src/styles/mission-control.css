@@ -1,0 +1,87 @@
+/* Controle de missão (Início). Referências: NASA Science (kickers em caixa-alta
+   espaçada + títulos grandes), JPL Eyes (telemetria em mono sobre o vazio),
+   ESA/Webb (conteúdo guiado pelo objeto). Tokens do Observatório. */
+
+.mission-control{display:flex;flex-direction:column;gap:clamp(40px,6vw,88px);margin:0 0 clamp(40px,6vw,80px)}
+
+/* Telemetria — relógio de missão */
+.mc-telemetry{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--obs-line);border-bottom:1px solid var(--obs-line);
+  font-family:var(--obs-mono);font-size:12px;color:var(--obs-bright);letter-spacing:.04em}
+.mc-telemetry span{display:flex;flex-direction:column;gap:4px;padding:14px 22px 14px 0;margin-right:22px;border-right:1px solid var(--obs-line)}
+.mc-telemetry span:last-child{border-right:0}
+.mc-telemetry em{font-style:normal;font-size:10px;letter-spacing:.22em;color:var(--obs-dim)}
+.mc-live{color:var(--obs-ok)}
+.mc-live em::before{content:"";display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;
+  background:var(--obs-ok);box-shadow:0 0 0 0 color-mix(in srgb,var(--obs-ok) 60%,transparent);animation:mc-pulse 2.4s infinite}
+@keyframes mc-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--obs-ok) 55%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+/* Cabeçalhos editoriais */
+.mc-head{display:flex;flex-direction:column;gap:10px;margin-bottom:clamp(20px,3vw,32px)}
+.mc-eyebrow,.mc-kicker{font-family:var(--obs-mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--obs-dim)}
+.mc-head h2{margin:0;font-family:var(--obs-display);font-weight:900;text-transform:uppercase;letter-spacing:.01em;
+  font-size:clamp(34px,5vw,64px);line-height:.95;color:var(--obs-bright)}
+
+/* Missões */
+.mc-missions{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:1px;background:var(--obs-line);border:1px solid var(--obs-line)}
+.mc-mission{position:relative;display:flex;flex-direction:column;gap:18px;text-align:left;padding:clamp(22px,3vw,34px);
+  background:var(--obs-void);color:var(--obs-text);border:0;cursor:pointer;overflow:hidden;
+  opacity:0;transform:translateY(14px);animation:mc-rise .7s var(--obs-ease) forwards;animation-delay:calc(var(--mc-i,0) * 90ms)}
+.mc-mission::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .5s var(--obs-ease);
+  background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--dom) 16%,transparent),transparent 60%)}
+.mc-mission::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--dom);transform:scaleY(.25);transform-origin:top;transition:transform .5s var(--obs-ease)}
+.mc-mission:hover::before,.mc-mission:focus-visible::before{opacity:1}
+.mc-mission:hover::after,.mc-mission:focus-visible::after{transform:scaleY(1)}
+.mc-mission:focus-visible{outline:1px solid var(--dom);outline-offset:-1px}
+.mc-mission .mc-kicker{color:var(--dom)}
+.mc-mission-body{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start}
+.mc-mission h3{margin:0 0 10px;font-family:var(--obs-display);font-weight:600;font-size:clamp(22px,2.4vw,30px);line-height:1.05;color:var(--obs-bright);text-transform:none}
+.mc-question{margin:0;font-size:14px;line-height:1.55;color:var(--obs-text);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+.mc-ring{width:84px;height:84px;flex:none}
+.mc-ring circle{fill:none;stroke-width:3}
+.mc-ring-track{stroke:var(--obs-line)}
+.mc-ring-value{stroke:var(--dom);transform:rotate(-90deg);transform-origin:40px 40px;stroke-linecap:butt;
+  stroke-dashoffset:var(--mc-offset);animation:mc-ring 1.4s var(--obs-ease) both}
+@keyframes mc-ring{from{stroke-dashoffset:214}}
+.mc-ring-num{font-family:var(--obs-display);font-weight:900;font-size:22px;fill:var(--obs-bright);text-anchor:middle}
+.mc-ring-den{font-family:var(--obs-mono);font-size:8px;letter-spacing:.14em;fill:var(--obs-dim);text-anchor:middle}
+
+.mc-phase-bar{display:flex;gap:2px;height:3px}
+.mc-phase{display:block;min-width:4px;background:var(--obs-line-strong)}
+.phase-done{background:var(--dom)}
+.phase-running{background:var(--obs-ok);animation:mc-flow 1.6s linear infinite;background-image:linear-gradient(90deg,var(--obs-ok),color-mix(in srgb,var(--obs-ok) 30%,transparent),var(--obs-ok));background-size:200% 100%}
+.phase-ready{background:color-mix(in srgb,var(--dom) 45%,var(--obs-line-strong))}
+.phase-blocked{background:var(--obs-violet)}
+@keyframes mc-flow{to{background-position:-200% 0}}
+.mc-phase-legend{margin:0;font-family:var(--obs-mono);font-size:11px;letter-spacing:.06em;color:var(--obs-dim)}
+.mc-next{margin:0;display:flex;gap:12px;align-items:baseline;font-size:13px;line-height:1.5;color:var(--obs-bright);
+  padding-top:14px;border-top:1px solid var(--obs-line)}
+.mc-next span{flex:none;font-family:var(--obs-mono);font-size:10px;letter-spacing:.22em;color:var(--dom)}
+
+.mc-more{margin-top:18px;background:none;border:0;padding:0;cursor:pointer;font-family:var(--obs-mono);font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--obs-sodium)}
+.mc-more:hover{color:var(--obs-bright)}
+
+/* Descobertas — lista editorial */
+.mc-results{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:clamp(24px,3vw,40px) clamp(24px,4vw,56px)}
+.mc-results li{opacity:0;transform:translateY(14px);animation:mc-rise .7s var(--obs-ease) forwards;animation-delay:calc(200ms + var(--mc-i,0) * 80ms)}
+.mc-results button{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--obs-line);
+  padding:18px 0 0;color:inherit;cursor:pointer}
+.mc-results .mc-kicker{color:var(--dom)}
+.mc-results strong{font-family:var(--obs-display);font-weight:600;font-size:22px;line-height:1.1;color:var(--obs-bright);transition:color .3s}
+.mc-results p{margin:0;font-size:14px;line-height:1.6;color:var(--obs-text);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.mc-mission-ref{font-family:var(--obs-mono);font-size:11px;letter-spacing:.08em;color:var(--obs-dim)}
+.mc-results button:hover strong,.mc-results button:focus-visible strong{color:var(--dom)}
+.mc-results button:hover{border-top-color:var(--dom)}
+
+@keyframes mc-rise{to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .mc-mission,.mc-results li{animation:none;opacity:1;transform:none}
+  .mc-ring-value,.phase-running,.mc-live em::before{animation:none}
+}
+@media (max-width:640px){
+  .mc-telemetry span{padding:10px 14px 10px 0;margin-right:14px}
+  .mc-mission-body{grid-template-columns:1fr}
+  .mc-ring{width:64px;height:64px}
+}

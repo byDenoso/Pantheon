@@ -1,0 +1,6 @@
+.mcp-grant{margin:20px 0;padding:18px;border:1px solid var(--pw-line,#333);border-radius:8px;background:var(--pw-panel,#121416);color:var(--pw-text,#eee);font-size:14px;line-height:1.55;max-width:760px}
+.mcp-grant h3{font-size:17px;margin:0 0 10px}.mcp-grant p{margin:10px 0;overflow-wrap:anywhere}
+.mcp-grant-consent{display:flex;gap:10px;align-items:flex-start;margin:16px 0}.mcp-grant-consent input{width:20px;height:20px;flex:none;margin-top:2px}
+.mcp-grant button{font:inherit;min-height:44px;padding:10px 14px;margin:6px 8px 6px 0;border:1px solid #777;border-radius:5px;background:#20252a;color:#fff;cursor:pointer;max-width:100%;white-space:normal}
+.mcp-grant button:disabled{opacity:.5;cursor:not-allowed}.mcp-grant :focus-visible{outline:2px solid #c9ad75;outline-offset:3px}
+@media(max-width:540px){.mcp-grant{padding:14px}.mcp-grant button{width:100%;margin-right:0}}

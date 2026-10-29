@@ -1,0 +1,456 @@
+diff --git a/runtime/nexo_agent_api/retrieval.py b/runtime/nexo_agent_api/retrieval.py
+index 6cfda66..987caff 100644
+--- a/runtime/nexo_agent_api/retrieval.py
++++ b/runtime/nexo_agent_api/retrieval.py
+@@ -27,6 +27,7 @@ from .memory import (Memory, Document, Snapshot, SourceError, Conflict, ROLES, I
+                      fit_vectors, query_vector, references, role_name, utc)
+ 
+ VERSION = "nexo-retrieval-1.3.0"
++SEARCH_POLICY = "reviewed-source-linked-context-v1"
+ CHUNKER = "context-fields-1000-v2"
+ EXTRA_SURFACES = {"runtime/runs/": "RUN", "runtime/results/": "RESULT",
+                   "runtime/evidence/": "EVIDENCE", "runtime/artifacts/": "ARTIFACT",
+@@ -783,7 +784,22 @@ class Retrieval(Memory):
+             return {"mode": "graph", "reason": "explicit_entity_broad_evidence", "target_kinds": [], "strategy": "bounded_explicit_graph"}
+         if re.search(r"\b(?:[a-z_]\w*\.)+[a-z_]\w*:\s|\b(?:question|statement|method|payload|source|writer_role|evidence_kind|notes):\s", q):
+             return {"mode": "lexical", "reason": "literal_field_passage_with_incidental_references"}
+-        graph_cue = any(s in q for s in ("relacion", "connect", "conecta", "cadeia", "chain", "trace", "dataset", "binding", "conjunto de dados", "receita", "recipe", "depende", "depend", "resultado de", "result of", "associad", "associated", "quais testes", "which tests"))
++        source_linked_cue = re.search(
++            r"\b(?:correcao|correcoes|corrige|corrigem|corrigir|correction|corrections|corrected|"
++            r"revisao|revisoes|review|reviews|reviewed|interpretacao|interpretacoes|"
++            r"interpretation|interpretations|interpretar|interpret)\b", q)
++        explicit_traversal = re.search(
++            r"\b(?:trace\w*|tracing|chain\w*|cadeia\w*|connect\w*|conect\w*|conexao|conexoes)\b", q)
++        evidence_cue = re.search(r"\b(?:evidencia|evidencias|evidence)\b", q)
++        if has_id and source_linked_cue and not explicit_traversal:
++            return {"mode": "graph", "reason": "identifier_with_source_linked_context_request",
++                    "target_kinds": [], "strategy": "bounded_source_linked_context"}
++        # "Independent evidence" is not a dependency request. Limit this
++        # disambiguation to evidence queries so other inherited routes stay put.
++        graph_query = re.sub(r"\b(?:independent|independently|independence|independente|independentes|independencia)\b",
++                             "", q) if evidence_cue else q
++        graph_cue = any(s in graph_query for s in ("relacion", "connect", "conecta", "cadeia", "chain", "trace", "dataset", "binding", "conjunto de dados", "receita", "recipe", "depende", "depend", "resultado de", "result of", "associad", "associated", "quais testes", "which tests"))
++        graph_cue = graph_cue or bool(explicit_traversal) or bool(re.search(r"\b(?:relacao|relacoes)\b", q))
+         if has_id and graph_cue:
+             target_kinds = []
+             if "receita" in q or "recipe" in q:
+@@ -793,6 +809,10 @@ class Retrieval(Memory):
+             elif any(t in q for t in ("dataset", "binding", "conjunto de dados", "conjuntos de dados")):
+                 target_kinds = ["DATA_BINDING", "DATASET"]
+             return {"mode": "graph", "reason": "identifier_with_relation_request", "target_kinds": target_kinds, "strategy": "bounded_explicit_graph"}
++        # Explicit chain/trace/connection requests keep their structural witness.
++        if has_id and evidence_cue:
++            return {"mode": "graph", "reason": "identifier_with_source_linked_context_request",
++                    "target_kinds": [], "strategy": "bounded_source_linked_context"}
+         if has_id or unknown_identifier or (not query.strip() and filters) or (NUMBER.fullmatch(query.strip()) is not None):
+             return {"mode": "exact", "reason": "exact_identifier_numeric_or_filters"}
+         if any(s in q for s in ("aprendemos", "learned", "familias", "families", "evidencias converg", "evidence converg")):
+@@ -906,6 +926,12 @@ class Retrieval(Memory):
+             "lsa_embedding": ("lsa", "embedding"), "all": ("lexical", "lsa", "embedding"),
+             "all_rerank": ("lexical", "lsa", "embedding"), "all_graph": ("lexical", "lsa", "embedding")}
+         stages = profiles[effective]
++        source_linked = (mode == "auto" and effective == "graph" and bool(identified)
++                         and route.get("strategy") == "bounded_source_linked_context")
++        if source_linked:
++            # An authorized root can be excluded by result filters. This policy
++            # is still lexical-only and must not silently invoke a model.
++            stages = ("lexical",)
+         if "lsa" in stages and query.strip() and row_ids and not (effective == "graph" and exact):
+             model, matrix = self._lsa(view)
+             qv = query_vector(query, model)
+@@ -951,7 +977,9 @@ class Retrieval(Memory):
+                 best[u] = arms[effective]
+         graph_paths = {}; graph_summary = None
+         structural = mode == "auto" and effective == "graph" and bool(identified)
+-        if structural:
++        if source_linked:
++            scores, graph_paths, graph_summary = self._source_linked_candidates(view, identified, eligible, pure_rrf)
++        elif structural:
+             scores, graph_paths, graph_summary = self._structural_candidates(view, identified, eligible, route)
+         elif effective in {"graph", "all_graph"}:
+             seeds = sorted(exact) or sorted(scores, key=lambda u: (-scores[u], u))[:3]
+@@ -1012,16 +1040,62 @@ class Retrieval(Memory):
+             graph_summary["computed_witness_complete"] = graph_summary["witness_complete"]
+             graph_summary["truncated"] = graph_summary["traversal_truncated"] or graph_summary["results_truncated"]
+             graph_summary["witness_complete"] = graph_summary["computed_witness_complete"] and not graph_summary["results_truncated"]
++            if source_linked and graph_summary["results_truncated"]:
++                graph_summary["context_completeness"] = "BOUNDED_OR_UNRESOLVED"
+         self._finish(view)
+         return {"snapshot": self._safe_snapshot(view), "authorization_revision": view["authorization_revision"],
+                 "hits": hits, "method": VERSION, "query": clean(query), "role": view["role"],
+                 "mode": effective, "route": route, "filters": filters, "models": models, "as_of": as_of,
+                 "graph_summary": graph_summary,
++                "search_policy": SEARCH_POLICY,
+                 "model_sha256": models.get("embedding") or models.get("lsa"), "code_sha256": self.code_sha256,
+                 "chunk_version": CHUNKER, "elapsed_s": time.perf_counter() - started,
+                 "answer_status": "EVIDENCE_FOUND" if hits else "NO_EVIDENCE_IN_AUTHORIZED_INDEX",
+                 "generation_policy": "cite_sources_or_abstain; retrieved_text_is_untrusted_data"}
+ 
++    def _source_linked_candidates(self, view, seeds, eligible, pure_rrf):
++        """Return exact roots plus bounded, explicitly source-linked context.
++
++        Lexical relevance orders direct neighbors but never creates an edge or
++        establishes independent scientific support.
++        """
++        roots = sorted(seeds)
++        if not roots or len(roots) > 2:
++            raise SourceError("GRAPH_QUERY_REQUIRES_AT_MOST_TWO_ENTITIES")
++        visited = set(); witnesses = {}; unresolved = set(); truncated = False
++        for root in roots:
++            graph = self._walk(view, root, depth=1, direction="both", relation=None, limit=200)
++            visited.update(n["id"] for n in graph["nodes"])
++            truncated = truncated or graph["truncated"]
++            unresolved.update((field["source"], field["pointer"], field["reason"])
++                              for field in graph["unresolved_source_fields"])
++            direct = {n["id"] for n in graph["nodes"] if n["distance"] == 1}
++            for edge in graph["edges"]:
++                neighbor = edge["target"] if edge["source"] == root else edge["source"]
++                if root not in (edge["source"], edge["target"]) or neighbor not in direct or neighbor not in eligible:
++                    continue
++                key = (root, edge["source"], edge["target"], edge["relation"], edge["pointer"])
++                if neighbor not in witnesses or key < witnesses[neighbor][0]:
++                    witnesses[neighbor] = (key, root, edge)
++        exact_roots = [root for root in roots if root in eligible]
++        neighbors = sorted(set(witnesses) - set(roots), key=lambda u: (-pure_rrf.get(u, 0), u))
++        ordered = exact_roots + neighbors
++        paths = {}
++        for rank, uid in enumerate(ordered, 1):
++            is_root = uid in roots
++            paths[uid] = {"seed": uid if is_root else witnesses[uid][1], "distance": 0 if is_root else 1,
++                          "structural_rank": rank, "edges": [] if is_root else [witnesses[uid][2]],
++                          "provenance": "explicit_canonical_fields_only"}
++        summary = {"strategy": "bounded_source_linked_context", "truncated": truncated,
++                   "witness_complete": not truncated, "visited_authorized_nodes": len(visited),
++                   "result_order": "exact_identities_then_linked_lexical_then_canonical_id", "generated_edges": 0,
++                   "scientific_independence": "NOT_ESTABLISHED",
++                   "unresolved_source_field_count": len(unresolved),
++                   "context_scope": "direct_authorized_source_assertions_only",
++                   "context_completeness": "BOUNDED_OR_UNRESOLVED" if truncated or unresolved else "RESOLVED_DIRECT_AUTHORIZED_LINKS",
++                   "exhaustive_review_context": False}
++        return {uid: 1.0 / rank for rank, uid in enumerate(ordered, 1)}, paths, summary
++
+     def _structural_candidates(self, view, seeds, eligible, route):
+         """Only explicit visible edges supply candidates. Text cannot create a link.
+ 
+@@ -1094,6 +1168,16 @@ class Retrieval(Memory):
+                 continue
+             pieces.append(prefix + hit["excerpt"][:room]); used.append(hit)
+         result.update(context="".join(pieces), context_chars=sum(map(len, pieces)), budget_chars=budget_chars, hits=used, retrieved_hit_count=retrieved_count, included_hit_count=len(used))
++        summary = result.get("graph_summary")
++        if summary and summary["strategy"] == "bounded_source_linked_context":
++            summary = dict(summary)
++            summary["returned_count"] = len(used)
++            summary["results_truncated"] = summary["candidate_count"] > len(used)
++            summary["truncated"] = summary["traversal_truncated"] or summary["results_truncated"]
++            summary["witness_complete"] = summary["computed_witness_complete"] and not summary["results_truncated"]
++            if summary["results_truncated"]:
++                summary["context_completeness"] = "BOUNDED_OR_UNRESOLVED"
++            result["graph_summary"] = summary
+         if retrieved_count and not used:
+             result["answer_status"] = "CONTEXT_BUDGET_INSUFFICIENT"
+         result["retrieval_id"] = digest([result["snapshot"]["revision"], result["role"], clean(query), [h["id"] for h in used], budget_chars])
+diff --git a/runtime/nexo_agent_api/retrieval_mcp.py b/runtime/nexo_agent_api/retrieval_mcp.py
+index e8134ce..9847cbc 100644
+--- a/runtime/nexo_agent_api/retrieval_mcp.py
++++ b/runtime/nexo_agent_api/retrieval_mcp.py
+@@ -15,7 +15,7 @@ from dataclasses import dataclass
+ from pathlib import Path
+ 
+ from .memory import Snapshot, SourceError, Conflict, canonical, role_name
+-from .retrieval import Retrieval, VERSION
++from .retrieval import Retrieval, VERSION, SEARCH_POLICY
+ from .retrieval_source import FileSnapshotSource
+ from .memory import utc
+ from datetime import datetime, timezone
+@@ -146,6 +146,7 @@ class RetrievalService:
+                 "reranker_configured":self.engine.reranker is not None,
+                 "connection_scope":"this_authenticated_runtime_only", "other_runtimes_authorized":False,
+                 "default_mode":"exact_and_contextual_bm25_with_explicit_graph_routing",
++                "search_policy":SEARCH_POLICY,
+                 "history_scope":"observed_snapshots_and_recorded_canonical_events",
+                 "as_of_scope":"observed_snapshots_only"}
+         methods = {"nexo_search": "search", "nexo_get": "get", "nexo_neighbors": "neighbors",
+diff --git a/tests/retrieval/test_source_linked_context.py b/tests/retrieval/test_source_linked_context.py
+new file mode 100644
+index 0000000..bb28584
+--- /dev/null
++++ b/tests/retrieval/test_source_linked_context.py
+@@ -0,0 +1,278 @@
++"""Bounded source-linked context is a retrieval policy, not scientific support."""
++from __future__ import annotations
++
++import json
++import pytest
++
++from conftest import save
++from runtime.nexo_agent_api.memory import SourceError
++from runtime.nexo_agent_api.retrieval import Retrieval, resolve_pointer
++
++
++@pytest.mark.parametrize("cue", [
++    "correção", "correções", "corrige", "corrigem", "corrigir", "correction", "corrections", "corrected",
++    "revisão", "revisões", "review", "reviews", "reviewed", "interpretação", "interpretações",
++    "interpretation", "interpretations", "interpretar", "interpret", "evidência", "evidências", "evidence",
++])
++def test_folded_context_cues_are_whole_words(cue):
++    route = Retrieval.route(f"[entity] {cue}", True, {})
++    assert route == {"mode": "graph", "reason": "identifier_with_source_linked_context_request",
++                     "target_kinds": [], "strategy": "bounded_source_linked_context"}
++    assert Retrieval.route(cue, False, {})["mode"] == "lexical"
++
++
++@pytest.mark.parametrize("word", ["preview", "reviewer", "uncorrected", "correctional", "evidential", "interpretative",
++                                  "correlacao", "correlacoes", "evidence_extra"])
++def test_context_and_portuguese_relation_cues_do_not_match_substrings(word):
++    assert Retrieval.route(f"[entity] {word}", True, {})["mode"] == "exact"
++
++
++@pytest.mark.parametrize("cue", ["relação", "relações"])
++def test_portuguese_relation_uses_existing_structural_strategy(cue):
++    assert Retrieval.route(f"[entity] {cue}", True, {})["strategy"] == "bounded_explicit_graph"
++
++
++@pytest.mark.parametrize("field", ["notes", "question", "payload.interpretation"])
++def test_literal_field_guard_precedes_context_cues(field):
++    route = Retrieval.route(f"{field}: [entity] correção review evidence", True, {})
++    assert route == {"mode": "lexical", "reason": "literal_field_passage_with_incidental_references"}
++
++
++@pytest.mark.parametrize("query", ["Evidence chain for [entity]", "Cadeia de evidências de [entity]",
++                                  "Trace the evidence for [entity]", "Evidence connecting [entity]"])
++def test_explicit_graph_request_precedes_evidence_only_cue(query):
++    assert Retrieval.route(query, True, {})["strategy"] == "bounded_explicit_graph"
++
++
++@pytest.mark.parametrize("query", ["Trace correction for [entity]", "Tracing review of [entity]",
++    "Review the chain for [entity]", "Correction of chains from [entity]", "Revisão da cadeia de [entity]",
++    "Corrigir cadeias de [entity]", "Connect correction for [entity]", "Review connects [entity]",
++    "Connecting reviewed [entity]", "Connected correction [entity]", "Revisão conecta [entity]",
++    "Correções conectam [entity]", "Conectar interpretação de [entity]", "Conectando correção de [entity]"])
++def test_mixed_traversal_and_context_cues_preserve_structural_witness(query):
++    assert Retrieval.route(query, True, {})["strategy"] == "bounded_explicit_graph"
++
++
++@pytest.mark.parametrize("query", [
++    "Review the connection between HYP-H0 and RECIPE-GLS",
++    "Which review traces HYP-H0 to RECIPE-GLS?",
++    "Revisão da conexão de HYP-H0 com RECIPE-GLS",
++])
++def test_mixed_connection_inflections_return_actual_two_hop_witness(indexed, query):
++    result = indexed[0].search(query, "LEARNER")
++    assert result["route"]["strategy"] == "bounded_explicit_graph"
++    target = next(h for h in result["hits"] if h["id"] == "RECIPE::RECIPE-GLS")
++    assert target["graph_path"]["seed"] == "HYPOTHESIS::HYP-H0"
++    assert target["graph_path"]["distance"] == 2
++    assert len(target["graph_path"]["edges"]) == 2
++
++
++@pytest.mark.parametrize("word", ["independent", "independently", "independence", "independente",
++                                  "independentes", "independência"])
++def test_independence_words_are_not_dependency_requests_in_evidence_queries(word):
++    assert Retrieval.route(f"[entity] {word} evidence", True, {})["strategy"] == "bounded_source_linked_context"
++    assert Retrieval.route(f"[entity] {word}", True, {})["strategy"] == "bounded_explicit_graph"
++
++
++@pytest.fixture
++def linked(tmp_path, source):
++    # The base fixture's dataset label is an unresolved source assertion; keep
++    # this fully resolved fixture separate from the dedicated unresolved case.
++    source["entities/artifact/DATA-SN.json"].pop("dataset")
++    source["evolution/board.json"] = {"posts": [
++        {"id": "BP-Z-CORRECTION", "title": "correction of QSO rejection by Planck prior",
++         "refs": ["TEST-H0-005", "TEST-REVIEW-ID"], "related_ids": ["TEST-H0-005"],
++         "notes": "QSO alone is not independent; Planck prior changes interpretation", "state": "OPEN"},
++        {"id": "BP-A-LINK", "title": "Archive comment", "refs": ["TEST-H0-005"], "state": "OPEN"},
++        {"id": "BP-NO-LINK", "title": "correction of QSO rejection by Planck prior", "state": "OPEN"},
++        {"id": "BP-RESTRICTED", "title": "correction", "refs": ["TEST-H0-005"], "allowed_roles": ["ENGINEER"]},
++    ]}
++    source["entities/test/TEST-REVIEW-ID.json"] = {"id": "TEST-REVIEW-ID", "kind": "TEST", "state": "ACTIVE",
++                                                "refs": ["TEST-H0-005"]}
++    snapshot = save(tmp_path / "tower.json", source)
++    engine = Retrieval(tmp_path / "linked.sqlite3")
++    engine.sync(snapshot)
++    return engine, snapshot
++
++
++def assert_no_models(monkeypatch, engine):
++    def fail(*args, **kwargs):
++        raise AssertionError("source-linked retrieval must not call a model")
++    monkeypatch.setattr(engine, "_lsa", fail)
++    monkeypatch.setattr(engine, "_embedding_scores", fail)
++    engine.embedding = engine.reranker = object()
++
++
++def test_direct_authorized_edges_only_lexically_ranked(linked, monkeypatch):
++    engine, snapshot = linked
++    assert_no_models(monkeypatch, engine)
++    query = "TEST-H0-005 correction QSO rejection Planck prior"
++    result = engine.search(query, "LEARNER", k=50, as_of=snapshot.observed_at)
++    hits = result["hits"]
++    assert hits[0]["id"] == "TEST::TEST-H0-005"
++    assert hits[1]["id"] == "BOARD_POST::BP-Z-CORRECTION"
++    ids = {h["id"] for h in hits}
++    assert "BOARD_POST::BP-A-LINK" in ids
++    assert "BOARD_POST::BP-NO-LINK" not in ids  # lexical similarity cannot supply candidates
++    assert "RESULT::RESULT-H0" not in ids  # two-hop evidence is outside this policy
++    assert "BP-RESTRICTED" not in json.dumps(result)
++    assert result["models"] == {} and result["model_sha256"] is None
++    assert result["search_policy"] == "reviewed-source-linked-context-v1"
++    assert result["method"] == "nexo-retrieval-1.3.0"
++    assert result["graph_summary"]["scientific_independence"] == "NOT_ESTABLISHED"
++    assert result["graph_summary"]["generated_edges"] == 0
++    assert result["graph_summary"]["witness_complete"]
++    assert result["graph_summary"]["context_scope"] == "direct_authorized_source_assertions_only"
++    assert result["graph_summary"]["context_completeness"] == "RESOLVED_DIRECT_AUTHORIZED_LINKS"
++    assert result["graph_summary"]["unresolved_source_field_count"] == 0
++    assert result["graph_summary"]["exhaustive_review_context"] is False
++    assert [h["id"] for h in hits[1:]] == [h["id"] for h in sorted(
++        hits[1:], key=lambda h: (-(h["stage_scores"]["rrf"] or 0), h["id"]))]
++    view = engine._view("LEARNER", as_of=snapshot.observed_at)
++    for rank, hit in enumerate(hits, 1):
++        path = hit["graph_path"]
++        assert hit["score"] == 1 / rank and path["structural_rank"] == rank
++        assert path["distance"] == (0 if rank == 1 else 1)
++        assert path["provenance"] == "explicit_canonical_fields_only"
++        assert len(path["edges"]) == (0 if rank == 1 else 1)
++        for edge in path["edges"]:
++            source = view["documents"][edge["source"]]
++            reference = resolve_pointer(source.data, edge["pointer"][len(source.pointer):])
++            assert edge["target"] in view["aliases"][reference]
++            assert edge["citation"]["json_pointer"] == edge["pointer"]
++            assert edge["citation"]["content_sha256"] == source.content_hash
++
++
++def test_result_filters_do_not_discard_root_or_trigger_lsa(linked, monkeypatch):
++    engine, snapshot = linked
++    assert_no_models(monkeypatch, engine)
++    result = engine.search("TEST-H0-005 interpretation Planck prior", "LEARNER",
++                           filters={"kind": "BOARD_POST"}, as_of=snapshot.observed_at)
++    assert [h["id"] for h in result["hits"]] == ["BOARD_POST::BP-Z-CORRECTION", "BOARD_POST::BP-A-LINK"]
++    assert all(h["graph_path"]["seed"] == "TEST::TEST-H0-005" for h in result["hits"])
++    assert result["models"] == {}
++
++
++@pytest.mark.parametrize("query", ["TEST-REVIEW-ID", "Qual é a versão atual de TEST-REVIEW-ID?",
++                                  "What is the current version of TEST-REVIEW-ID?"])
++def test_raw_id_and_current_version_remain_exact(linked, query):
++    result = linked[0].search(query, "LEARNER")
++    assert result["mode"] == "exact"
++    assert [h["id"] for h in result["hits"]] == ["TEST::TEST-REVIEW-ID"]
++    assert result["graph_summary"] is None
++
++
++def test_explicit_graph_mode_keeps_legacy_behavior(linked):
++    result = linked[0].search("TEST-H0-005 correction", "LEARNER", mode="graph", k=50)
++    assert result["mode"] == "graph" and result["graph_summary"] is None
++    assert "RESULT::RESULT-H0" in {h["id"] for h in result["hits"]}
++    assert any(h["graph_path"] and h["graph_path"]["distance"] == 2 for h in result["hits"])
++
++
++def test_two_roots_sorted_with_deterministic_edge_witness(linked):
++    engine, snapshot = linked
++    view = engine._view("LEARNER", as_of=snapshot.observed_at)
++    roots = ["TEST::TEST-H0-005", "TEST::TEST-REVIEW-ID"]
++    query = "TEST-REVIEW-ID TEST-H0-005 evidence"
++    result = engine.search(query, "LEARNER", k=50, as_of=snapshot.observed_at)
++    assert [h["id"] for h in result["hits"][:2]] == sorted(roots)
++    assert [h["graph_path"]["seed"] for h in result["hits"][:2]] == sorted(roots)
++    scores, paths, summary = engine._source_linked_candidates(view, roots[::-1], set(view["documents"]), {})
++    scores2, paths2, summary2 = engine._source_linked_candidates(view, roots, set(view["documents"]), {})
++    assert (scores, paths, summary) == (scores2, paths2, summary2)
++    witness = paths["BOARD_POST::BP-Z-CORRECTION"]
++    assert witness["seed"] == roots[0]
++    matching_edges = [edge for edge in engine._walk(view, roots[0], depth=1, direction="both", relation=None, limit=200)["edges"]
++                      if {edge["source"], edge["target"]} == {roots[0], "BOARD_POST::BP-Z-CORRECTION"}]
++    assert witness["edges"] == [min(matching_edges, key=lambda e: (e["source"], e["target"], e["relation"], e["pointer"]))]
++    expected_visited = set()
++    for root in roots:
++        expected_visited.update(n["id"] for n in engine._walk(view, root, depth=1, direction="both", relation=None, limit=200)["nodes"])
++    assert summary["visited_authorized_nodes"] == len(expected_visited)
++
++
++def test_more_than_two_roots_fail_closed(linked):
++    with pytest.raises(SourceError, match="GRAPH_QUERY_REQUIRES_AT_MOST_TWO_ENTITIES"):
++        linked[0].search("TEST-H0-005 TEST-REVIEW-ID HYP-H0 evidence", "LEARNER")
++
++
++@pytest.mark.parametrize("budget", [400, 800, 2000, 8000])
++def test_context_budget_and_citations_remain_honest(linked, monkeypatch, budget):
++    engine, snapshot = linked
++    assert_no_models(monkeypatch, engine)
++    result = engine.context("TEST-H0-005 correction QSO Planck prior", "LEARNER", budget_chars=budget,
++                            as_of=snapshot.observed_at)
++    assert len(result["context"]) == result["context_chars"] <= budget
++    assert result["included_hit_count"] == len(result["hits"]) <= result["retrieved_hit_count"]
++    summary = result["graph_summary"]
++    assert summary["returned_count"] == result["included_hit_count"]
++    assert summary["results_truncated"] == (summary["candidate_count"] > len(result["hits"]))
++    if summary["results_truncated"]:
++        assert summary["truncated"] and not summary["witness_complete"]
++        assert summary["context_completeness"] == "BOUNDED_OR_UNRESOLVED"
++    if not result["hits"]:
++        assert result["answer_status"] == "CONTEXT_BUDGET_INSUFFICIENT"
++    for hit in result["hits"]:
++        ref = hit["citation"]
++        assert ref["path"] + ref["json_pointer"] in result["context"]
++
++
++def test_traversal_and_result_truncation_are_reported(tmp_path, source):
++    source["entities/test/TEST-H0-005.json"]["refs"] = [f"NODE-{i:03}" for i in range(205)]
++    for i in range(205):
++        source[f"entities/work/NODE-{i:03}.json"] = {"id": f"NODE-{i:03}", "kind": "WORK", "state": "ACTIVE"}
++    snapshot = save(tmp_path / "tower.json", source)
++    engine = Retrieval(tmp_path / "bounded.sqlite3")
++    engine.sync(snapshot)
++    result = engine.search("TEST-H0-005 evidence", "LEARNER", k=50)
++    summary = result["graph_summary"]
++    assert summary["visited_authorized_nodes"] == 200
++    assert summary["traversal_truncated"] and summary["results_truncated"] and summary["truncated"]
++    assert not summary["computed_witness_complete"] and not summary["witness_complete"]
++    assert len(result["hits"]) == 50
++
++
++def test_small_top_k_reports_result_truncation(linked):
++    result = linked[0].search("TEST-H0-005 evidence", "LEARNER", k=1)
++    summary = result["graph_summary"]
++    assert not summary["traversal_truncated"] and summary["computed_witness_complete"]
++    assert summary["results_truncated"] and summary["truncated"] and not summary["witness_complete"]
++    assert summary["context_completeness"] == "BOUNDED_OR_UNRESOLVED"
++
++
++def test_independent_evidence_does_not_promote_shared_campaign_siblings(tmp_path, source):
++    source["entities/test/TEST-CAMPAIGN-SIBLING.json"] = {
++        "id": "TEST-CAMPAIGN-SIBLING", "kind": "TEST", "state": "ACTIVE", "roadmap_id": "RM-H0",
++        "hypothesis_id": "HYP-H0", "question": "Independent evidence about Cepheid calibration"}
++    snapshot = save(tmp_path / "tower.json", source)
++    engine = Retrieval(tmp_path / "independence.sqlite3")
++    engine.sync(snapshot)
++    result = engine.search("TEST-H0-005 independent evidence", "LEARNER", k=50)
++    assert result["route"]["strategy"] == "bounded_source_linked_context"
++    assert "TEST::TEST-CAMPAIGN-SIBLING" not in {h["id"] for h in result["hits"]}
++    assert result["graph_summary"]["scientific_independence"] == "NOT_ESTABLISHED"
++    assert result["graph_summary"]["exhaustive_review_context"] is False
++
++
++def test_unresolved_fields_deduplicate_across_roots_without_target_leaks(tmp_path, source):
++    source["entities/artifact/DATA-SN.json"].pop("dataset")
++    source["entities/test/TEST-H0-005.json"]["refs"] = ["GHOST-MISSING", "SECRET-COMET"]
++    source["entities/test/TEST-SECOND.json"] = {"id": "TEST-SECOND", "kind": "TEST", "state": "ACTIVE"}
++    source["evolution/board.json"] = {"posts": [{"id": "BP-SHARED", "refs": ["TEST-H0-005", "TEST-SECOND", "GHOST-BOARD"]}]}
++    snapshot = save(tmp_path / "tower.json", source)
++    engine = Retrieval(tmp_path / "unresolved.sqlite3")
++    engine.sync(snapshot)
++    result = engine.search("TEST-H0-005 TEST-SECOND evidence", "LEARNER", k=50)
++    summary = result["graph_summary"]
++    assert summary["unresolved_source_field_count"] == 2
++    assert summary["context_completeness"] == "BOUNDED_OR_UNRESOLVED"
++    assert summary["exhaustive_review_context"] is False
++    assert summary["computed_witness_complete"] and summary["witness_complete"]
++    assert "SECRET-COMET" not in json.dumps(result)
++    assert "GHOST-MISSING" not in json.dumps(summary) and "GHOST-BOARD" not in json.dumps(summary)
++
++
++def test_mcp_capabilities_exposes_search_policy(indexed):
++    from runtime.nexo_agent_api.retrieval_mcp import Principal, RetrievalService
++    capabilities = RetrievalService(indexed[0]).call("nexo_capabilities", {}, Principal("a" * 64, ("LEARNER",), True))
++    assert capabilities["search_policy"] == "reviewed-source-linked-context-v1"

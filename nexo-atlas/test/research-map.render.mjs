@@ -1,0 +1,106 @@
+import {build} from 'vite';import {mkdir,writeFile} from 'node:fs/promises';import {resolve} from 'node:path';import {pathToFileURL} from 'node:url';
+import {readFileSync} from 'node:fs';import {createRequire} from 'node:module';import assert from 'node:assert/strict';
+const temp=resolve('.sites-runtime/map-render');await mkdir(temp,{recursive:true});
+await writeFile(temp+'/entry.tsx',String.raw`
+import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';import assert from 'node:assert/strict';
+import {ResearchMap} from '../../src/atlas/ui/PublicResearchHub.tsx';
+const bilingual=(s)=>({'pt-BR':s,en:s});
+const entries=Array.from({length:24},(_,i)=>({id:'q-'+i,question:bilingual('Question '+i),method:null,summary:bilingual('Published result '+i),limits:[],nextStep:null,href:'?pergunta=q-'+i+'#/',state:'published',stage:null,tests:1,complete:true,reviewed:null,topics:i<20?['bao','cmb']:[],updatedAt:null}));
+for(const locale of ['pt-BR','en']){
+ const html=renderToStaticMarkup(<ResearchMap entries={entries} locale={locale}/>);
+ assert.equal((html.match(/class="nexo-orbit-node"/g)||[]).length,8);
+ assert.equal((html.match(/<g[^>]*role="button"/g)||[]).length,0);
+ assert.match(html,/<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
+ assert.match(html,/min|nexo-map-pagination/);assert.match(html,/BAO/);assert.match(html,/CMB/);
+ assert.match(html,/href="\?pergunta=q-0#\/"/);
+ const empty=renderToStaticMarkup(<ResearchMap entries={[]} locale={locale}/>);
+ assert.match(empty,/nexo-map-empty/);assert.doesNotMatch(empty,/nexo-orbit-node/);
+ const many=renderToStaticMarkup(<ResearchMap entries={entries.map(e=>({...e,topics:['software']}))} locale={locale}/>);
+ assert.equal((many.match(/class="nexo-orbit-node"/g)||[]).length,8);
+ assert.match(many,/24/);assert.match(many,/nexo-map-pagination/);
+}console.log('PASS: bilingual map SSR, 8-node cap, real HTML controls, decorative SVG, empty state, pagination, topics and source links.');
+`);
+await build({configFile:false,logLevel:'warn',build:{ssr:temp+'/entry.tsx',outDir:temp+'/out',rollupOptions:{output:{entryFileNames:'render.mjs'}}}});await import(pathToFileURL(temp+'/out/render.mjs'));
+await writeFile(temp+'/gallery.tsx',String.raw`
+import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';import assert from 'node:assert/strict';
+import PublicVisualGallery from '../../src/atlas/ui/PublicVisualGallery.tsx';import {guardVisual} from '../../src/atlas/publicVisuals.ts';
+import InteractivePlot from '../../src/atlas/ui/InteractivePlot.tsx';
+import {publicAtlasProjection} from '../../worker/public-tests.mjs';import {publicEditorialProjection} from '../../worker/public-editorial.mjs';import {visualPublicProjection} from '../../worker/public-visuals.mjs';
+const p=await visualPublicProjection(publicEditorialProjection(publicAtlasProjection()));
+const visuals=p.visuals.map(guardVisual).filter(Boolean),links=Object.fromEntries(visuals.map(v=>[v.id,{question:{'pt-BR':'Pergunta','en':'Question'},href:'?pergunta=source#/' }]));
+const occurrences=(html,text)=>html.split(text).length-1;
+const sourceSnapshot=JSON.stringify(visuals);
+const first=visuals.find(v=>v.plot?.series.length===1&&v.plot.series[0].points.length===1&&v.plot.series[0].points[0].y===94);
+const second=visuals.find(v=>v.plot?.series.length===1&&v.plot.series[0].points.length===1&&v.plot.series[0].points[0].y===93);
+assert.ok(first&&second&&first.id!==second.id);
+for(const locale of ['pt-BR','en']){
+ const html=renderToStaticMarkup(<PublicVisualGallery visuals={visuals} links={links} locale={locale}/>);
+ assert.match(html,/nexo-gallery-grid/);assert.doesNotMatch(html,/nexo-figure-configuration/);
+ assert.ok(html.includes('href="?pergunta=source#/"'));assert.ok(!html.includes('href="https://nexoresearch.org/"'));
+ const single=renderToStaticMarkup(<InteractivePlot plot={first.plot} title={first.title[locale]} locale={locale}/>);
+ assert.equal(occurrences(single,'<strong>94</strong>'),1);
+ assert.equal(occurrences(single,first.plot.series[0].label[locale]),1);
+ assert.match(single,/<div class="nexo-single-bar" aria-hidden="true"/);
+ assert.match(single,/--bar-size:94%/);assert.match(single,/nexo-bar-scale[^>]*><span>0%<\/span><span>100%/);
+ assert.doesNotMatch(single,/<button|aria-pressed|nexo-bar-heading|nexo-data-table/);
+ assert.match(single,/<details class="nexo-technical-plot"><summary>/);
+ const card=renderToStaticMarkup(<PublicVisualGallery visuals={[first,second]} links={links} locale={locale}/>);
+ assert.equal(occurrences(card,'class="nexo-visual-card"'),2);
+ for(const v of [first,second]){
+  assert.equal(occurrences(card,'>'+v.plot.series[0].label[locale]+'<'),1);
+  assert.ok(card.includes(v.caption[locale]));
+  for(const limit of v.limitations)assert.ok(card.includes(limit[locale]));
+ }
+ assert.match(card,/<strong>94<\/strong>/);assert.match(card,/<strong>93<\/strong>/);
+ assert.equal(occurrences(card,'<details class="nexo-result-limits nexo-figure-limits"><summary>'),2);
+ assert.ok(card.includes(locale==='en'?'Limits of this result':'Limites deste resultado'));
+ assert.doesNotMatch(card,/<details[^>]+class="[^"]*nexo-figure-limits[^"]*"[^>]*open/);
+ const compact=renderToStaticMarkup(<PublicVisualGallery visuals={[first]} locale={locale} compact headingLevel={3}/>);
+ assert.match(compact,/<h3>/);assert.doesNotMatch(compact,/nexo-figure-configuration|nexo-figure-question/);
+ const detail=renderToStaticMarkup(<InteractivePlot plot={first.plot} title={first.title[locale]} locale={locale} detailed/>);
+ assert.match(detail,/nexo-data-table/);assert.match(detail,/CSV/);assert.match(detail,/SVG/);
+ assert.ok(detail.includes(first.plot.series[0].label[locale]));assert.match(detail,/<td>94<\/td>/);
+ const multi={...first.plot,series:[first.plot.series[0],{...first.plot.series[0],id:'second',label:{'pt-BR':'Segunda medida',en:'Second measurement'},points:[{x:2,y:60}]}]};
+ const comparison=renderToStaticMarkup(<InteractivePlot plot={multi} title={first.title[locale]} locale={locale}/>);
+ assert.equal(occurrences(comparison,'class="nexo-bar-row"'),2);
+ assert.equal(occurrences(comparison,'aria-pressed="true"'),1);assert.equal(occurrences(comparison,'aria-pressed="false"'),1);
+ assert.equal(occurrences(comparison,'type="button"'),2);assert.doesNotMatch(comparison,/nexo-single-bar/);
+ assert.ok(comparison.includes(locale==='en'?'Select a measurement':'Toque em uma medida'));
+ const scalar={...first.plot,y:{...first.plot.y,unit:''},series:[{...first.plot.series[0],points:[{x:1,y:-2.4}]}]};
+ const scalarHtml=renderToStaticMarkup(<InteractivePlot plot={scalar} title={first.title[locale]} locale={locale}/>);
+ assert.doesNotMatch(scalarHtml,/nexo-comparison-bars|<button/);
+ const interval={...scalar,series:[{...scalar.series[0],points:[{x:1,y:-2.4,low:-3.1,high:-1.7}]}]};
+ const intervalHtml=renderToStaticMarkup(<InteractivePlot plot={interval} title={first.title[locale]} locale={locale}/>);
+ assert.match(intervalHtml,/nexo-single-bar/);assert.match(intervalHtml,/nexo-bar-interval/);
+ assert.equal(occurrences(intervalHtml,'class="nexo-stat-interval"'),1);assert.doesNotMatch(intervalHtml,/<button|nexo-bar-bounds/);
+ const continuous={...first.plot,x:{...first.plot.x,label:{'pt-BR':'Tempo',en:'Time'}}};
+ const continuousCard=renderToStaticMarkup(<PublicVisualGallery visuals={[{...first,plot:continuous}]} locale={locale}/>);
+ assert.equal(occurrences(continuousCard,'class="nexo-plot-legend"'),1);assert.doesNotMatch(continuousCard,/nexo-figure-configuration/);
+}
+assert.equal(JSON.stringify(visuals),sourceSnapshot);
+console.log('PASS: PT/EN gallery, distinct source tests, single-value/context summaries, decorative one-point bars, interactive comparisons, scalar/interval plots, collapsed accessible limits, retained captions and technical exports; source objects unchanged.');
+`);
+await build({configFile:false,logLevel:'warn',build:{ssr:temp+'/gallery.tsx',outDir:temp+'/gallery-out',rollupOptions:{output:{entryFileNames:'render.mjs'}}}});await import(pathToFileURL(temp+'/gallery-out/render.mjs'));
+
+// Execute the real summary handlers with persistent hook state, without a browser.
+const require=createRequire(import.meta.url),React=require('react'),ts=require('typescript');
+let state=[],cursor=0;
+const hookReact={...React,useMemo:fn=>fn(),useState(initial){const i=cursor++;if(!(i in state))state[i]=initial;return [state[i],value=>{state[i]=typeof value==='function'?value(state[i]):value;}];}};
+const compiled=ts.transpileModule(readFileSync('src/atlas/ui/SummaryFigure.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+const module={exports:{}};
+Function('require','module','exports',compiled)(id=>id==='react'?hookReact:id==='../publicItems.ts'?{pick:(text,locale)=>text[locale]}:require(id),module,module.exports);
+const Summary=module.exports.default,plot=JSON.parse(readFileSync('worker/public-summary-visuals.json','utf8')).records[0].plots[0].plot;
+const collect=(node,predicate)=>!node||typeof node!=='object'?[]:[...(predicate(node)?[node]:[]),...React.Children.toArray(node.props?.children).flatMap(child=>collect(child,predicate))];
+const render=plot=>{cursor=0;return Summary({plot,title:'Summary test',locale:'en',children:React.createElement('div',{'data-technical-probe':true})});};
+let tree=render(plot);assert.equal(collect(tree,node=>node.type==='button').length,0);
+const technical=()=>collect(tree,node=>node.type==='details')[0],probe=()=>collect(tree,node=>node.props['data-technical-probe']).length;
+assert.equal(probe(),0);technical().props.onToggle({currentTarget:{open:true}});tree=render(plot);assert.equal(probe(),1);
+technical().props.onToggle({currentTarget:{open:false}});tree=render(plot);assert.equal(probe(),1);
+const multi={...plot,series:[plot.series[0],{...plot.series[0],id:'second',points:[{x:2,y:60}]}]};
+state=[];tree=render(multi);
+const buttons=()=>collect(tree,node=>node.type==='button');
+buttons()[1].props.onFocus();tree=render(multi);assert.equal(buttons()[1].props['aria-pressed'],true);
+buttons()[0].props.onPointerEnter({pointerType:'touch'});tree=render(multi);assert.equal(buttons()[1].props['aria-pressed'],true);
+buttons()[0].props.onPointerEnter({pointerType:'mouse'});tree=render(multi);assert.equal(buttons()[0].props['aria-pressed'],true);
+buttons()[1].props.onClick();tree=render(multi);assert.equal(buttons()[1].props['aria-pressed'],true);
+console.log('PASS: actual focus/click/mouse selection handlers, touch scroll safety, and lazy technical detail persistence.');

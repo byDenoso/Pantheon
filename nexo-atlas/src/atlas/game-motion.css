@@ -1,0 +1,53 @@
+/* Gaming-site motion language, using NEXO's own decorative cosmological art. */
+.atlas-app[data-area=public]{--nexo-surface:color-mix(in srgb,var(--bg) 82%,transparent);--nexo-soft-surface:color-mix(in srgb,var(--bg) 70%,transparent)}
+.atlas-app[data-area=public] .atlas-header{background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px)}
+.atlas-app[data-area=public] .nexo-cinema-backdrop:after{background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 4%,transparent),color-mix(in srgb,var(--bg) 15%,transparent))}
+.atlas-app[data-area=public] .nexo-cosmic-backdrop{container-type:size;inset:-40px}
+.atlas-app[data-area=public] .nexo-cosmic-image{opacity:.62;transform-origin:55% 42%}
+.atlas-app[data-area=public] .nexo-cosmic-backdrop[data-illustration=cosmic-expansion] .nexo-cosmic-image{opacity:1}
+.atlas-app[data-area=public] .atlas-public-main{max-width:1600px;--stage-gutter:clamp(24px,3vw,48px)}
+.atlas-app[data-area=public] .atlas-public-main .atlas-hero{position:relative;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px 36px;min-height:0;margin:24px 0 36px;padding:clamp(28px,3vw,44px);border-radius:26px;background:linear-gradient(105deg,color-mix(in srgb,var(--bg) 93%,transparent) 18%,color-mix(in srgb,var(--bg) 70%,transparent) 46%,color-mix(in srgb,var(--bg) 12%,transparent) 100%);box-shadow:0 32px 90px #06172e22}
+.atlas-app[data-area=public] .atlas-hero:before{content:'';position:absolute;left:0;top:38px;width:3px;height:106px;border-radius:4px;background:var(--cyan);box-shadow:0 0 24px color-mix(in srgb,var(--cyan) 50%,transparent)}
+.atlas-app[data-area=public] .atlas-hero-copy{padding-block:12px;max-width:none}
+.atlas-app[data-area=public] .atlas-hero-copy .atlas-eyebrow{margin-bottom:24px;letter-spacing:.12em}
+.atlas-app[data-area=public] .atlas-hero-copy h1{font-size:clamp(40px,4.5vw,72px);line-height:1.02;letter-spacing:-.045em;margin-bottom:24px}
+.atlas-app[data-area=public] .atlas-hero-copy h1 span:last-child{color:var(--cyan)}
+.atlas-app[data-area=public] .atlas-hero-lead{font-size:clamp(18px,1.5vw,23px);max-width:41ch;margin-bottom:28px}
+.atlas-app[data-area=public] .atlas-hero-art{min-height:400px;pointer-events:auto}
+.atlas-app[data-area=public] .nexo-themed-picture{overflow:visible;transition:translate .5s cubic-bezier(.16,1,.3,1)}
+.atlas-app[data-area=public] .nexo-art-scene.is-cmb{width:min(84cqw,90cqh,460px);box-shadow:inset 0 0 0 1px #aec5dc,0 26px 80px #164e792d}
+.atlas-app[data-area=public] .nexo-themed-art[data-illustration=cosmic-expansion] .nexo-art-scene{mask-image:radial-gradient(ellipse 75% 74% at 50% 50%,#000 35%,transparent 83%);-webkit-mask-image:radial-gradient(ellipse 75% 74% at 50% 50%,#000 35%,transparent 83%)}
+.atlas-app[data-area=public] .atlas-public-content:before{background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--bg) 58%,transparent) 72px,color-mix(in srgb,var(--bg) 68%,transparent) 360px)}
+.atlas-app[data-area=public] .atlas-public-main .atlas-section{padding-top:40px}
+.nexo-research-launch{grid-column:1/-1;display:grid;grid-template-columns:minmax(185px,.8fr) minmax(0,2.6fr);align-items:center;gap:24px;border-top:1px solid var(--line);padding-top:22px;position:relative;z-index:3}
+.atlas-public-main .nexo-launch-records .atlas-eyebrow{font-size:11px;letter-spacing:.1em;margin:0 0 9px}
+.atlas-public-main .nexo-launch-records p{font-size:14px;line-height:1.6;margin:0;max-width:none}.nexo-launch-records strong{font-size:26px;font-weight:500;color:var(--fg)}.nexo-launch-records p>span{color:var(--cyan);padding:0 8px}
+.nexo-launch-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;min-width:0}
+.nexo-research-shortcut{display:flex;align-items:center;gap:12px;min-height:82px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--bg) 76%,transparent);color:var(--fg);text-align:left;cursor:pointer;font:inherit;min-width:0;overflow:hidden}
+.nexo-research-shortcut>svg{width:36px;height:36px;flex:none;fill:none;stroke:var(--cyan);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.nexo-research-shortcut>span:nth-child(2){display:grid;gap:5px;min-width:0}.nexo-research-shortcut strong{font-size:16px;font-weight:500;line-height:1.2}.nexo-research-shortcut small{font-size:12px;line-height:1.4;color:var(--fg-2)}.nexo-shortcut-arrow{margin-left:auto;color:var(--cyan);font-size:20px}
+/* The illustration itself stretches; no synthetic particles or orbit overlays. */
+.atlas-app[data-area=public] [data-illustration=cmb] .nexo-cosmic-image,
+.atlas-app[data-area=public] .nexo-art-scene.is-cmb .nexo-themed-image{animation:none;transform:scale(1.12)}
+@media(prefers-reduced-motion:no-preference){
+ .atlas-app[data-area=public] .nexo-cosmic-backdrop[data-illustration=cosmic-expansion] .nexo-cosmic-image{animation:nexo-image-stretch 18s ease-in-out infinite alternate}
+ .atlas-app[data-area=public] .nexo-themed-art[data-illustration=cosmic-expansion] .nexo-themed-image{animation:nexo-image-stretch 18s ease-in-out infinite alternate}
+ .atlas-app[data-area=public][data-cinema-paused=false] .nexo-themed-picture{translate:var(--pointer-x,0px) var(--pointer-y,0px)}
+ .atlas-app[data-area=public] .atlas-btn{position:relative;isolation:isolate;overflow:hidden;border-radius:10px}
+ .atlas-app[data-area=public] .atlas-btn:before{content:'';position:absolute;z-index:-1;inset:-40%;background:linear-gradient(110deg,transparent 35%,#ffffff35 48%,transparent 62%);translate:-110% 0;transition:translate .55s ease}
+ .atlas-app[data-area=public][data-cinema-paused=false] .atlas-btn:is(:hover,:focus-visible):before{translate:110% 0}
+ .atlas-app[data-area=public][data-cinema-paused=false] .nexo-research-shortcut:focus-visible{border-color:var(--cyan);background:color-mix(in srgb,var(--cyan) 8%,var(--bg))}
+ .atlas-app[data-area=public][data-cinema-paused=false] .nexo-research-shortcut:focus-visible>svg{transform:scale(1.1)}
+ @media(hover:hover) and (pointer:fine){.atlas-app[data-area=public][data-cinema-paused=false] .nexo-research-shortcut>svg,.atlas-app[data-area=public][data-cinema-paused=false] .nexo-shortcut-arrow{transition:transform .3s ease}.atlas-app[data-area=public][data-cinema-paused=false] .nexo-research-shortcut:hover>svg{transform:scale(1.13)}.atlas-app[data-area=public][data-cinema-paused=false] .nexo-research-shortcut:hover .nexo-shortcut-arrow{transform:translate(3px,-3px)}}
+ @keyframes nexo-image-stretch{0%{transform:scale(1.04,1.04)}50%{transform:scale(1.17,1.08)}100%{transform:scale(1.28,1.18)}}
+}
+.atlas-app[data-cinema-paused=true] .nexo-cosmic-image,.atlas-app[data-cinema-paused=true] .nexo-themed-image,.nexo-cosmic-backdrop[data-paused=true] .nexo-cosmic-image,.nexo-themed-art[data-paused=true] .nexo-themed-image{animation-play-state:paused!important}
+@media(max-width:1100px){.nexo-research-launch{grid-template-columns:1fr;gap:16px}.nexo-launch-records{display:flex;align-items:center;justify-content:space-between;gap:16px}.atlas-public-main .nexo-launch-records .atlas-eyebrow{margin:0}.nexo-research-shortcut{padding-inline:12px;gap:10px}.nexo-research-shortcut>svg{width:28px;height:28px}}
+@media(max-width:900px){.atlas-app[data-area=public] .atlas-public-main .atlas-hero{display:flex;padding:28px;gap:0;margin:20px 0 28px}.atlas-app[data-area=public] .atlas-hero-copy h1{font-size:clamp(36px,7.5vw,64px)}.atlas-app[data-area=public] .atlas-hero-art{height:360px;min-height:0;margin:12px 0 18px}.nexo-research-launch{width:100%}}
+@media(max-width:600px){.atlas-app[data-area=public] .atlas-public-main{--stage-gutter:16px}.atlas-app[data-area=public] .atlas-public-main .atlas-hero{padding:26px 20px 20px;border-radius:20px}.atlas-app[data-area=public] .atlas-hero-copy h1{font-size:clamp(28px,7.6vw,44px);line-height:1.08;margin-bottom:20px}.atlas-app[data-area=public] .atlas-hero-copy .atlas-eyebrow{font-size:10px;letter-spacing:.1em;margin-bottom:20px}.atlas-app[data-area=public] .atlas-hero-lead{font-size:18px}.atlas-app[data-area=public] .atlas-hero-art{height:250px;margin-top:12px}.nexo-launch-records{display:block}.atlas-public-main .nexo-launch-records .atlas-eyebrow{margin:0 0 6px}.nexo-launch-links{grid-template-columns:1fr}.nexo-research-shortcut{min-height:66px;padding:12px 14px}.nexo-research-shortcut>svg{width:30px;height:30px}.nexo-research-shortcut strong{font-size:16px}.atlas-app[data-area=public] .nexo-art-scene.is-cmb{width:min(80cqw,90cqh,320px)}.atlas-app[data-area=public] .atlas-hero:before{top:34px;height:80px}}
+@media(prefers-reduced-motion:reduce){.nexo-cosmic-image,.nexo-themed-image{animation:none!important}.nexo-themed-picture{translate:none!important;transition:none!important}.nexo-research-shortcut>svg,.nexo-shortcut-arrow{transition:none!important;transform:none!important}}
+@media(prefers-contrast:more){.atlas-app[data-area=public]{--nexo-surface:var(--bg);--nexo-soft-surface:var(--bg)}.atlas-app[data-area=public] .atlas-public-main .atlas-hero,.atlas-app[data-area=public] .atlas-header,.nexo-research-shortcut{background:var(--bg)}.atlas-app[data-area=public] .atlas-public-content:before{background:var(--bg)}}
+
+/* CMB stays fixed even when the hero surface receives pointer tilt. */
+.atlas-app[data-area=public] .nexo-themed-art[data-illustration=cmb].nexo-reactive[data-hover=true]{transform:none}
+.atlas-app[data-area=public] .nexo-themed-art[data-illustration=cmb] .nexo-themed-picture{translate:none}

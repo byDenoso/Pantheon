@@ -1,0 +1,116 @@
+import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
+import {MetroAtlasRenderer} from '../atlas3d/MetroAtlasRenderer.tsx';
+import {GalaxyView} from '../atlas3d/GalaxyView.tsx';
+import {ensureAtlasG6} from '../atlas3d/g6-loader.ts';
+import {visibleAtlasIds,type AtlasGraphLayer,type AtlasMetroModel} from '../atlas3d/atlasAdapter.ts';
+import {domainLabel,label} from '../viewmodels/tokens.ts';
+import './NexoGraph.css';
+
+export type NexoGraphView='2d'|'3d'|'galaxy';
+const ALL_GRAPH_LAYERS=new Set<AtlasGraphLayer>(['knowledge','execution','capability']);
+const NODE_TYPE_COPY:Record<string,string>={hub:'Área principal',subdomain:'Assunto',ROOT:'Sistema',LAYER:'Camada',TRANSPORT:'Canal',TOOL:'Ferramenta',FAMILY:'Família de ferramentas',RUNTIME:'Serviço executor',ROLE:'Equipe de automação'};
+const displayCode=(value:string,fallback:string)=>{
+  const translated=label(value);
+  return translated!==value?translated:/^[A-Z][A-Z0-9_]*$/.test(value)?fallback:translated;
+};
+
+export function GraphViewSwitch({view,onChange}:{view:NexoGraphView;onChange:(view:NexoGraphView)=>void}){
+  return <div className="nexo-graph-view-switch" role="group" aria-label="Visualização do grafo">
+    <button type="button" className={view==='2d'?'active':''} aria-pressed={view==='2d'} onClick={()=>onChange('2d')}>2D</button>
+    <button type="button" className={view==='3d'?'active':''} aria-pressed={view==='3d'} onClick={()=>onChange('3d')}>3D</button>
+    {/* The galaxy has its own tab (#/galaxia); graphs keep 2D/3D. */}
+  </div>;
+}
+
+export function NexoGraph({
+  model,expanded,visibleLayers=ALL_GRAPH_LAYERS,selectedId,view,theme='dark',showRelations=true,fitNonce=0,onSelect,onViewChange,onFit,onReset,onReady,toolbarContext,toolbarFilters,showViewSwitch=true,
+}:{
+  model:AtlasMetroModel;expanded:ReadonlySet<string>;visibleLayers?:ReadonlySet<AtlasGraphLayer>;selectedId:string|null;view:NexoGraphView;theme?:'dark'|'light';
+  showRelations?:boolean;fitNonce?:number;onSelect:(id:string)=>void;onViewChange:(view:NexoGraphView)=>void;
+  onFit?:()=>void;onReset?:()=>void;onReady?:()=>void;toolbarContext?:ReactNode;toolbarFilters?:ReactNode;
+  showViewSwitch?:boolean;
+}){
+  const hostRef=useRef<HTMLDivElement|null>(null);
+  const [g6Status,setG6Status]=useState<'idle'|'loading'|'ready'|'error'>(()=>Boolean((window as any).G6?.Graph)?'ready':'idle');
+  const [g6Retry,setG6Retry]=useState(0);
+  const [tableMode,setTableMode]=useState(false);
+  const [spotlight,setSpotlight]=useState(true);
+  const [illuminated,setIlluminated]=useState(false);
+  const visible=useMemo(()=>visibleAtlasIds(model,expanded,visibleLayers),[model.revision,expanded,visibleLayers]);
+  const visibleSet=useMemo(()=>new Set(visible),[visible]);
+  const rows=useMemo(()=>visible.map(id=>model.nodeMap.get(id)).filter(Boolean),[visible,model]);
+  const relationCount=useMemo(()=>model.crossLinks.filter(link=>visibleSet.has(link.source)&&visibleSet.has(link.target)).length,[model.crossLinks,visibleSet]);
+
+  useEffect(()=>{
+    if(view!=='2d')return;
+    if((window as any).G6?.Graph){setG6Status('ready');return;}
+    let active=true;
+    setG6Status('loading');
+    void ensureAtlasG6().then(()=>{
+      if(active)setG6Status((window as any).G6?.Graph?'ready':'error');
+    }).catch(()=>{if(active)setG6Status('error');});
+    return()=>{active=false;};
+  },[view,g6Retry]);
+
+  useEffect(()=>{
+    const onKey=(event:KeyboardEvent)=>{
+      const target=event.target as HTMLElement|null;
+      if(target&&/INPUT|TEXTAREA|SELECT/.test(target.tagName))return;
+      if(event.key==='2')onViewChange('2d');
+      if(event.key==='3')onViewChange('3d');
+      if(event.key==='g')window.location.hash=showViewSwitch?'#/galaxia':'#/atlas?view=galaxy';
+      if(event.key==='Escape'&&selectedId)hostRef.current?.focus();
+    };
+    window.addEventListener('keydown',onKey);
+    return()=>window.removeEventListener('keydown',onKey);
+  },[onViewChange,selectedId,showViewSwitch]);
+
+  const fullscreen=()=>{
+    const node=hostRef.current;
+    if(!node)return;
+    if(document.fullscreenElement)void document.exitFullscreen();
+    else void node.requestFullscreen?.();
+  };
+
+  const count=<div className="nexo-graph-count" title="Os números acompanham os itens abertos na visualização atual"><strong>{visible.length}</strong> itens mostrados · <span>{model.nodes.length} no mapa</span> · <span>{relationCount} conexões</span></div>;
+  const spotlightActive=spotlight&&Boolean(selectedId);
+  const spotlightToggle=!tableMode&&<button type="button" className="nexo-spotlight-toggle" aria-label={spotlightActive?"Desativar foco visual no nó selecionado":"Ativar foco visual no nó selecionado"} aria-pressed={spotlightActive} disabled={!selectedId} title={selectedId?(spotlightActive?"Mostrar todo o grafo com o mesmo peso":"Destacar o nó selecionado e sua vizinhança"):"Selecione um nó para ativar o foco"} onClick={()=>setSpotlight(value=>!value)}>{spotlightActive?'Foco ativo':'Focar seleção'}</button>;
+  const illuminationToggle=!tableMode&&<button type="button" className="nexo-illumination-toggle" aria-label={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} aria-pressed={illuminated} title={illuminated?"Desativar iluminação global":"Iluminar todos os nós e relações"} onClick={()=>setIlluminated(value=>!value)}>{illuminated?'Apagar luz':'Iluminar tudo'}</button>;
+  return <section ref={hostRef} tabIndex={-1} className="nexo-graph" data-graph-view={view} data-atlas-entry={!showViewSwitch} data-graph-illuminated={illuminated} data-graph-visible={visible.length} data-graph-total={model.nodes.length} data-toolbar-rows={toolbarFilters?2:1}>
+    <div className="nexo-graph-toolbar">
+      <div className="nexo-graph-toolbar-row nexo-graph-toolbar-primary">
+        <div className="nexo-graph-toolbar-context">{toolbarContext||(!toolbarFilters&&count)}</div>
+        <div className="nexo-graph-actions">
+          {!showViewSwitch&&<nav className="nexo-atlas-entry" aria-label="Visualização do Atlas">
+            <a className="nexo-atlas-galaxy-link" href="#/atlas?view=galaxy" onClick={() => onViewChange('galaxy')} aria-current={view==='galaxy'?'page':undefined}>Galáxia 3D</a>
+            <button type="button" aria-pressed={view==='2d'} onClick={()=>onViewChange('2d')}>2D</button>
+          </nav>}
+          {showViewSwitch&&<GraphViewSwitch view={view} onChange={onViewChange}/>}
+          {!toolbarFilters&&spotlightToggle}
+          {!toolbarFilters&&illuminationToggle}
+          {onFit&&<button type="button" className="nexo-graph-icon-btn" onClick={onFit} aria-label="Enquadrar" title="Enquadrar"><i aria-hidden="true">⤢</i><span>Enquadrar</span></button>}
+          {onReset&&<button type="button" className="nexo-graph-icon-btn" onClick={onReset} aria-label="Resetar" title="Resetar"><i aria-hidden="true">↺</i><span>Resetar</span></button>}
+          <button type="button" className="nexo-graph-icon-btn" onClick={fullscreen} aria-label="Tela cheia" title="Tela cheia"><i aria-hidden="true">⛶</i><span>Tela cheia</span></button>
+          <button type="button" className="nexo-graph-icon-btn" aria-pressed={tableMode} onClick={()=>setTableMode(value=>!value)} aria-label={tableMode?'Ver grafo':'Ver como tabela'} title={tableMode?'Ver grafo':'Ver como tabela'}><i aria-hidden="true">{tableMode?'◉':'☰'}</i><span>{tableMode?'Ver grafo':'Ver como tabela'}</span></button>
+        </div>
+      </div>
+      {toolbarFilters&&<div className="nexo-graph-toolbar-row nexo-graph-toolbar-secondary">
+        <div className="nexo-graph-filters">
+          {spotlightToggle}
+          {illuminationToggle}
+          {toolbarFilters}
+        </div>
+        {count}
+      </div>}
+    </div>
+    {tableMode
+      ? <div className="nexo-graph-table-wrap"><table className="nexo-graph-table"><caption>Esta lista mostra os itens abertos no mapa atual. Selecione uma linha para ver o contexto e as ligações.</caption><thead><tr><th>Item</th><th>O que é</th><th>Área</th><th>Situação</th><th>Conexões</th></tr></thead><tbody>{rows.map(node=><tr key={node!.id} className={node!.id===selectedId?'selected':''}><td><button type="button" className="nexo-graph-table-select" aria-pressed={node!.id===selectedId} onClick={()=>onSelect(node!.id)}><strong>{node!.name}</strong></button><details><summary>Ver referência técnica</summary><code>{node!.id}</code></details></td><td>{NODE_TYPE_COPY[String(node!.entityType)]??displayCode(String(node!.entityType),'Registro')}</td><td>{domainLabel(node!.domain)}</td><td title="O valor técnico fica disponível nos detalhes do item">{displayCode(node!.status,'Estado sem descrição')}</td><td>{node!.relationCount}</td></tr>)}</tbody></table></div>
+      : view==='galaxy'
+        ? <GalaxyView selectedId={selectedId} onSelect={onSelect}/>
+      : view==='2d'&&g6Status!=='ready'
+        ? g6Status==='error'
+          ? <div className="nexo-graph-fallback" role="alert"><p>Não foi possível carregar o mapa 2D. Os dados continuam disponíveis na tabela.</p><button type="button" onClick={()=>{setG6Status('loading');setG6Retry(value=>value+1);}}>Tentar carregar novamente</button></div>
+          : <div className="nexo-graph-fallback" role="status" aria-live="polite">Carregando o mapa 2D…</div>
+        : <MetroAtlasRenderer model={model} expanded={expanded} visibleLayers={visibleLayers} selectedId={spotlightActive?selectedId:null} showBeams={showRelations} viewMode={view} theme={theme} fitNonce={fitNonce} allIlluminated={illuminated} onActivate={onSelect} onReady={onReady}/>}
+  </section>;
+}

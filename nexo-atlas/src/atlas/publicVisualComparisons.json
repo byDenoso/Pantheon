@@ -1,0 +1,600 @@
+{
+  "contract": "PUBLIC_VISUAL_COMPARISONS_V1",
+  "groups": [
+    {
+      "id": "sn-prior-1",
+      "title": {
+        "pt-BR": "DES-SN5YR e Union3: sensibilidade ao prior e às faixas",
+        "en": "DES-SN5YR and Union3: prior and bin sensitivity"
+      },
+      "caption": {
+        "pt-BR": "Mesma seleção de compilações e método descrito nos resumos públicos, com BAO e radiação cósmica de fundo fixos. Comparamos somente a maior redução publicada da melhora do ajuste. Priors e partições de redshift variam como indicado; seus efeitos não podem ser isolados aqui. O conjunto e o corte responsáveis pelo máximo constam na fonte de cada linha. As porcentagens não são probabilidades. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same compilation selection and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Only the largest published reduction in fit improvement is compared. Priors and redshift partitions vary as labeled; their effects cannot be isolated here. The dataset and removal producing each maximum are in the row source. Percentages are not probabilities. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-c7413e76c9dc102d8217-1",
+          "revision": "4439:2237d387:23a92a1b",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-ea32290bd13561a23f23-1",
+          "revision": "4469:e03e0ef4:e2d6e2b0",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-8e4b47375b5e1aedd4b6-1",
+          "revision": "4447:13bd00a8:37324406",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-5eb04081b1ab4df3764c-1",
+          "revision": "4475:1435d5e0:b5bdc2f8",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-prior-2",
+      "title": {
+        "pt-BR": "Pantheon+, DES-SN5YR e Union3: sensibilidade ao prior e às faixas",
+        "en": "Pantheon+, DES-SN5YR and Union3: prior and bin sensitivity"
+      },
+      "caption": {
+        "pt-BR": "Mesma seleção de compilações e método descrito nos resumos públicos, com BAO e radiação cósmica de fundo fixos. Comparamos somente a maior redução publicada da melhora do ajuste. Priors e partições de redshift variam como indicado; seus efeitos não podem ser isolados aqui. O conjunto e o corte responsáveis pelo máximo constam na fonte de cada linha. As porcentagens não são probabilidades. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same compilation selection and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Only the largest published reduction in fit improvement is compared. Priors and redshift partitions vary as labeled; their effects cannot be isolated here. The dataset and removal producing each maximum are in the row source. Percentages are not probabilities. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-8eff59025c02139f9bc5-1",
+          "revision": "4483:14f461b4:f921a668",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-045144f0475e8c445d8f-1",
+          "revision": "4513:59f193c0:5ff78f0a",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-d311c65d78c9e2f726ef-1",
+          "revision": "4491:45ad2e99:3fba707b",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-e851830e145633ee343f-1",
+          "revision": "4519:b6c569e1:e7a66fab",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-prior-3",
+      "title": {
+        "pt-BR": "Pantheon+ e DES-SN5YR: sensibilidade ao prior e às faixas",
+        "en": "Pantheon+ and DES-SN5YR: prior and bin sensitivity"
+      },
+      "caption": {
+        "pt-BR": "Mesma seleção de compilações e método descrito nos resumos públicos, com BAO e radiação cósmica de fundo fixos. Comparamos somente a maior redução publicada da melhora do ajuste. Priors e partições de redshift variam como indicado; seus efeitos não podem ser isolados aqui. O conjunto e o corte responsáveis pelo máximo constam na fonte de cada linha. As porcentagens não são probabilidades. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same compilation selection and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Only the largest published reduction in fit improvement is compared. Priors and redshift partitions vary as labeled; their effects cannot be isolated here. The dataset and removal producing each maximum are in the row source. Percentages are not probabilities. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-5533b25d0e9759d45a9a-1",
+          "revision": "4473:14de7f6c:556beb5e",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-0e5f50be753c8ee3fb63-1",
+          "revision": "4452:6c0af7af:ea5d3437",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-cec1731bffc1da778c9b-1",
+          "revision": "4482:1d87fb4d:a2006f9",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-92e754e082c7842a2efd-1",
+          "revision": "4460:25c3f1:71a055f1",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-2a6cb3349191fa639028-1",
+          "revision": "4510:5f809ffa:fa4f7e12",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-20c02f9d9df2e24b9131-1",
+          "revision": "4488:2641164b:590902ff",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-prior-4",
+      "title": {
+        "pt-BR": "Pantheon+ e Union3: sensibilidade ao prior e às faixas",
+        "en": "Pantheon+ and Union3: prior and bin sensitivity"
+      },
+      "caption": {
+        "pt-BR": "Mesma seleção de compilações e método descrito nos resumos públicos, com BAO e radiação cósmica de fundo fixos. Comparamos somente a maior redução publicada da melhora do ajuste. Priors e partições de redshift variam como indicado; seus efeitos não podem ser isolados aqui. O conjunto e o corte responsáveis pelo máximo constam na fonte de cada linha. As porcentagens não são probabilidades. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same compilation selection and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Only the largest published reduction in fit improvement is compared. Priors and redshift partitions vary as labeled; their effects cannot be isolated here. The dataset and removal producing each maximum are in the row source. Percentages are not probabilities. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-a47935dd7a39319636d5-1",
+          "revision": "4422:32691682:f12c7a9a",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · Union3: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · Union3: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-9fc745ba5a49f3cbc10d-1",
+          "revision": "4446:a9c3e65d:3e21b1c7",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · Union3: retirar z = 0.1–0.3",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · Union3: remove z = 0.1–0.3"
+          }
+        },
+        {
+          "id": "summary-c00c0125d205bc01a8a4-1",
+          "revision": "4430:88aaae86:919fba9e",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,03, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · Union3: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.315 ± 0.03, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · Union3: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-14ef8e28bece4f0a1902-1",
+          "revision": "4458:afe7fb57:7bb938dd",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · Union3: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · Union3: remove z = 0.01–0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-bao-1",
+      "title": {
+        "pt-BR": "DES-SN5YR e Union3: sensibilidade com BAO fixo",
+        "en": "DES-SN5YR and Union3: sensitivity with BAO fixed"
+      },
+      "caption": {
+        "pt-BR": "Mesmo método e seleção de compilações descritos nos resumos públicos, com BAO fixo. Priors e faixas estão identificados em cada linha; a informação publicada não estabelece o mesmo tratamento da radiação de fundo usado em outros painéis. Só a maior redução da melhora do ajuste está disponível. Não se isolam efeitos nem se interpretam porcentagens como probabilidades. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same method and compilation selection as described in the public summaries, with BAO fixed. Each row identifies its prior and bins; the published information does not establish the same microwave-background treatment as other panels. Only the largest reduction in fit improvement is available. Effects are not isolated and percentages are not probabilities. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-0ece71d58224d51d85a6-1",
+          "revision": "4428:aa338337:daf926c9",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-e876d34ac4dae8e1966d-1",
+          "revision": "4440:81f65713:602e3009",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-49ff273c0badbe678ba9-1",
+          "revision": "4464:2efaf355:cab476f1",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-bao-2",
+      "title": {
+        "pt-BR": "Pantheon+, DES-SN5YR e Union3: sensibilidade com BAO fixo",
+        "en": "Pantheon+, DES-SN5YR and Union3: sensitivity with BAO fixed"
+      },
+      "caption": {
+        "pt-BR": "Mesmo método e seleção de compilações descritos nos resumos públicos, com BAO fixo. Priors e faixas estão identificados em cada linha; a informação publicada não estabelece o mesmo tratamento da radiação de fundo usado em outros painéis. Só a maior redução da melhora do ajuste está disponível. Não se isolam efeitos nem se interpretam porcentagens como probabilidades. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same method and compilation selection as described in the public summaries, with BAO fixed. Each row identifies its prior and bins; the published information does not establish the same microwave-background treatment as other panels. Only the largest reduction in fit improvement is available. Effects are not isolated and percentages are not probabilities. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-c1f673ae38eecacc3232-1",
+          "revision": "4472:544c22f0:dc9d5818",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-c52c37441e09b99c21e5-1",
+          "revision": "4484:6397ebc3:7e48ae77",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-5cc54dd5b418b182d586-1",
+          "revision": "4508:cb84fb01:1d81ed47",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · DES-SN5YR: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · DES-SN5YR: remove z = 0.01–0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-bao-3",
+      "title": {
+        "pt-BR": "Pantheon+ e Union3: sensibilidade com BAO fixo",
+        "en": "Pantheon+ and Union3: sensitivity with BAO fixed"
+      },
+      "caption": {
+        "pt-BR": "Mesmo método e seleção de compilações descritos nos resumos públicos, com BAO fixo. Priors e faixas estão identificados em cada linha; a informação publicada não estabelece o mesmo tratamento da radiação de fundo usado em outros painéis. Só a maior redução da melhora do ajuste está disponível. Não se isolam efeitos nem se interpretam porcentagens como probabilidades. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same method and compilation selection as described in the public summaries, with BAO fixed. Each row identifies its prior and bins; the published information does not establish the same microwave-background treatment as other panels. Only the largest reduction in fit improvement is available. Effects are not isolated and percentages are not probabilities. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-cd2a148968f64f65cc0a-1",
+          "revision": "4426:2f58e2ea:f56b3596",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · Union3: retirar z = 0.1–0.3",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · Union3: remove z = 0.1–0.3"
+          }
+        },
+        {
+          "id": "summary-c278f8edd9a685a585b0-1",
+          "revision": "4410:5e4a2fd0:1ce8bb18",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · Union3: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · Union3: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-94068b5b2bae34e5bc06-1",
+          "revision": "4454:22559882:c90ea812",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · Union3: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · Union3: remove z = 0.01–0.15"
+          }
+        },
+        {
+          "id": "summary-17a2ff171ada52db6746-1",
+          "revision": "4446:2c47d267:bb872db3",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,15; 0,15–0,5; 0,5–2,3 · Union3: retirar z = 0.01–0.15",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.15; 0.15–0.5; 0.5–2.3 · Union3: remove z = 0.01–0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-partition-1",
+      "title": {
+        "pt-BR": "Pantheon+ e DES-SN5YR: faixas 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+        "en": "Pantheon+ and DES-SN5YR: bins 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+      },
+      "caption": {
+        "pt-BR": "Mesma partição completa de redshift, compilações e método descritos nos resumos públicos, com BAO e radiação cósmica de fundo fixos. As linhas comparam priors e mantêm as repetições identificadas. Mostram apenas a maior redução publicada da melhora do ajuste; não a curva completa nem uma probabilidade. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same full redshift partition, compilations and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Rows compare priors and retain labeled repeats. They show only the largest published reduction in fit improvement, not the full curve or a probability. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-7f57256cf53e94ef5355-1",
+          "revision": "4535:cc69824f:d0456ad3",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-91b454bab477ed8f3b19-1",
+          "revision": "4547:ed5ff54a:3b074d7e",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-partition-2",
+      "title": {
+        "pt-BR": "Pantheon+ e DES-SN5YR: faixas 0,01–0,1; 0,1–0,4; 0,4–2,3",
+        "en": "Pantheon+ and DES-SN5YR: bins 0.01–0.1; 0.1–0.4; 0.4–2.3"
+      },
+      "caption": {
+        "pt-BR": "Mesma partição completa de redshift, compilações e método descritos nos resumos públicos, com BAO e radiação cósmica de fundo fixos. As linhas comparam priors e mantêm as repetições identificadas. Mostram apenas a maior redução publicada da melhora do ajuste; não a curva completa nem uma probabilidade. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same full redshift partition, compilations and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Rows compare priors and retain labeled repeats. They show only the largest published reduction in fit improvement, not the full curve or a probability. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-008af065986561341117-1",
+          "revision": "4499:e35af226:fcf89336",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,1; 0,1–0,4; 0,4–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.1; 0.1–0.4; 0.4–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-a663066daa6773133d03-1",
+          "revision": "4511:963108c2:6b8f0208",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,1; 0,1–0,4; 0,4–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.1; 0.1–0.4; 0.4–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-30a79082bca845bb9578-1",
+          "revision": "4716:404944b6:fb7eecd2",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,1; 0,1–0,4; 0,4–2,3 · repetição do mesmo desenho · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.1; 0.1–0.4; 0.4–2.3 · same-design repeat · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        },
+        {
+          "id": "summary-2a16e0f3115fd48c691a-1",
+          "revision": "4535:e9d6705e:ecddbe84",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,1; 0,1–0,4; 0,4–2,3 · DES-SN5YR: retirar z = 0.01–0.1",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.1; 0.1–0.4; 0.4–2.3 · DES-SN5YR: remove z = 0.01–0.1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-partition-3",
+      "title": {
+        "pt-BR": "Pantheon+ e DES-SN5YR: faixas 0,01–0,2; 0,2–0,6; 0,6–2,3",
+        "en": "Pantheon+ and DES-SN5YR: bins 0.01–0.2; 0.2–0.6; 0.6–2.3"
+      },
+      "caption": {
+        "pt-BR": "Mesma partição completa de redshift, compilações e método descritos nos resumos públicos, com BAO e radiação cósmica de fundo fixos. As linhas comparam priors e mantêm as repetições identificadas. Mostram apenas a maior redução publicada da melhora do ajuste; não a curva completa nem uma probabilidade. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same full redshift partition, compilations and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Rows compare priors and retain labeled repeats. They show only the largest published reduction in fit improvement, not the full curve or a probability. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-69de6c60dc1800a6396a-1",
+          "revision": "4499:fc000678:69f258c6",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,2; 0,2–0,6; 0,6–2,3 · DES-SN5YR: retirar z = 0.01–0.2",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.2; 0.2–0.6; 0.6–2.3 · DES-SN5YR: remove z = 0.01–0.2"
+          }
+        },
+        {
+          "id": "summary-3dc26938ac6196d25b2c-1",
+          "revision": "4511:78c38b33:9d2501e9",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,2; 0,2–0,6; 0,6–2,3 · DES-SN5YR: retirar z = 0.01–0.2",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.2; 0.2–0.6; 0.6–2.3 · DES-SN5YR: remove z = 0.01–0.2"
+          }
+        },
+        {
+          "id": "summary-e46c2f04e80a9451f127-1",
+          "revision": "4716:83a4d20d:227f5031",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,2; 0,2–0,6; 0,6–2,3 · repetição do mesmo desenho · DES-SN5YR: retirar z = 0.01–0.2",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.2; 0.2–0.6; 0.6–2.3 · same-design repeat · DES-SN5YR: remove z = 0.01–0.2"
+          }
+        },
+        {
+          "id": "summary-80781838665274bfd4b9-1",
+          "revision": "4535:ee45237f:f3ab3ef1",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,2; 0,2–0,6; 0,6–2,3 · DES-SN5YR: retirar z = 0.01–0.2",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.2; 0.2–0.6; 0.6–2.3 · DES-SN5YR: remove z = 0.01–0.2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sn-partition-4",
+      "title": {
+        "pt-BR": "Pantheon+ e DES-SN5YR: faixas 0,01–0,3; 0,3–2,3",
+        "en": "Pantheon+ and DES-SN5YR: bins 0.01–0.3; 0.3–2.3"
+      },
+      "caption": {
+        "pt-BR": "Mesma partição completa de redshift, compilações e método descritos nos resumos públicos, com BAO e radiação cósmica de fundo fixos. As linhas comparam priors e mantêm as repetições identificadas. Mostram apenas a maior redução publicada da melhora do ajuste; não a curva completa nem uma probabilidade. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional. As porcentagens são relativas à melhora do ajuste de referência de cada análise; esses denominadores absolutos não constam destes resumos públicos.",
+        "en": "Same full redshift partition, compilations and method as described in the public summaries, with BAO and cosmic microwave background constraints fixed. Rows compare priors and retain labeled repeats. They show only the largest published reduction in fit improvement, not the full curve or a probability. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated. Percentages are relative to each analysis’s own reference fit improvement; those absolute denominators are not provided in these public summaries."
+      },
+      "members": [
+        {
+          "id": "summary-23e3edd183ca1d721a67-1",
+          "revision": "4463:28b88a7a:e699e876",
+          "configuration": {
+            "pt-BR": "Ωm = 0,3 ± 0,01, · z: 0,01–0,3; 0,3–2,3 · DES-SN5YR: retirar z = 0.01–0.3",
+            "en": "Ωm = 0.3 ± 0.01, · z: 0.01–0.3; 0.3–2.3 · DES-SN5YR: remove z = 0.01–0.3"
+          }
+        },
+        {
+          "id": "summary-f5ff633bd8440d3ed78f-1",
+          "revision": "4507:86df5564:717be968",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,3; 0,3–2,3 · DES-SN5YR: retirar z = 0.01–0.3",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.3; 0.3–2.3 · DES-SN5YR: remove z = 0.01–0.3"
+          }
+        },
+        {
+          "id": "summary-8c2a350e512f182970f9-1",
+          "revision": "4712:341a610c:ec4ef6ee",
+          "configuration": {
+            "pt-BR": "Ωm = 0,315 ± 0,007, · z: 0,01–0,3; 0,3–2,3 · repetição do mesmo desenho · DES-SN5YR: retirar z = 0.01–0.3",
+            "en": "Ωm = 0.315 ± 0.007, · z: 0.01–0.3; 0.3–2.3 · same-design repeat · DES-SN5YR: remove z = 0.01–0.3"
+          }
+        },
+        {
+          "id": "summary-4e69a6380d84f8544268-1",
+          "revision": "4499:2c531917:802bf2fd",
+          "configuration": {
+            "pt-BR": "Ωm = 0,33 ± 0,01, · z: 0,01–0,3; 0,3–2,3 · DES-SN5YR: retirar z = 0.01–0.3",
+            "en": "Ωm = 0.33 ± 0.01, · z: 0.01–0.3; 0.3–2.3 · DES-SN5YR: remove z = 0.01–0.3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "desi-model-1",
+      "title": {
+        "pt-BR": "DESI DR1 · Galáxias com linhas de emissão, z = 1,317",
+        "en": "DESI DR1 · Emission-line galaxies, z = 1.317"
+      },
+      "caption": {
+        "pt-BR": "Mesmo traçador, redshift efetivo e método full-shape descritos nos resumos públicos; variam os pontos cosmológicos alternativos, mantendo a restrição angular de Planck e o ajuste dos parâmetros de viés. Δχ² = χ² da constante cosmológica − χ² da alternativa. Positivo significa menor χ² da alternativa; não é significância em σ, probabilidade ou um novo veredito. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional.",
+        "en": "Same tracer, effective redshift and full-shape method as described in the public summaries; alternative cosmological points vary, retaining the Planck angular constraint and nuisance-bias fitting. Δχ² = cosmological-constant χ² − alternative χ². Positive means a lower alternative χ²; it is not a significance in σ, probability or new verdict. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated."
+      },
+      "members": [
+        {
+          "id": "summary-96988086e11de45fb446-1",
+          "revision": "4339:1954e98c:59d3fa4",
+          "configuration": {
+            "pt-BR": "w₀ = -0.667, wₐ = -1.09",
+            "en": "w₀ = -0.667, wₐ = -1.09"
+          }
+        },
+        {
+          "id": "summary-26d93835ab42dcddd14d-1",
+          "revision": "4329:4df18cd7:4b695483",
+          "configuration": {
+            "pt-BR": "w₀ = -0.838, wₐ = -0.62",
+            "en": "w₀ = -0.838, wₐ = -0.62"
+          }
+        }
+      ]
+    },
+    {
+      "id": "desi-model-2",
+      "title": {
+        "pt-BR": "DESI DR1 · Galáxias vermelhas luminosas, z = 0,51",
+        "en": "DESI DR1 · Luminous red galaxies, z = 0.51"
+      },
+      "caption": {
+        "pt-BR": "Mesmo traçador, redshift efetivo e método full-shape descritos nos resumos públicos; variam os pontos cosmológicos alternativos, mantendo a restrição angular de Planck e o ajuste dos parâmetros de viés. Δχ² = χ² da constante cosmológica − χ² da alternativa. Positivo significa menor χ² da alternativa; não é significância em σ, probabilidade ou um novo veredito. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional.",
+        "en": "Same tracer, effective redshift and full-shape method as described in the public summaries; alternative cosmological points vary, retaining the Planck angular constraint and nuisance-bias fitting. Δχ² = cosmological-constant χ² − alternative χ². Positive means a lower alternative χ²; it is not a significance in σ, probability or new verdict. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated."
+      },
+      "members": [
+        {
+          "id": "summary-40de24d744c5157cf635-1",
+          "revision": "4329:f2b105f4:824942f0",
+          "configuration": {
+            "pt-BR": "w₀ = -0.667, wₐ = -1.09",
+            "en": "w₀ = -0.667, wₐ = -1.09"
+          }
+        },
+        {
+          "id": "summary-5c147bc12339d05b86a0-1",
+          "revision": "4070:36729bbe:12792116",
+          "configuration": {
+            "pt-BR": "w₀ = -0.838, wₐ = -0.62",
+            "en": "w₀ = -0.838, wₐ = -0.62"
+          }
+        }
+      ]
+    },
+    {
+      "id": "desi-model-3",
+      "title": {
+        "pt-BR": "DESI DR1 · Galáxias vermelhas luminosas, z = 0,706",
+        "en": "DESI DR1 · Luminous red galaxies, z = 0.706"
+      },
+      "caption": {
+        "pt-BR": "Mesmo traçador, redshift efetivo e método full-shape descritos nos resumos públicos; variam os pontos cosmológicos alternativos, mantendo a restrição angular de Planck e o ajuste dos parâmetros de viés. Δχ² = χ² da constante cosmológica − χ² da alternativa. Positivo significa menor χ² da alternativa; não é significância em σ, probabilidade ou um novo veredito. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional.",
+        "en": "Same tracer, effective redshift and full-shape method as described in the public summaries; alternative cosmological points vary, retaining the Planck angular constraint and nuisance-bias fitting. Δχ² = cosmological-constant χ² − alternative χ². Positive means a lower alternative χ²; it is not a significance in σ, probability or new verdict. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated."
+      },
+      "members": [
+        {
+          "id": "summary-f563c310f888fa800476-1",
+          "revision": "4333:5e221409:cb2dd0c5",
+          "configuration": {
+            "pt-BR": "w₀ = -0.667, wₐ = -1.09",
+            "en": "w₀ = -0.667, wₐ = -1.09"
+          }
+        },
+        {
+          "id": "summary-208abf0a842724774cdb-1",
+          "revision": "3976:75dd7e86:c92b6e4e",
+          "configuration": {
+            "pt-BR": "w₀ = -0.838, wₐ = -0.62",
+            "en": "w₀ = -0.838, wₐ = -0.62"
+          }
+        }
+      ]
+    },
+    {
+      "id": "desi-model-4",
+      "title": {
+        "pt-BR": "DESI DR1 · Galáxias vermelhas luminosas, z = 0,919",
+        "en": "DESI DR1 · Luminous red galaxies, z = 0.919"
+      },
+      "caption": {
+        "pt-BR": "Mesmo traçador, redshift efetivo e método full-shape descritos nos resumos públicos; variam os pontos cosmológicos alternativos, mantendo a restrição angular de Planck e o ajuste dos parâmetros de viés. Δχ² = χ² da constante cosmológica − χ² da alternativa. Positivo significa menor χ² da alternativa; não é significância em σ, probabilidade ou um novo veredito. Cada linha preserva uma análise publicada. Configurações relacionadas podem reutilizar os mesmos dados; não são amostras independentes. Não calculamos média, resultado combinado ou significância adicional.",
+        "en": "Same tracer, effective redshift and full-shape method as described in the public summaries; alternative cosmological points vary, retaining the Planck angular constraint and nuisance-bias fitting. Δχ² = cosmological-constant χ² − alternative χ². Positive means a lower alternative χ²; it is not a significance in σ, probability or new verdict. Each row preserves a published analysis. Related configurations may reuse the same data; they are not independent samples. No average, pooled result or additional significance is calculated."
+      },
+      "members": [
+        {
+          "id": "summary-c7941d71d3e911514fa1-1",
+          "revision": "4333:d370bd67:4b286e9b",
+          "configuration": {
+            "pt-BR": "w₀ = -0.667, wₐ = -1.09",
+            "en": "w₀ = -0.667, wₐ = -1.09"
+          }
+        },
+        {
+          "id": "summary-e8a3f2b92ebf96c3fd31-1",
+          "revision": "4074:782ac58a:7cd81378",
+          "configuration": {
+            "pt-BR": "w₀ = -0.838, wₐ = -0.62",
+            "en": "w₀ = -0.838, wₐ = -0.62"
+          }
+        }
+      ]
+    }
+  ]
+}

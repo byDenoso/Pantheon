@@ -1,0 +1,28 @@
+[data-tower-svg-host]{position:fixed;inset:0;z-index:2147483646;pointer-events:none;contain:strict;overflow:hidden}
+[data-tower-svg-surface]{display:block;width:100%;height:100%;overflow:hidden;pointer-events:none}
+[data-tower-svg-surface] *{pointer-events:none}
+
+/* The original DOM remains the semantic and interactive surface under its SVG mirror. */
+body.tower-svg-active #root :not(:is(.galaxy-three-mount,.galaxy-three-mount *, .galaxy-three-canvas,.galaxy-three-canvas *, .obs-canvas,.obs-canvas *, [data-tower-svg-native],[data-tower-svg-native] *,canvas,canvas *,video,video *,iframe,iframe *,object,object *,embed,embed *,img,img *,picture,picture *)),
+body.tower-svg-active> :not([data-tower-svg-host]):not(#root) :not(:is(.galaxy-three-mount,.galaxy-three-mount *, .galaxy-three-canvas,.galaxy-three-canvas *, .obs-canvas,.obs-canvas *, [data-tower-svg-native],[data-tower-svg-native] *,canvas,canvas *,video,video *,iframe,iframe *,object,object *,embed,embed *,img,img *,picture,picture *)){
+  -webkit-text-fill-color:transparent!important;
+  background-color:transparent!important;
+  background-image:none!important;
+  border-color:transparent!important;
+  outline-color:transparent!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
+
+body.tower-svg-active :is(input,textarea,select):focus,
+body.tower-svg-active :is(input,textarea,select):focus-visible{
+  color:var(--ink,#fff)!important;
+  -webkit-text-fill-color:var(--ink,#fff)!important;
+  caret-color:var(--ink,#fff)!important;
+  background-color:transparent!important;
+}
+
+@media(prefers-reduced-motion:reduce){[data-tower-svg-surface]{scroll-behavior:auto}}
+
+/* Source paint is sampled atomically; CSS transitions must not restart when its paint is hidden. */
+body[data-tower-svg-enabled] #root *,body[data-tower-svg-enabled]> :not([data-tower-svg-host]):not(#root) *{transition:none!important}

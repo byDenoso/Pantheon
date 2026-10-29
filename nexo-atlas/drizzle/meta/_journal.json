@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791253201948,
+      "tag": "0000_steep_venom",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791253606224,
+      "tag": "0001_small_amazoness",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791300362976,
+      "tag": "0002_nexo_retrieval_v13",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791665517368,
+      "tag": "0003_natural_the_captain",
+      "breakpoints": true
+    }
+  ]
+}

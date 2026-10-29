@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {readExplorerValue} from '../src/atlas/ui/useExplorerState.ts';
+const storage=new Map();globalThis.sessionStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
+const key='nexo.public.explorer.v1.';
+test('public UI state restores strings, page and open state without retaining data payloads',()=>{storage.set(key+'map.query',JSON.stringify('simulação'));storage.set(key+'figures.page','3');storage.set(key+'catalog.open','true');assert.equal(readExplorerValue('map.query',''),'simulação');assert.equal(readExplorerValue('figures.page',0),3);assert.equal(readExplorerValue('catalog.open',false),true);});
+test('corrupt, wrong-type, excessive and negative UI state falls back safely',()=>{for(const value of ['{','null','{}','-1','1.5','100001','"2"']){storage.set(key+'page',value);assert.equal(readExplorerValue('page',0),0);}storage.set(key+'query',JSON.stringify('x'.repeat(501)));assert.equal(readExplorerValue('query',''),'');});
+test('storage denial does not prevent rendering',()=>{const saved=globalThis.sessionStorage;globalThis.sessionStorage={getItem(){throw Error('denied');}};assert.equal(readExplorerValue('page',0),0);globalThis.sessionStorage=saved;});
+test('collapsed technical plots mount on demand and retain their state',()=>{const s=readFileSync('src/atlas/ui/SummaryFigure.tsx','utf8');assert.match(s,/technicalMounted&&children/);assert.match(s,/if\(event.currentTarget.open\)setTechnicalMounted\(true\)/);});
+test('fallback canvas observes manual motion pause and cleans up',()=>{const s=readFileSync('src/atlas/ui/CosmicWebCanvas.tsx','utf8');assert.match(s,/!reduced && !paused/);assert.match(s,/attributeFilter:\['data-cinema-paused'\]/);assert.match(s,/pauseObserver.disconnect\(\)/);});

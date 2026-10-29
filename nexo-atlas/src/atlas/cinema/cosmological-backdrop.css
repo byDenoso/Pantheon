@@ -1,0 +1,29 @@
+.nexo-cosmic-backdrop{background:#f8faff}
+.nexo-cosmic-backdrop .nexo-cosmic-image{opacity:.46}
+.nexo-cosmic-backdrop[data-illustration="cosmic-expansion"]{background:#020712}
+.nexo-cosmic-backdrop[data-illustration="cosmic-expansion"] .nexo-cosmic-image{opacity:.86}
+.atlas-app[data-area="public"] .atlas-hero-picture.nexo-themed-picture{
+  inset:0 0 34px;display:flex;align-items:center;justify-content:center;
+  mix-blend-mode:normal;mask-image:none;-webkit-mask-image:none;container-type:size;
+}
+.nexo-art-scene{position:relative;width:100%;height:100%;overflow:hidden;border-radius:10px;
+  mask-image:radial-gradient(ellipse 72% 72% at 50% 50%,#000 44%,transparent 80%);
+  -webkit-mask-image:radial-gradient(ellipse 72% 72% at 50% 50%,#000 44%,transparent 80%)}
+.nexo-themed-image{display:block;width:100%;height:100%;object-fit:cover}
+.nexo-art-scene.is-cmb{width:min(100%,400px);height:auto;aspect-ratio:1;border-radius:50%;mask-image:none;-webkit-mask-image:none;
+  box-shadow:inset 0 0 0 1px #aec5dc,0 14px 40px #143b6514}
+.nexo-art-scene.is-cmb .nexo-themed-image{animation:none;transform:scale(1.12)}
+@supports(width:1cqh){.nexo-art-scene.is-cmb{width:min(100cqw,100cqh,400px)}}
+.nexo-art-scene.is-cmb::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(circle at 32% 26%,#ffffff45,transparent 46%,#15344c22 76%,#09253c66 100%);
+  box-shadow:inset -12px -8px 24px #1e3d5940,inset 0 0 0 1px #829bb344}
+.nexo-cosmic-backdrop[data-paused="true"] .nexo-cosmic-image,
+.nexo-themed-art[data-paused="true"] .nexo-themed-image,
+.atlas-app[data-cinema-paused="true"] .nexo-themed-image{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.nexo-cosmic-image,.nexo-themed-image{animation:none!important}}
+
+/* Shared artwork for the authenticated shell, without loading the retired video backdrop. */
+.atlas-app[data-area="private"] .nexo-cosmic-backdrop{inset:-32px}
+.atlas-app[data-area="private"] .nexo-cosmic-backdrop[data-illustration="cmb"] .nexo-cosmic-image{transform:scale(1.12);animation:none}
+@media(prefers-reduced-motion:no-preference){.atlas-app[data-area="private"] .nexo-cosmic-backdrop[data-illustration="cosmic-expansion"] .nexo-cosmic-image{animation:nexo-private-image-stretch 18s ease-in-out infinite alternate}}
+@keyframes nexo-private-image-stretch{from{transform:scale(1.04,1.04)}to{transform:scale(1.28,1.18)}}

@@ -1,0 +1,3910 @@
+[
+  {
+    "key": "precedentes",
+    "title": {
+      "pt-BR": "A cadeia entre holografia, escala meV e teoria efetiva protegida já existe na literatura?",
+      "en": "Does the chain linking holography, the meV scale and a protected effective theory already exist in the literature?"
+    },
+    "scope": {
+      "pt-BR": "Busca de precedentes fisicamente equivalentes à proposta completa, incluindo referências e citações dos seus componentes.",
+      "en": "Search for physically equivalent precedents for the full proposal, including references and citations of its components."
+    },
+    "members": [
+      {
+        "question": "A cadeia teórica holografia → escala meV → teoria efetiva local protegida já existe na literatura?",
+        "label": {
+          "pt-BR": "Busca bibliográfica dirigida",
+          "en": "Targeted literature search"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "A possível novidade da cadeia teórica completa resiste à busca nas referências e nos trabalhos que as citam?",
+        "label": {
+          "pt-BR": "Ampliação pelas referências e citações",
+          "en": "Extension through references and citations"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Existe um precedente completo escondido nas redes de citações dos trabalhos que já cobrem partes da proposta?",
+        "label": {
+          "pt-BR": "Busca em três redes de citações",
+          "en": "Search across three citation networks"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Já existe na literatura a cadeia teórica completa que este teste procura?",
+        "label": {
+          "pt-BR": "Busca bibliográfica independente",
+          "en": "Independent literature search"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "faixas-supernovas",
+    "title": {
+      "pt-BR": "Quanto a preferência por energia escura variável depende da distribuição das supernovas em redshift?",
+      "en": "How sensitive is the preference for evolving dark energy to the supernova redshift distribution?"
+    },
+    "scope": {
+      "pt-BR": "Sensibilidade às compilações de supernovas, aos limites das faixas de redshift e ao prior de densidade de matéria.",
+      "en": "Sensitivity to supernova compilations, redshift-bin boundaries and the matter-density prior."
+    },
+    "members": [
+      {
+        "question": "Com o prior Ωm = 0,3 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,33 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR se concentra em uma das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em Pantheon+ e DES-SN5YR se concentra em uma das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em Pantheon+ e DES-SN5YR se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR se concentra em uma das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em Pantheon+ e Union3 se concentra em uma das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,315 ± 0,03, a preferência por energia escura variável em Pantheon+ e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.03 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com o prior Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 se concentra em uma das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Sensibilidade ao prior de densidade de matéria",
+          "en": "Sensitivity to the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "A evidência de energia escura variável está espalhada pelos dados ou depende demais de uma faixa de redshift?",
+        "label": {
+          "pt-BR": "Retirada de três faixas comuns",
+          "en": "Removal of three common ranges"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada das faixas de redshift 0,01–0,15; 0,15–0,5; 0,5–2,3?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,3 ± 0,01, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,3 ± 0,01, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,1; 0,1–0,4; 0,4–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,1; 0,1–0,4; 0,4–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.1; 0.1–0.4; 0.4–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,3 ± 0,01, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,2; 0,2–0,6; 0,6–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,2; 0,2–0,6; 0,6–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.2; 0.2–0.6; 0.6–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,3 ± 0,01, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,3; 0,3–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · z: 0,01–0,3; 0,3–2,3",
+          "en": "Ωm = 0.3 ± 0.01 · z: 0.01–0.3; 0.3–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,08; 0,08–0,15; 0,15–0,3; 0,3–0,6; 0,6–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,08; 0,08–0,15; 0,15–0,3; 0,3–0,6; 0,6–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.08; 0.08–0.15; 0.15–0.3; 0.3–0.6; 0.6–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,1; 0,1–0,3; 0,3–0,7; 0,7–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.1; 0.1–0.3; 0.3–0.7; 0.7–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,1; 0,1–0,4; 0,4–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,1; 0,1–0,4; 0,4–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.1; 0.1–0.4; 0.4–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Repetindo o mesmo desenho: com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,1; 0,1–0,4; 0,4–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR · Repetição da análise",
+          "en": "Pantheon+, DES-SN5YR · Repeat analysis"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,1; 0,1–0,4; 0,4–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.1; 0.1–0.4; 0.4–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": true
+      },
+      {
+        "question": "Com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,2; 0,2–0,6; 0,6–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,2; 0,2–0,6; 0,6–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.2; 0.2–0.6; 0.6–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Repetindo o mesmo desenho: com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,2; 0,2–0,6; 0,6–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR · Repetição da análise",
+          "en": "Pantheon+, DES-SN5YR · Repeat analysis"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,2; 0,2–0,6; 0,6–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.2; 0.2–0.6; 0.6–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": true
+      },
+      {
+        "question": "Com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,3; 0,3–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,3; 0,3–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.3; 0.3–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Repetindo o mesmo desenho: com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,3; 0,3–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR · Repetição da análise",
+          "en": "Pantheon+, DES-SN5YR · Repeat analysis"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,01–0,3; 0,3–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.01–0.3; 0.3–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": true
+      },
+      {
+        "question": "Com Ωm = 0,315 ± 0,007, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,023–0,15; 0,15–0,5; 0,5–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · z: 0,023–0,15; 0,15–0,5; 0,5–2,3",
+          "en": "Ωm = 0.315 ± 0.007 · z: 0.023–0.15; 0.15–0.5; 0.5–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,33 ± 0,01, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,1; 0,1–0,4; 0,4–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,1; 0,1–0,4; 0,4–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.1; 0.1–0.4; 0.4–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,33 ± 0,01, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,2; 0,2–0,6; 0,6–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,2; 0,2–0,6; 0,6–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.2; 0.2–0.6; 0.6–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com Ωm = 0,33 ± 0,01, dividir Pantheon+ e DES-SN5YR nas faixas de redshift 0,01–0,3; 0,3–2,3 revela dependência de uma única faixa para a preferência por energia escura variável?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · z: 0,01–0,3; 0,3–2,3",
+          "en": "Ωm = 0.33 ± 0.01 · z: 0.01–0.3; 0.3–2.3"
+        },
+        "section": {
+          "pt-BR": "Dependência dos limites das faixas de redshift",
+          "en": "Dependence on redshift-bin boundaries"
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "grupos-bao",
+    "title": {
+      "pt-BR": "A preferência por energia escura variável é robusta à exclusão de grupos BAO?",
+      "en": "Is the preference for evolving dark energy robust to excluding BAO groups?"
+    },
+    "scope": {
+      "pt-BR": "Influência de galáxias, quasares e absorção Lyman-alfa, com diferentes agrupamentos em redshift e priors de densidade de matéria.",
+      "en": "Influence of galaxies, quasars and Lyman-alpha absorption under different redshift groupings and matter-density priors."
+    },
+    "members": [
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · galáxias e floresta Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.01 · galaxies and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · baixo e alto redshift",
+          "en": "Ωm = 0.3 ± 0.01 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · extremos e centro do intervalo de redshift",
+          "en": "Ωm = 0.3 ± 0.01 · ends and center of the redshift interval"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias e floresta Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · galaxies and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · baixo e alto redshift",
+          "en": "Ωm = 0.315 ± 0.007 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · extremos e centro do intervalo de redshift",
+          "en": "Ωm = 0.315 ± 0.007 · ends and center of the redshift interval"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,02, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,02 · galáxias e floresta Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.02 · galaxies and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,02, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,02 · baixo e alto redshift",
+          "en": "Ωm = 0.315 ± 0.02 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,02, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,02 · extremos e centro do intervalo de redshift",
+          "en": "Ωm = 0.315 ± 0.02 · ends and center of the redshift interval"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de galáxias e floresta Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · galáxias e floresta Lyman-alfa",
+          "en": "Ωm = 0.33 ± 0.01 · galaxies and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · baixo e alto redshift",
+          "en": "Ωm = 0.33 ± 0.01 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a direção da preferência por energia escura variável resiste à retirada dos blocos de extremos e centro do intervalo de redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · extremos e centro do intervalo de redshift",
+          "en": "Ωm = 0.33 ± 0.01 · ends and center of the redshift interval"
+        },
+        "section": {
+          "pt-BR": "Agrupamentos em redshift e prior de densidade de matéria",
+          "en": "Redshift groupings and the matter-density prior"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "baixo e alto redshift",
+          "en": "low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.01 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.33 ± 0.01 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "baixo e alto redshift",
+          "en": "low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.01 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.33 ± 0.01 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "baixo e alto redshift",
+          "en": "low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de baixo e alto redshift?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · baixo e alto redshift",
+          "en": "Ωm = 0.3 ± 0.01 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,3 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.01 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.33 ± 0.01 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Comparação entre compilações de supernovas",
+          "en": "Comparison across supernova compilations"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em DES-SN5YR e Union3, com Ωm = 0,3 ± 0,02?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,02 · quasares e floresta Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.02 · quasars and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · baixo e alto redshift",
+          "en": "Ωm = 0.315 ± 0.007 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,3 ± 0,02?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,02 · quasares e floresta Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.02 · quasars and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · baixo e alto redshift",
+          "en": "Ωm = 0.315 ± 0.007 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,3 ± 0,01?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · seis grupos de traçadores",
+          "en": "Ωm = 0.3 ± 0.01 · six tracer groups"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,3 ± 0,02?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,02 · quasares e floresta Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.02 · quasars and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · baixo e alto redshift",
+          "en": "Ωm = 0.315 ± 0.007 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,315 ± 0,03?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · seis grupos de traçadores",
+          "en": "Ωm = 0.315 ± 0.03 · six tracer groups"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e DES-SN5YR, com Ωm = 0,33 ± 0,01?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · seis grupos de traçadores",
+          "en": "Ωm = 0.33 ± 0.01 · six tracer groups"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar quasares e floresta Lyman-alfa, separadamente do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,3 ± 0,02?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,02 · quasares e floresta Lyman-alfa",
+          "en": "Ωm = 0.3 ± 0.02 · quasars and the Lyman-alpha forest"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar baixo e alto redshift do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · baixo e alto redshift",
+          "en": "Ωm = 0.315 ± 0.007 · low and high redshift"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "Ωm = 0.315 ± 0.007 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Ao retirar seis grupos de traçadores do BAO DESI, a preferência por energia escura variável permanece em Pantheon+ e Union3, com Ωm = 0,315 ± 0,03?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,03 · seis grupos de traçadores",
+          "en": "Ωm = 0.315 ± 0.03 · six tracer groups"
+        },
+        "section": {
+          "pt-BR": "Dependência do agrupamento de traçadores",
+          "en": "Dependence on tracer grouping"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,315 ± 0,03, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,315 ± 0,03 · cada um dos sete intervalos BAO do DESI DR2 · Sete intervalos separados",
+          "en": "DESI DR2 · Ωm = 0.315 ± 0.03 · each of the seven DESI DR2 BAO intervals · Seven separate intervals"
+        },
+        "section": {
+          "pt-BR": "Sete intervalos BAO separados",
+          "en": "Seven separate BAO intervals"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em DES-SN5YR e Union3, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · cada um dos sete intervalos BAO do DESI DR2 · Sete intervalos separados",
+          "en": "DESI DR2 · each of the seven DESI DR2 BAO intervals · Seven separate intervals"
+        },
+        "section": {
+          "pt-BR": "Sete intervalos BAO separados",
+          "en": "Seven separate BAO intervals"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,315 ± 0,007 · cada um dos sete intervalos BAO do DESI DR2 · Sete intervalos separados",
+          "en": "DESI DR2 · Ωm = 0.315 ± 0.007 · each of the seven DESI DR2 BAO intervals · Seven separate intervals"
+        },
+        "section": {
+          "pt-BR": "Sete intervalos BAO separados",
+          "en": "Seven separate BAO intervals"
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01, a preferência por energia escura variável resiste à retirada de cada um dos sete intervalos BAO do DESI DR2?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,33 ± 0,01 · cada um dos sete intervalos BAO do DESI DR2 · Sete intervalos separados",
+          "en": "DESI DR2 · Ωm = 0.33 ± 0.01 · each of the seven DESI DR2 BAO intervals · Seven separate intervals"
+        },
+        "section": {
+          "pt-BR": "Sete intervalos BAO separados",
+          "en": "Seven separate BAO intervals"
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-33",
+    "title": {
+      "pt-BR": "A floresta Lyman-alfa e as galáxias satélites favorecem uma escala de corte compatível com matéria escura morna ou ultraleve?",
+      "en": "Do the Lyman-alpha forest and satellite galaxies favor a cutoff scale compatible with warm or ultralight dark matter?"
+    },
+    "scope": {
+      "pt-BR": "Escala de corte inferida de resumos publicados da floresta Lyman-alfa e de galáxias satélites.",
+      "en": "Cutoff scale inferred from published summaries of the Lyman-alpha forest and satellite galaxies."
+    },
+    "members": [
+      {
+        "question": "A floresta Lyman-alfa e as galáxias satélites apontam juntas para uma matéria escura 'morna' ou ultraleve?",
+        "label": {
+          "pt-BR": "Escala de corte da matéria escura",
+          "en": "Dark-matter cutoff scale"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-34",
+    "title": {
+      "pt-BR": "A holografia prevê a escala de 2,3 meV independentemente das observações cosmológicas?",
+      "en": "Does holography predict the 2.3 meV scale independently of cosmological observations?"
+    },
+    "scope": {
+      "pt-BR": "Independência da escala de energia obtida a partir da entropia e da expansão de de Sitter.",
+      "en": "Independence of the energy scale derived from de Sitter entropy and expansion."
+    },
+    "members": [
+      {
+        "question": "A holografia realmente prevê 2,3 meV ou apenas reescreve o valor observado?",
+        "label": {
+          "pt-BR": "Origem da escala meV",
+          "en": "Origin of the meV scale"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "autointeracao",
+    "title": {
+      "pt-BR": "Uma única lei de autointeração da matéria escura é compatível com galáxias e aglomerados?",
+      "en": "Is one dark-matter self-interaction law compatible with galaxies and clusters?"
+    },
+    "scope": {
+      "pt-BR": "Dependência da interação com a velocidade e compatibilidade entre escalas galácticas e de aglomerados, considerando incertezas bariônicas.",
+      "en": "Velocity dependence of the interaction and compatibility between galactic and cluster scales, accounting for baryonic uncertainties."
+    },
+    "members": [
+      {
+        "question": "A mesma lei de autointeração da matéria escura permite interações fortes em galáxias anãs e fracas em aglomerados?",
+        "label": {
+          "pt-BR": "Compatibilidade entre anãs e aglomerados",
+          "en": "Compatibility between dwarf galaxies and clusters"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Uma autointeração de matéria escura que diminui com a velocidade consegue ser forte em galáxias pequenas sem violar os limites de aglomerados?",
+        "label": {
+          "pt-BR": "Dependência da interação com a velocidade",
+          "en": "Velocity dependence of the interaction"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "versao-bao",
+    "title": {
+      "pt-BR": "A preferência por energia escura variável depende da versão dos dados BAO do DESI?",
+      "en": "Does the preference for evolving dark energy depend on the DESI BAO data release?"
+    },
+    "scope": {
+      "pt-BR": "Comparações com DESI DR1 em relação a DR2, preservando as compilações de supernovas e as hipóteses de cada teste.",
+      "en": "Comparisons using DESI DR1 relative to DR2, preserving the supernova compilations and assumptions of each test."
+    },
+    "members": [
+      {
+        "question": "Em DES-SN5YR e Union3 e BAO DESI DR1, a preferência por energia escura variável resiste à retirada de galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · galáxias vermelhas, galáxias de emissão e quasares com Lyman-alfa",
+          "en": "DESI DR1 · red galaxies, emission-line galaxies and quasars with Lyman-alpha"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 8?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR1 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 8?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR1 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 2?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 2",
+          "en": "DESI DR1 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 2"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 4?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 4",
+          "en": "DESI DR1 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 8?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR1 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 2?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 2",
+          "en": "DESI DR1 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 2"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 4?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 4",
+          "en": "DESI DR1 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 8?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR1 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+ e Union3, com Ωm = 0,315 ± 0,007 e calibração BAO = 30 ± 8?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR1 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01 e calibração BAO = 30 ± 8?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR1 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,315 ± 0,007",
+          "en": "DESI DR1 · Ωm = 0.315 ± 0.007"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+, DES-SN5YR e Union3, com Ωm = 0,33 ± 0,01?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,33 ± 0,01",
+          "en": "DESI DR1 · Ωm = 0.33 ± 0.01"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em DES-SN5YR e Union3, com Ωm = 0,315 ± 0,007?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,315 ± 0,007",
+          "en": "DESI DR1 · Ωm = 0.315 ± 0.007"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Trocando BAO DESI DR2 por DR1, a preferência por energia escura variável persiste em Pantheon+ e Union3, com Ωm = 0,33 ± 0,01?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR1 · Ωm = 0,33 ± 0,01",
+          "en": "DESI DR1 · Ωm = 0.33 ± 0.01"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "calibracao-bao",
+    "title": {
+      "pt-BR": "A incerteza da calibração BAO altera a preferência por energia escura variável?",
+      "en": "Does BAO calibration uncertainty alter the preference for evolving dark energy?"
+    },
+    "scope": {
+      "pt-BR": "Sensibilidade à largura do prior da régua acústica e ao prior de densidade de matéria.",
+      "en": "Sensitivity to the width of the acoustic-ruler prior and the matter-density prior."
+    },
+    "members": [
+      {
+        "question": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 4",
+          "en": "DESI DR2 · Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "DES-SN5YR, Union3",
+          "en": "DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 2 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 2",
+          "en": "Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 2"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 4",
+          "en": "Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 2 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 2",
+          "en": "Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 2"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 4 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 4",
+          "en": "Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 8",
+          "en": "Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 2 e Ωm = 0,315 ± 0,02, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,02 · Calibração BAO = 30 ± 2",
+          "en": "Ωm = 0.315 ± 0.02 · BAO calibration = 30 ± 2"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 4 e Ωm = 0,315 ± 0,02, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,02 · Calibração BAO = 30 ± 4",
+          "en": "Ωm = 0.315 ± 0.02 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,02, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,315 ± 0,02 · Calibração BAO = 30 ± 8",
+          "en": "Ωm = 0.315 ± 0.02 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 2 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 2",
+          "en": "Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 2"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 4 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 4",
+          "en": "Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+, DES-SN5YR e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR, Union3",
+          "en": "Pantheon+, DES-SN5YR, Union3"
+        },
+        "detail": {
+          "pt-BR": "Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 4",
+          "en": "DESI DR2 · Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+ e DES-SN5YR resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, DES-SN5YR",
+          "en": "Pantheon+, DES-SN5YR"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 4 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 4",
+          "en": "DESI DR2 · Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 4"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,3 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,3 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.3 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,315 ± 0,007, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,315 ± 0,007 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.315 ± 0.007 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com calibração BAO = 30 ± 8 e Ωm = 0,33 ± 0,01, a preferência por energia escura variável em Pantheon+ e Union3 resiste à retirada de cada bloco de traçadores?",
+        "label": {
+          "pt-BR": "Pantheon+, Union3",
+          "en": "Pantheon+, Union3"
+        },
+        "detail": {
+          "pt-BR": "DESI DR2 · Ωm = 0,33 ± 0,01 · Calibração BAO = 30 ± 8",
+          "en": "DESI DR2 · Ωm = 0.33 ± 0.01 · BAO calibration = 30 ± 8"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-142",
+    "title": {
+      "pt-BR": "As estruturas do mapa tridimensional do DESI DR1 resistem aos testes de geometria e seleção?",
+      "en": "Do the structures in the DESI DR1 three-dimensional map withstand geometry and selection tests?"
+    },
+    "scope": {
+      "pt-BR": "Verificação da transformação de coordenadas e dos efeitos da janela observacional sobre o mapa.",
+      "en": "Checks of the coordinate transformation and the effects of the survey window on the map."
+    },
+    "members": [
+      {
+        "question": "A seleção e a transformação para coordenadas 3D do DESI DR1 podem ser aplicadas sem fabricar estruturas dominantes por erro geométrico ou pela janela do levantamento?",
+        "label": {
+          "pt-BR": "Geometria e seleção do DESI DR1",
+          "en": "DESI DR1 geometry and selection"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-143",
+    "title": {
+      "pt-BR": "A supersimetria protege a relação R = 1 sem exigir um novo ajuste fino?",
+      "en": "Does supersymmetry protect R = 1 without requiring further fine-tuning?"
+    },
+    "scope": {
+      "pt-BR": "Estabilidade da relação na teoria efetiva local, incluindo efeitos de Kähler, quebra de supersimetria e gravidade.",
+      "en": "Stability of the relation in the local effective theory, including Kähler, supersymmetry-breaking and gravity effects."
+    },
+    "members": [
+      {
+        "question": "A supersimetria consegue proteger a compatibilização R=1 sem reintroduzir outro ajuste fino?",
+        "label": {
+          "pt-BR": "Proteção supersimétrica de R = 1",
+          "en": "Supersymmetric protection of R = 1"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-144",
+    "title": {
+      "pt-BR": "As calibrações de lentes fracas do eROSITA são consistentes em alto redshift?",
+      "en": "Are the eROSITA weak-lensing calibrations consistent at high redshift?"
+    },
+    "scope": {
+      "pt-BR": "Comparação das calibrações DES, KiDS e HSC a partir de verificações publicadas de aglomerados comuns.",
+      "en": "Comparison of DES, KiDS and HSC calibrations using published checks on common clusters."
+    },
+    "members": [
+      {
+        "question": "As calibrações de lentes fracas (DES, KiDS, HSC) usadas pelo eROSITA discordam entre si em alto redshift?",
+        "label": {
+          "pt-BR": "Calibração cruzada DES, KiDS e HSC",
+          "en": "DES, KiDS and HSC cross-calibration"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-145",
+    "title": {
+      "pt-BR": "A relação R = 1 é estável a correções quânticas no modelo bosônico mínimo?",
+      "en": "Is R = 1 stable under quantum corrections in the minimal bosonic model?"
+    },
+    "scope": {
+      "pt-BR": "Estabilidade radiativa das proporções entre os coeficientes do potencial.",
+      "en": "Radiative stability of the ratios between the potential coefficients."
+    },
+    "members": [
+      {
+        "question": "As correções quânticas preservam R=1 no modelo bosônico mínimo?",
+        "label": {
+          "pt-BR": "Estabilidade radiativa do modelo bosônico",
+          "en": "Radiative stability of the bosonic model"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pontos-cosmologicos",
+    "title": {
+      "pt-BR": "Quais pontos cosmológicos são favorecidos pelos dados de estruturas do DESI DR1?",
+      "en": "Which cosmological points are favored by DESI DR1 structure data?"
+    },
+    "scope": {
+      "pt-BR": "Comparações de pontos fixados em w₀ e wₐ, separadas por traçador e redshift efetivo.",
+      "en": "Comparisons of fixed points in w₀ and wₐ, separated by tracer and effective redshift."
+    },
+    "members": [
+      {
+        "question": "No DESI DR1, galáxias com linhas de emissão em redshift efetivo 1,317 favorecem o modelo com w₀ = -0,667 e wₐ = -1,09 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias com linhas de emissão · z = 1,317",
+          "en": "Emission-line galaxies · z = 1.317"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,667 · wₐ = -1,09",
+          "en": "w₀ = -0.667 · wₐ = -1.09"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, galáxias com linhas de emissão em redshift efetivo 1,317 favorecem o modelo com w₀ = -0,838 e wₐ = -0,62 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias com linhas de emissão · z = 1,317",
+          "en": "Emission-line galaxies · z = 1.317"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,838 · wₐ = -0,62",
+          "en": "w₀ = -0.838 · wₐ = -0.62"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, galáxias vermelhas luminosas em redshift efetivo 0,51 favorecem o modelo com w₀ = -0,667 e wₐ = -1,09 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,51",
+          "en": "Luminous red galaxies · z = 0.51"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,667 · wₐ = -1,09",
+          "en": "w₀ = -0.667 · wₐ = -1.09"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, galáxias vermelhas luminosas em redshift efetivo 0,706 favorecem o modelo com w₀ = -0,667 e wₐ = -1,09 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,706",
+          "en": "Luminous red galaxies · z = 0.706"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,667 · wₐ = -1,09",
+          "en": "w₀ = -0.667 · wₐ = -1.09"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, galáxias vermelhas luminosas em redshift efetivo 0,919 favorecem o modelo com w₀ = -0,667 e wₐ = -1,09 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,919",
+          "en": "Luminous red galaxies · z = 0.919"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,667 · wₐ = -1,09",
+          "en": "w₀ = -0.667 · wₐ = -1.09"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, galáxias vermelhas luminosas em redshift efetivo 0,51 favorecem o modelo com w₀ = -0,838 e wₐ = -0,62 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,51",
+          "en": "Luminous red galaxies · z = 0.51"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,838 · wₐ = -0,62",
+          "en": "w₀ = -0.838 · wₐ = -0.62"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, galáxias vermelhas luminosas em redshift efetivo 0,706 favorecem o modelo com w₀ = -0,838 e wₐ = -0,62 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,706",
+          "en": "Luminous red galaxies · z = 0.706"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,838 · wₐ = -0,62",
+          "en": "w₀ = -0.838 · wₐ = -0.62"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, galáxias vermelhas luminosas em redshift efetivo 0,919 favorecem o modelo com w₀ = -0,838 e wₐ = -0,62 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,919",
+          "en": "Luminous red galaxies · z = 0.919"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,838 · wₐ = -0,62",
+          "en": "w₀ = -0.838 · wₐ = -0.62"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "No DESI DR1, quasares em redshift efetivo 1,491 favorecem o modelo com w₀ = -0,667 e wₐ = -1,09 em relação à constante cosmológica?",
+        "label": {
+          "pt-BR": "Quasares · z = 1,491",
+          "en": "Quasars · z = 1.491"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,667 · wₐ = -1,09",
+          "en": "w₀ = -0.667 · wₐ = -1.09"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-157",
+    "title": {
+      "pt-BR": "A relação R = 1 decorre da redução clássica da teoria?",
+      "en": "Does R = 1 follow from the classical reduction of the theory?"
+    },
+    "scope": {
+      "pt-BR": "Derivação da relação adimensional entre os coeficientes da teoria efetiva no limite adiabático.",
+      "en": "Derivation of the dimensionless relation between effective-theory coefficients in the adiabatic limit."
+    },
+    "members": [
+      {
+        "question": "O R=1 aparece sozinho na compatibilização clássica ou foi colocado à mão?",
+        "label": {
+          "pt-BR": "Derivação clássica de R = 1",
+          "en": "Classical derivation of R = 1"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-158",
+    "title": {
+      "pt-BR": "A tendência de S8 no eROSITA é robusta à exclusão de faixas de redshift?",
+      "en": "Is the eROSITA S8 trend robust to excluding redshift bins?"
+    },
+    "scope": {
+      "pt-BR": "Influência de cada um dos cinco intervalos sobre a inclinação estimada de S8 com redshift.",
+      "en": "Influence of each of the five bins on the estimated slope of S8 with redshift."
+    },
+    "members": [
+      {
+        "question": "O resultado de S8 do eROSITA depende de um único intervalo de redshift?",
+        "label": {
+          "pt-BR": "Influência das faixas de redshift em S8",
+          "en": "Redshift-bin influence on S8"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-161",
+    "title": {
+      "pt-BR": "As anomalias atribuídas à matéria escura exigem uma mesma propriedade física?",
+      "en": "Do the anomalies attributed to dark matter require a shared physical property?"
+    },
+    "scope": {
+      "pt-BR": "Compatibilidade entre anomalias após considerar gás, estrelas, calibrações e incertezas de medida.",
+      "en": "Compatibility among anomalies after accounting for gas, stars, calibrations and measurement uncertainties."
+    },
+    "members": [
+      {
+        "question": "Quais anomalias contra a matéria escura fria ainda sobrevivem depois de descontar gás, estrelas e erros de medição?",
+        "label": {
+          "pt-BR": "Compatibilidade entre anomalias",
+          "en": "Compatibility among anomalies"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "expansao-crescimento",
+    "title": {
+      "pt-BR": "Com a expansão fixada, os dados favorecem o crescimento previsto pela constante cosmológica?",
+      "en": "With expansion fixed, do the data favor the growth predicted by a cosmological constant?"
+    },
+    "scope": {
+      "pt-BR": "Comparações em que a história de expansão é mantida e apenas a descrição do crescimento é alterada.",
+      "en": "Comparisons that hold the expansion history fixed while changing only the description of growth."
+    },
+    "members": [
+      {
+        "question": "Com expansão fixada em w₀ = -0,838 e wₐ = -0,62, o crescimento medido por galáxias com linhas de emissão em redshift efetivo 1,317 favorece a constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias com linhas de emissão · z = 1,317",
+          "en": "Emission-line galaxies · z = 1.317"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,838 · wₐ = -0,62",
+          "en": "w₀ = -0.838 · wₐ = -0.62"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com expansão fixada em w₀ = -0,667 e wₐ = -1,09, o crescimento medido por galáxias vermelhas luminosas em redshift efetivo 0,51, 0,706 e 0,919 favorece a constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,51, 0,706 e 0,919",
+          "en": "Luminous red galaxies · z = 0.51, 0.706 and 0.919"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,667 · wₐ = -1,09",
+          "en": "w₀ = -0.667 · wₐ = -1.09"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com expansão fixada em w₀ = -0,838 e wₐ = -0,62, o crescimento medido por galáxias vermelhas luminosas em redshift efetivo 0,51, 0,706 e 0,919 favorece a constante cosmológica?",
+        "label": {
+          "pt-BR": "Galáxias vermelhas luminosas · z = 0,51, 0,706 e 0,919",
+          "en": "Luminous red galaxies · z = 0.51, 0.706 and 0.919"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,838 · wₐ = -0,62",
+          "en": "w₀ = -0.838 · wₐ = -0.62"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com expansão fixada em w₀ = -0,667 e wₐ = -1,09, o crescimento medido por quasares em redshift efetivo 1,491 favorece a constante cosmológica?",
+        "label": {
+          "pt-BR": "Quasares · z = 1,491",
+          "en": "Quasars · z = 1.491"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,667 · wₐ = -1,09",
+          "en": "w₀ = -0.667 · wₐ = -1.09"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com expansão fixada em w₀ = -0,838 e wₐ = -0,62, o crescimento medido por quasares em redshift efetivo 1,491 favorece a constante cosmológica?",
+        "label": {
+          "pt-BR": "Quasares · z = 1,491",
+          "en": "Quasars · z = 1.491"
+        },
+        "detail": {
+          "pt-BR": "w₀ = -0,838 · wₐ = -0,62",
+          "en": "w₀ = -0.838 · wₐ = -0.62"
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-167",
+    "title": {
+      "pt-BR": "Uma supressão do crescimento pode reduzir a diferença de S8 entre Planck e lentes fracas?",
+      "en": "Can growth suppression reduce the S8 discrepancy between Planck and weak lensing?"
+    },
+    "scope": {
+      "pt-BR": "Compatibilidade de uma supressão fenomenológica com resumos de S8, distâncias do Planck e limites da floresta Lyman-alfa.",
+      "en": "Compatibility of phenomenological suppression with S8 summaries, Planck distances and Lyman-alpha forest bounds."
+    },
+    "members": [
+      {
+        "question": "Se a matéria escura 'apagar' um pouco da estrutura em escalas médias, isso resolve a diferença entre Planck e os levantamentos de lentes (S8)?",
+        "label": {
+          "pt-BR": "Supressão fenomenológica do crescimento",
+          "en": "Phenomenological growth suppression"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-168",
+    "title": {
+      "pt-BR": "Se houver supressão física do crescimento, em que época ela se torna necessária?",
+      "en": "If growth is physically suppressed, when does that suppression become necessary?"
+    },
+    "scope": {
+      "pt-BR": "Comparação de crescimento em baixo e alto redshift com lentes da radiação cósmica de fundo, DESI e lentes fracas.",
+      "en": "Comparison of growth at low and high redshift using cosmic microwave background lensing, DESI and weak lensing."
+    },
+    "members": [
+      {
+        "question": "Se a supressão de crescimento associada à tensão de S8 for física, ela aparece só tarde no Universo ou já estava presente em alto redshift?",
+        "label": {
+          "pt-BR": "Época de início da supressão",
+          "en": "Onset of suppression"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "objetivos",
+    "title": {
+      "pt-BR": "Os testes têm um objetivo científico explícito?",
+      "en": "Do tests have an explicit scientific objective?"
+    },
+    "scope": {
+      "pt-BR": "Verificações em amostras, no conjunto da campanha e nos vínculos documentados.",
+      "en": "Checks across samples, the campaign and documented links."
+    },
+    "members": [
+      {
+        "question": "A ausência de objetivo explícito também aparece no conjunto completo de testes prontos da campanha?",
+        "label": {
+          "pt-BR": "Todos os testes prontos da campanha",
+          "en": "All ready tests in the campaign"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Cada teste da campanha informa explicitamente qual objetivo científico procura atender?",
+        "label": {
+          "pt-BR": "Amostra de cinco testes prontos",
+          "en": "Sample of five ready tests"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Entre os cinco itens mais antigos prontos para execução, pelo menos quatro continuam sem objetivo explícito?",
+        "label": {
+          "pt-BR": "Cinco itens mais antigos",
+          "en": "Five oldest items"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Os cinco itens continuam sem objetivo identificável quando só se usam vínculos explícitos e inequívocos?",
+        "label": {
+          "pt-BR": "Verificação dos vínculos com objetivos",
+          "en": "Check of links to objectives"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "temas-testes",
+    "title": {
+      "pt-BR": "Os testes ativos têm temas definidos?",
+      "en": "Do active tests have defined topics?"
+    },
+    "scope": {
+      "pt-BR": "Medições em diferentes recortes e reconstruções da seleção.",
+      "en": "Measurements across different snapshots and reconstructed selections."
+    },
+    "members": [
+      {
+        "question": "A ausência de tema continua em pelo menos 80% dos testes ativos quando a seleção é reconstruída diretamente?",
+        "label": {
+          "pt-BR": "Seleção reconstruída dos registros",
+          "en": "Selection reconstructed from records"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Os testes ativos têm temas definidos o suficiente para organizar resultados e aprendizado?",
+        "label": {
+          "pt-BR": "Recorte inicial de testes ativos",
+          "en": "Initial subset of active tests"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Pelo menos 80% dos testes ativos continuam sem tema definido em uma observação independente?",
+        "label": {
+          "pt-BR": "Observação independente",
+          "en": "Independent observation"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "calibracao-previsoes",
+    "title": {
+      "pt-BR": "A quantidade de informação disponível muda a calibração das previsões?",
+      "en": "Does the amount of available information change prediction calibration?"
+    },
+    "scope": {
+      "pt-BR": "Comparações com diferentes números mínimos de casos por grupo.",
+      "en": "Comparisons using different minimum case counts per group."
+    },
+    "members": [
+      {
+        "question": "Exigindo ao menos 10 casos por grupo, a calibração das previsões difere entre testes com mais ou menos informação disponível?",
+        "label": {
+          "pt-BR": "Ao menos 10 casos por grupo",
+          "en": "At least 10 cases per group"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Exigindo ao menos 15 casos por grupo, a calibração das previsões difere entre testes com mais ou menos informação disponível?",
+        "label": {
+          "pt-BR": "Ao menos 15 casos por grupo",
+          "en": "At least 15 cases per group"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Exigindo ao menos 5 casos por grupo, a calibração das previsões difere entre testes com mais ou menos informação disponível?",
+        "label": {
+          "pt-BR": "Ao menos 5 casos por grupo",
+          "en": "At least 5 cases per group"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "regras-antigas",
+    "title": {
+      "pt-BR": "Os processos de inicialização ainda usam regras antigas?",
+      "en": "Do startup processes still use old rules?"
+    },
+    "scope": {
+      "pt-BR": "Verificação de referências diretas, indiretas e do possível carregamento em execução.",
+      "en": "Checks of direct references, indirect references and possible runtime loading."
+    },
+    "members": [
+      {
+        "question": "A cópia antiga das regras de execução é citada diretamente pelos processos ativos de inicialização?",
+        "label": {
+          "pt-BR": "Referências diretas",
+          "en": "Direct references"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Algum dos cinco processos de inicialização alcança indiretamente uma cópia antiga das regras de execução?",
+        "label": {
+          "pt-BR": "Referências indiretas",
+          "en": "Indirect references"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Algum processo de inicialização consulta dinamicamente a cópia antiga das regras de execução?",
+        "label": {
+          "pt-BR": "Possível carregamento dinâmico",
+          "en": "Possible dynamic loading"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "temas-registros",
+    "title": {
+      "pt-BR": "A falta de classificação temática está concentrada nas tarefas?",
+      "en": "Is missing topic classification concentrated in tasks?"
+    },
+    "scope": {
+      "pt-BR": "Contagens e recontagens da distribuição entre tarefas e testes.",
+      "en": "Counts and recounts of the distribution between tasks and tests."
+    },
+    "members": [
+      {
+        "question": "A falta de classificação temática está concentrada em tarefas ou em testes?",
+        "label": {
+          "pt-BR": "Distribuição entre tarefas e testes",
+          "en": "Distribution between tasks and tests"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "As tarefas representam pelo menos 80% dos registros sem classificação temática em uma recontagem independente?",
+        "label": {
+          "pt-BR": "Recontagem independente",
+          "en": "Independent recount"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Pelo menos 80% dos registros sem classificação temática continuam sendo tarefas?",
+        "label": {
+          "pt-BR": "Nova verificação do limite de 80%",
+          "en": "New check of the 80% threshold"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "simulacao",
+    "title": {
+      "pt-BR": "A simulação é estável e reproduzível?",
+      "en": "Is the simulation stable and reproducible?"
+    },
+    "scope": {
+      "pt-BR": "Testes de execução, sementes, tamanho da amostra e rastreabilidade, cada um com seu próprio alcance.",
+      "en": "Tests of execution, seeds, sample size and traceability, each with its own scope."
+    },
+    "members": [
+      {
+        "question": "A infraestrutura automatizada de testes executa uma simulação e devolve o resultado sem intervenção?",
+        "label": {
+          "pt-BR": "Execução automatizada",
+          "en": "Automated run"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "A simulação continua dentro dos mesmos limites quando a amostra é reduzida para 25 mil observações?",
+        "label": {
+          "pt-BR": "Amostra de 25 mil observações",
+          "en": "Sample of 25 thousand observations"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "A simulação permanece estável com as sementes fixadas e três tamanhos de amostra?",
+        "label": {
+          "pt-BR": "Três tamanhos de amostra",
+          "en": "Three sample sizes"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "O resultado numérico permanece dentro dos mesmos limites com três sementes independentes?",
+        "label": {
+          "pt-BR": "Três sementes independentes",
+          "en": "Three independent seeds"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "O sistema reproduz o resultado com três sementes previamente fixadas?",
+        "label": {
+          "pt-BR": "Três sementes previamente fixadas",
+          "en": "Three seeds fixed in advance"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "O sistema reproduz o resultado em três execuções com parâmetros previamente definidos?",
+        "label": {
+          "pt-BR": "Suficiência dos parâmetros de replicação",
+          "en": "Sufficiency of replication parameters"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Uma replicação independente preserva o resultado numérico e a rastreabilidade até a leitura final?",
+        "label": {
+          "pt-BR": "Replicação e rastreabilidade",
+          "en": "Replication and traceability"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "tarefas-antigas",
+    "title": {
+      "pt-BR": "As tarefas antigas continuam ativas e sem progresso?",
+      "en": "Do old tasks remain active without progress?"
+    },
+    "scope": {
+      "pt-BR": "Verificações de idade, disponibilidade para retomada e mudanças ao longo do tempo.",
+      "en": "Checks of age, resumability and changes over time."
+    },
+    "members": [
+      {
+        "question": "A permanência de tarefas antigas continua elevada quando a amostra é separada previamente por idade?",
+        "label": {
+          "pt-BR": "Amostra separada por idade",
+          "en": "Sample split by age"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "As tarefas antigas continuam disponíveis para retomada em observações separadas no tempo?",
+        "label": {
+          "pt-BR": "Observações separadas no tempo",
+          "en": "Observations separated in time"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "As tarefas antigas continuam estagnadas quando se procura evidência de progresso posterior?",
+        "label": {
+          "pt-BR": "Busca de progresso posterior",
+          "en": "Search for subsequent progress"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "As tarefas com pelo menos 48 horas continuam fazendo parte do trabalho disponível para retomada?",
+        "label": {
+          "pt-BR": "Tarefas com pelo menos 48 horas",
+          "en": "Tasks at least 48 hours old"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "As tarefas interrompidas há mais de três dias ainda fazem parte do trabalho ativo?",
+        "label": {
+          "pt-BR": "Tarefas interrompidas há mais de três dias",
+          "en": "Tasks interrupted more than three days ago"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "presenca-explicacoes",
+    "title": {
+      "pt-BR": "Os resultados chegam à revisão com explicações preenchidas?",
+      "en": "Do results reach review with explanations present?"
+    },
+    "scope": {
+      "pt-BR": "Verifica a presença dos textos nas filas examinadas.",
+      "en": "Checks whether the examined review queues contain explanations."
+    },
+    "members": [
+      {
+        "question": "A presença de explicações permanece alta quando a fila de revisão é reconstruída a partir dos registros originais?",
+        "label": {
+          "pt-BR": "Fila de revisão reconstruída",
+          "en": "Reconstructed review queue"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Os resultados chegam à revisão com uma explicação legível?",
+        "label": {
+          "pt-BR": "Presença de explicações na revisão",
+          "en": "Presence of explanations in review"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "qualidade-explicacoes",
+    "title": {
+      "pt-BR": "As explicações dos resultados são informativas?",
+      "en": "Are result explanations informative?"
+    },
+    "scope": {
+      "pt-BR": "Avalia o conteúdo das explicações, além da presença de campos preenchidos.",
+      "en": "Evaluates the content of explanations beyond whether fields are filled."
+    },
+    "members": [
+      {
+        "question": "As explicações continuam úteis quando avaliadas pelo conteúdo?",
+        "label": {
+          "pt-BR": "População reconstruída dos registros",
+          "en": "Population reconstructed from records"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "As explicações dos resultados são informativas ou apenas preenchem campos obrigatórios?",
+        "label": {
+          "pt-BR": "Avaliação do conteúdo dos textos",
+          "en": "Assessment of text content"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "motivos-interrupcao",
+    "title": {
+      "pt-BR": "A falta de dados ou vínculos explica as interrupções?",
+      "en": "Do missing data or links explain interruptions?"
+    },
+    "scope": {
+      "pt-BR": "Diagnóstico dos motivos registrados e tentativa de verificação em outra amostra.",
+      "en": "Diagnosis of recorded causes and an attempted check in another sample."
+    },
+    "members": [
+      {
+        "question": "As interrupções acontecem principalmente por falta de dados bem vinculados ou por falhas de cálculo e código?",
+        "label": {
+          "pt-BR": "Diagnóstico da amostra inicial",
+          "en": "Assessment of the initial sample"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Em uma amostra independente e distribuída entre planos, a falta de dados ou vínculos ainda explica pelo menos 70% das interrupções?",
+        "label": {
+          "pt-BR": "Tentativa em amostra independente",
+          "en": "Attempt using an independent sample"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-187",
+    "title": {
+      "pt-BR": "As operações ainda marcadas como não aplicadas representam falhas ativas ou resíduos antigos?",
+      "en": "Do operations still marked as unapplied represent active failures or old remnants?"
+    },
+    "scope": {
+      "pt-BR": "",
+      "en": ""
+    },
+    "members": [
+      {
+        "question": "As operações ainda marcadas como não aplicadas representam falhas ativas ou resíduos antigos?",
+        "label": {
+          "pt-BR": "As operações ainda marcadas como não aplicadas representam falhas ativas ou resíduos antigos?",
+          "en": "Do operations still marked as unapplied represent active failures or old remnants?"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-194",
+    "title": {
+      "pt-BR": "Documentos vazios ocorrem com frequência no fluxo recente de criação de propostas?",
+      "en": "Do empty documents occur frequently in the recent proposal-creation workflow?"
+    },
+    "scope": {
+      "pt-BR": "",
+      "en": ""
+    },
+    "members": [
+      {
+        "question": "Documentos vazios ocorrem com frequência no fluxo recente de criação de propostas?",
+        "label": {
+          "pt-BR": "Documentos vazios ocorrem com frequência no fluxo recente de criação de propostas?",
+          "en": "Do empty documents occur frequently in the recent proposal-creation workflow?"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "tempo-hipoteses",
+    "title": {
+      "pt-BR": "Os horários registrados permitem medir a chegada de novas hipóteses?",
+      "en": "Do recorded timestamps allow new hypothesis arrivals to be measured?"
+    },
+    "scope": {
+      "pt-BR": "Diagnóstico das lacunas, comparação de fontes temporais e intervenção isolada.",
+      "en": "Diagnosis of gaps, comparison of timestamp sources and an isolated intervention."
+    },
+    "members": [
+      {
+        "question": "O alerta de inatividade é compatível com a ausência de horários de criação das hipóteses?",
+        "label": {
+          "pt-BR": "Lacunas nos horários de criação",
+          "en": "Gaps in creation timestamps"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "O tempo desde a chegada de hipóteses fica coerente quando se usam os horários dos eventos de registro?",
+        "label": {
+          "pt-BR": "Comparação com eventos de registro",
+          "en": "Comparison with logging events"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Os eventos de criação ou registro de hipóteses fornecem uma fonte de tempo coerente?",
+        "label": {
+          "pt-BR": "Coerência dos horários dos eventos",
+          "en": "Consistency of event timestamps"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Preencher somente os horários de criação ausentes corrige a medição do tempo desde novas hipóteses?",
+        "label": {
+          "pt-BR": "Preenchimento isolado de horários ausentes",
+          "en": "Filling in missing timestamps alone"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "prontidao",
+    "title": {
+      "pt-BR": "O escore de prontidão prevê resultados bloqueados ou inconclusivos?",
+      "en": "Does the readiness score predict blocked or inconclusive outcomes?"
+    },
+    "scope": {
+      "pt-BR": "Comparações com uma previsão de referência e diferentes mínimos de casos.",
+      "en": "Comparisons with a baseline prediction and different minimum case counts."
+    },
+    "members": [
+      {
+        "question": "Com mínimo de 20 casos, o escore de prontidão prevê resultados bloqueados ou inconclusivos melhor que a previsão de referência?",
+        "label": {
+          "pt-BR": "Mínimo de 20 casos",
+          "en": "Minimum of 20 cases"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com mínimo de 30 casos, o escore de prontidão prevê resultados bloqueados ou inconclusivos melhor que a previsão de referência?",
+        "label": {
+          "pt-BR": "Mínimo de 30 casos",
+          "en": "Minimum of 30 cases"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      },
+      {
+        "question": "Com mínimo de 40 casos, o escore de prontidão prevê resultados bloqueados ou inconclusivos melhor que a previsão de referência?",
+        "label": {
+          "pt-BR": "Mínimo de 40 casos",
+          "en": "Minimum of 40 cases"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-201",
+    "title": {
+      "pt-BR": "O fornecimento ou a vinculação de dados antecede a retomada de tarefas interrompidas?",
+      "en": "Does supplying or linking data precede the resumption of interrupted tasks?"
+    },
+    "scope": {
+      "pt-BR": "",
+      "en": ""
+    },
+    "members": [
+      {
+        "question": "O fornecimento ou a vinculação de dados antecede a retomada de tarefas interrompidas?",
+        "label": {
+          "pt-BR": "O fornecimento ou a vinculação de dados antecede a retomada de tarefas interrompidas?",
+          "en": "Does supplying or linking data precede the resumption of interrupted tasks?"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-213",
+    "title": {
+      "pt-BR": "Um histórico temporal completo está associado a testes que conseguem chegar a uma conclusão?",
+      "en": "Is a complete timeline associated with tests that manage to reach a conclusion?"
+    },
+    "scope": {
+      "pt-BR": "",
+      "en": ""
+    },
+    "members": [
+      {
+        "question": "Um histórico temporal completo está associado a testes que conseguem chegar a uma conclusão?",
+        "label": {
+          "pt-BR": "Um histórico temporal completo está associado a testes que conseguem chegar a uma conclusão?",
+          "en": "Is a complete timeline associated with tests that manage to reach a conclusion?"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  },
+  {
+    "key": "pergunta-214",
+    "title": {
+      "pt-BR": "Uma confirmação de armazenamento inicial é suficiente quando também se medem atrasos e falhas de entrega em casos posteriores?",
+      "en": "Is an initial storage confirmation sufficient when delays and delivery failures are also measured in later cases?"
+    },
+    "scope": {
+      "pt-BR": "",
+      "en": ""
+    },
+    "members": [
+      {
+        "question": "Uma confirmação de armazenamento inicial é suficiente quando também se medem atrasos e falhas de entrega em casos posteriores?",
+        "label": {
+          "pt-BR": "Uma confirmação de armazenamento inicial é suficiente quando também se medem atrasos e falhas de entrega em casos posteriores?",
+          "en": "Is an initial storage confirmation sufficient when delays and delivery failures are also measured in later cases?"
+        },
+        "detail": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "section": {
+          "pt-BR": "",
+          "en": ""
+        },
+        "repeat": false
+      }
+    ]
+  }
+]

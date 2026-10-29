@@ -1,0 +1,340 @@
+import {useEffect,useId,useRef} from 'react';
+
+type SvgPaint={kind:'radial'|'linear';stops:Array<{offset:number;color:string}>;coords:number[];addColorStop:(offset:number,color:string)=>void};
+type Paint=string|SvgPaint;
+type SvgState={alpha:number;fill:Paint;stroke:Paint;lineWidth:number;lineCap:string;lineJoin:string;dash:number[];font:string;textAlign:string;textBaseline:string;transform:[number,number,number,number,number,number]};
+const SVG_NS='http://www.w3.org/2000/svg';
+
+/** Canvas-subset adapter: records vector paths and batches primitives by paint/style. */
+class SvgCanvasContext {
+  globalAlpha=1;fillStyle:Paint='#000';strokeStyle:Paint='#000';lineWidth=1;lineCap='butt';lineJoin='miter';font='10px sans-serif';textAlign='start';textBaseline='alphabetic';
+  private transform:[number,number,number,number,number,number]=[1,0,0,1,0,0];
+  private stack:SvgState[]=[];private defs:SVGDefsElement;private groups=new Map<string,{d:string;attrs:Record<string,string>}>();private ordered:SVGElement[]=[];
+  private current:string[]=[];private paints=new Map<string,string>();private nextPaint=0;private svg:SVGSVGElement;private prefix:string;
+  constructor(svg:SVGSVGElement,prefix:string){this.svg=svg;this.prefix=prefix.replace(/[^a-zA-Z0-9_-]/g,'');this.defs=document.createElementNS(SVG_NS,'defs');}
+  beginFrame(width:number,height:number){this.defs=document.createElementNS(SVG_NS,'defs');this.groups.clear();this.ordered=[];this.paints.clear();this.nextPaint=0;this.stack=[];this.transform=[1,0,0,1,0,0];this.globalAlpha=1;this.fillStyle='#000';this.strokeStyle='#000';this.lineWidth=1;this.lineCap='butt';this.lineJoin='miter';this._dash=[];this.font='10px sans-serif';this.textAlign='start';this.textBaseline='alphabetic';this.svg.setAttribute('viewBox',`0 0 ${Math.max(1,width)} ${Math.max(1,height)}`);}
+  present(){this.flushGroup();this.svg.replaceChildren(this.defs,...this.ordered);}
+  private flushGroup(){for(const group of this.groups.values()){const path=document.createElementNS(SVG_NS,'path');path.setAttribute('d',group.d);for(const [name,value] of Object.entries(group.attrs))path.setAttribute(name,value);this.ordered.push(path);}this.groups.clear();}
+  private point(x:number,y:number){const [a,b,c,d,e,f]=this.transform;return{x:a*x+c*y+e,y:b*x+d*y+f};}
+  private matrix(){return this.transform.map(v=>Number(v.toFixed(3))).join(',');}
+  setTransform(a:number,b:number,c:number,d:number,e:number,f:number){this.transform=[a,b,c,d,e,f];}
+  save(){this.stack.push({alpha:this.globalAlpha,fill:this.fillStyle,stroke:this.strokeStyle,lineWidth:this.lineWidth,lineCap:this.lineCap,lineJoin:this.lineJoin,dash:this._dash.slice(),font:this.font,textAlign:this.textAlign,textBaseline:this.textBaseline,transform:[...this.transform] as SvgState['transform']});}
+  restore(){const s=this.stack.pop();if(!s)return;this.globalAlpha=s.alpha;this.fillStyle=s.fill;this.strokeStyle=s.stroke;this.lineWidth=s.lineWidth;this.lineCap=s.lineCap;this.lineJoin=s.lineJoin;this._dash=s.dash;this.font=s.font;this.textAlign=s.textAlign;this.textBaseline=s.textBaseline;this.transform=s.transform;}
+  private _dash:number[]=[];setLineDash(dash:number[]){this._dash=[...dash];}
+  beginPath(){this.current=[];}moveTo(x:number,y:number){const p=this.point(x,y);this.current.push(`M${p.x.toFixed(2)},${p.y.toFixed(2)}`);}lineTo(x:number,y:number){const p=this.point(x,y);this.current.push(`L${p.x.toFixed(2)},${p.y.toFixed(2)}`);}quadraticCurveTo(cx:number,cy:number,x:number,y:number){const c=this.point(cx,cy),p=this.point(x,y);this.current.push(`Q${c.x.toFixed(2)},${c.y.toFixed(2)} ${p.x.toFixed(2)},${p.y.toFixed(2)}`);}closePath(){this.current.push('Z');}
+  ellipse(x:number,y:number,rx:number,ry:number,rotation:number,start:number,end:number){const segments=Math.max(12,Math.ceil(Math.abs(end-start)*12)),cos=Math.cos(rotation),sin=Math.sin(rotation);for(let i=0;i<=segments;i++){const t=start+(end-start)*i/segments,px=x+rx*Math.cos(t)*cos-ry*Math.sin(t)*sin,py=y+rx*Math.cos(t)*sin+ry*Math.sin(t)*cos,p=this.point(px,py);this.current.push(`${i?'L':'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`);}if(Math.abs(end-start)>=Math.PI*2-.01)this.closePath();}
+  arc(x:number,y:number,r:number,start:number,end:number){this.ellipse(x,y,r,r,0,start,end);}
+  translate(x:number,y:number){this.transform=this.mul(this.transform,[1,0,0,1,x,y]);}rotate(angle:number){this.transform=this.mul(this.transform,[Math.cos(angle),Math.sin(angle),-Math.sin(angle),Math.cos(angle),0,0]);}
+  private mul(a:number[],b:number[]):[number,number,number,number,number,number]{return[a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];}
+  fillRect(x:number,y:number,w:number,h:number){const a=this.point(x,y),b=this.point(x+w,y),c=this.point(x+w,y+h),d=this.point(x,y+h);this.emit(`M${a.x.toFixed(2)},${a.y.toFixed(2)}L${b.x.toFixed(2)},${b.y.toFixed(2)}L${c.x.toFixed(2)},${c.y.toFixed(2)}L${d.x.toFixed(2)},${d.y.toFixed(2)}Z`,'fill');}
+  stroke(){this.emit(this.current.join(''),'stroke');}fill(){this.emit(this.current.join(''),'fill');}
+  private paint(paint:Paint):string{if(typeof paint==='string')return paint;const signature=paint.kind+':'+(paint.kind==='linear'?paint.coords.join(','):'')+':'+paint.stops.map(s=>`${s.offset}:${s.color}`).join('|');let id=this.paints.get(signature);if(id)return`url(#${id})`;id=`${this.prefix}-paint-${this.nextPaint++}`;this.paints.set(signature,id);const g=document.createElementNS(SVG_NS,paint.kind==='radial'?'radialGradient':'linearGradient');g.id=id;g.setAttribute('gradientUnits',paint.kind==='radial'?'objectBoundingBox':'userSpaceOnUse');if(paint.kind==='radial'){g.setAttribute('cx','.5');g.setAttribute('cy','.5');g.setAttribute('r','.5');g.setAttribute('fx','.5');g.setAttribute('fy','.5');}else{const [x1,y1,x2,y2]=paint.coords;g.setAttribute('x1',String(x1));g.setAttribute('y1',String(y1));g.setAttribute('x2',String(x2));g.setAttribute('y2',String(y2));}for(const stop of paint.stops){const node=document.createElementNS(SVG_NS,'stop');node.setAttribute('offset',String(stop.offset));node.setAttribute('stop-color',stop.color);g.appendChild(node);}this.defs.appendChild(g);return`url(#${id})`;}
+  private emit(d:string,mode:'fill'|'stroke'){if(!d)return;const paint=this.paint(mode==='fill'?this.fillStyle:this.strokeStyle),alpha=Math.max(0,Math.min(1,this.globalAlpha)),opacity=String(Math.round(alpha*100)/100),attrs:Record<string,string>=mode==='fill'?{fill:paint,'fill-opacity':opacity}:{fill:'none',stroke:paint,'stroke-opacity':opacity,'stroke-width':String(this.lineWidth),'stroke-linecap':this.lineCap,'stroke-linejoin':this.lineJoin};if(mode==='stroke'&&this._dash.length)attrs['stroke-dasharray']=this._dash.join(' ');const key=JSON.stringify([attrs,this.matrix()]);const old=this.groups.get(key);if(old)old.d+=d;else this.groups.set(key,{d,attrs});}
+  createRadialGradient(_x0:number,_y0:number,_r0:number,_x1:number,_y1:number,r1:number):SvgPaint{const gradient:SvgPaint={kind:'radial',stops:[],coords:[r1],addColorStop:(offset,color)=>{gradient.stops.push({offset,color});gradient.stops.sort((a,b)=>a.offset-b.offset);}};return gradient;}
+  createLinearGradient(x1:number,y1:number,x2:number,y2:number):SvgPaint{const a=this.point(x1,y1),b=this.point(x2,y2),gradient:SvgPaint={kind:'linear',stops:[],coords:[a.x,a.y,b.x,b.y],addColorStop:(offset,color)=>{gradient.stops.push({offset,color});gradient.stops.sort((m,n)=>m.offset-n.offset);}};return gradient;}
+  measureText(text:string){const px=Number(/([\d.]+)px/.exec(this.font)?.[1]||10);return{width:text.length*px*.6} as TextMetrics;}
+  fillText(text:string,x:number,y:number){this.flushGroup();const p=this.point(x,y),node=document.createElementNS(SVG_NS,'text');node.textContent=text;node.setAttribute('x',String(p.x));node.setAttribute('y',String(p.y));node.setAttribute('fill',this.paint(this.fillStyle));node.setAttribute('fill-opacity',String(Math.round(Math.max(0,Math.min(1,this.globalAlpha))*100)/100));node.setAttribute('font',this.font);node.setAttribute('text-anchor',this.textAlign==='center'?'middle':this.textAlign==='right'?'end':'start');node.setAttribute('dominant-baseline',this.textBaseline==='middle'?'middle':'alphabetic');this.ordered.push(node);}
+}
+
+export type StarCluster={id:string;label:string;color:string;weight:number;detail?:string};
+/** Cross-domain relations: each becomes a filament of the cosmic web, denser with more relations. */
+export type StarLink={a:string;b:string;count:number};
+
+// Céu do hero. Sem clusters é só um campo de estrelas; com clusters, cada domínio
+// vira um aglomerado na sua cor, dimensionado pelo peso publicado. O foco é
+// compartilhado com a página pelo evento `nexo:domain-focus` e pelo atributo
+// data-domain-focus no <html>, nos dois sentidos. Pausa fora da tela e respeita
+// prefers-reduced-motion.
+// Teia cósmica: domínios são nós; relações entre domínios viram filamentos de
+// galáxias (densidade e brilho pela contagem). Pares sem relação ganham só um fio
+// tênue, para a teia ler como estrutura contínua sem inventar vínculo.
+export function StarfieldCanvas({className='starfield-canvas',clusters=[],links=[]}:{className?:string;clusters?:StarCluster[];links?:StarLink[]}){
+  const ref=useRef<SVGSVGElement>(null);
+  const id=useId();
+  const clustersRef=useRef(clusters);
+  clustersRef.current=clusters;
+  const linksRef=useRef(links);
+  linksRef.current=links;
+  const clusterKey=clusters.map(c=>`${c.id}:${c.weight}:${c.color}`).join('|')+'#'+links.map(l=>`${l.a}-${l.b}:${l.count}`).join('|');
+
+  useEffect(()=>{
+    const canvas=ref.current;if(!canvas)return;
+    const context=new SvgCanvasContext(canvas,id);
+    const still=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let width=0,height=0,frame=0,time=0,visible=true,focus:string|null=null;
+    let stars:Array<{angle:number;radius:number;size:number;seed:number;speed:number}>=[];
+    type Placed=StarCluster&{x:number;y:number;r:number;glow:number;members:Array<{dx:number;dy:number;size:number;seed:number}>};
+    let placed:Placed[]=[];
+    // Every filament particle carries a displacement + velocity: the pointer scatters it,
+    // a damped spring pulls it back, so the web comes apart under the cursor and re-knits.
+    type Mote={t:number;off:number;seed:number;px:number;py:number;vx:number;vy:number};
+    type Strand={a:Placed;b:Placed;count:number;bend:number;waves:number;phase:number;beads:Array<Mote&{size:number}>};
+    let pointer:{x:number;y:number}|null=null;
+    // Parallax: layers slide against the pointer (stars least, domains most).
+    const par={x:0,y:0};let shift={x:0,y:0};
+    const layer=(k:number)=>{shift={x:par.x*k,y:par.y*k};context.setTransform(ratioNow,0,0,ratioNow,shift.x*ratioNow,shift.y*ratioNow);};
+    let ratioNow=1;
+    // Intro: the web draws itself out of the nodes over ~2.6 s, then stays.
+    const INTRO=2600;
+    const ease=(v:number)=>{const c=Math.max(0,Math.min(1,v));return 1-Math.pow(1-c,3);};
+    const REACH=110;
+    const moteAt=(m:Mote,x:number,y:number)=>{
+      if(!still){
+        if(pointer){
+          const ddx=x+m.px-(pointer.x-shift.x),ddy=y+m.py-(pointer.y-shift.y),dist=Math.hypot(ddx,ddy);
+          if(dist<REACH&&dist>.01){const f=(1-dist/REACH)**2*2.4;m.vx+=ddx/dist*f;m.vy+=ddy/dist*f;}
+        }
+        m.vx=(m.vx-m.px*.035)*.9;m.vy=(m.vy-m.py*.035)*.9;m.px+=m.vx;m.py+=m.vy;
+      }
+      return [x+m.px,y+m.py] as const;
+    };
+    const mote=(off:number)=>({t:Math.random(),off,seed:Math.random(),px:0,py:0,vx:0,vy:0});
+    let strands:Strand[]=[];
+    // Background web: faint knots and dotted threads, the domains embedded in it.
+    let web:Array<{x1:number;y1:number;x2:number;y2:number;bend:number;waves:number;phase:number;dots:Mote[]}>=[];
+    let knots:Array<{x:number;y:number;r:number;seed:number}>=[];
+
+    const place=()=>{
+      const list=clustersRef.current;
+      const max=Math.max(1,...list.map(c=>c.weight));
+      placed=list.map((cluster,index)=>{
+        // Aglomerados em arco sobre os dois terços direitos, longe do título.
+        const t=list.length===1?.5:index/(list.length-1);
+        const x=width*(.44+.42*t);
+        const y=height*(.46-.16*Math.sin(t*Math.PI)+(index%2?.07:-.05));
+        const r=Math.min(width,height)*(.07+.07*(cluster.weight/max));
+        const count=Math.round(60+140*(cluster.weight/max));
+        const members=Array.from({length:count},()=>{
+          const a=Math.random()*Math.PI*2,d=Math.pow(Math.random(),1.8)*r;
+          return {dx:Math.cos(a)*d,dy:Math.sin(a)*d*.62,size:Math.random()*1.5+.3,seed:Math.random()};
+        });
+        const previous=placed.find(p=>p.id===cluster.id);
+        return {...cluster,x,y,r,members,glow:previous?.glow??1};
+      });
+      // Filaments: published relations, plus a faint thread to the nearest
+      // neighbour for clusters that would otherwise float alone.
+      const byId=new Map(placed.map(c=>[c.id,c]));
+      const pairs=new Map<string,{a:Placed;b:Placed;count:number}>();
+      for(const link of linksRef.current){
+        const a=byId.get(link.a),b=byId.get(link.b);
+        if(a&&b&&a!==b)pairs.set([a.id,b.id].sort().join('|'),{a,b,count:link.count});
+      }
+      for(const c of placed){
+        if([...pairs.values()].some(p=>p.a===c||p.b===c))continue;
+        const near=placed.filter(o=>o!==c).sort((m,n)=>Math.hypot(m.x-c.x,m.y-c.y)-Math.hypot(n.x-c.x,n.y-c.y))[0];
+        if(near)pairs.set([c.id,near.id].sort().join('|'),{a:c,b:near,count:0});
+      }
+      const nodes=[
+        ...Array.from({length:34},()=>({x:width*(.3+.72*Math.random()),y:height*(.04+.86*Math.random())})),
+        ...placed.map(c=>({x:c.x,y:c.y})),
+      ];
+      knots=nodes.slice(0,34).map(n=>({...n,r:1+Math.random()*2.2,seed:Math.random()}));
+      const seen=new Set<string>();web=[];
+      nodes.forEach((n,i)=>{
+        nodes.map((m,j)=>({j,d:Math.hypot(m.x-n.x,m.y-n.y)})).filter(o=>o.j!==i).sort((p,q)=>p.d-q.d).slice(0,3).forEach(({j,d})=>{
+          const key=[i,j].sort().join('-');if(seen.has(key)||d>Math.max(width,height)*.32)return;seen.add(key);
+          const m=nodes[j]!;
+          web.push({x1:n.x,y1:n.y,x2:m.x,y2:m.y,bend:(Math.random()-.5)*.45,waves:1+Math.floor(Math.random()*3),phase:Math.random()*6.28,dots:Array.from({length:Math.round(d/3.5)},()=>mote((Math.random()+Math.random()-1)*4))});
+        });
+      });
+      const maxLink=Math.max(1,...[...pairs.values()].map(p=>p.count));
+      strands=[...pairs.values()].map(({a,b,count})=>{
+        const beads=Math.round(24+(count?150*Math.sqrt(count/maxLink):0));
+        return {a,b,count,bend:(Math.random()-.5)*.5,waves:1+Math.floor(Math.random()*2),phase:Math.random()*6.28,beads:Array.from({length:beads},()=>({
+          ...mote((Math.random()+Math.random()-1)*(count?9+14*count/maxLink:5)),size:Math.random()*1.3+.3,
+        }))};
+      });
+    };
+
+    const resize=()=>{
+      ratioNow=1;
+      width=canvas.clientWidth;height=canvas.clientHeight;
+      canvas.setAttribute('viewBox',`0 0 ${Math.max(1,width)} ${Math.max(1,height)}`);
+      stars=Array.from({length:Math.min(1200,Math.round(width*height/800))},()=>({
+        angle:Math.random()*Math.PI*2,radius:Math.pow(Math.random(),.6)*Math.max(width,height)*.7,
+        size:Math.random()*1.3+.2,seed:Math.random(),speed:.00004+Math.random()*.0001,
+      }));
+      place();
+    };
+
+    const draw=()=>{
+      context.beginFrame(width,height);
+      const cx=width*.72,cy=height*.4;
+      const intro=still?1:ease(time/INTRO);
+      if(!still){
+        const tx=pointer?-(pointer.x-width/2)/width*28:0,ty=pointer?-(pointer.y-height/2)/height*18:0;
+        par.x+=(tx-par.x)*.05;par.y+=(ty-par.y)*.05;
+      }
+      layer(0);
+      context.fillStyle='#05070B';context.fillRect(0,0,width,height);
+      if(!placed.length){
+        const glow=context.createRadialGradient(cx,cy,0,cx,cy,Math.max(width,height)*.35);
+        glow.addColorStop(0,'rgba(233,179,91,.16)');glow.addColorStop(.4,'rgba(80,110,150,.06)');glow.addColorStop(1,'rgba(0,0,0,0)');
+        context.fillStyle=glow;context.fillRect(0,0,width,height);
+      }
+      layer(.25);
+      for(const star of stars){
+        const angle=star.angle+time*star.speed*(400/(star.radius+60));
+        context.globalAlpha=(.25+.6*Math.abs(Math.sin(time*.002+star.seed*9)))*(placed.length?.7:1);
+        context.fillStyle=!placed.length&&star.seed>.93?'#E9B35B':'#D6DEE8';
+        context.fillRect(cx+Math.cos(angle)*star.radius,cy+Math.sin(angle)*star.radius*.42,star.size,star.size);
+      }
+      layer(.55);
+      for(const w of web){
+        const dx=w.x2-w.x1,dy=w.y2-w.y1,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
+        const mx=(w.x1+w.x2)/2+nx*len*w.bend,my=(w.y1+w.y2)/2+ny*len*w.bend;
+        context.fillStyle='#9fb0cc';
+        for(const d of w.dots){
+          const t=d.t,u=1-t,wave=Math.sin(t*Math.PI*w.waves+w.phase+time*.0004)*len*.04*Math.sin(t*Math.PI);
+          const [x,y]=moteAt(d,u*u*w.x1+2*u*t*mx+t*t*w.x2+nx*(d.off+wave),u*u*w.y1+2*u*t*my+t*t*w.y2+ny*(d.off+wave));
+          const grow=Math.max(0,Math.min(1,(intro*1.25-Math.min(t,1-t)*1.1)*3));
+          if(grow<=0)continue;
+          context.globalAlpha=(.1+.22*Math.abs(Math.sin(time*.001+d.seed*11)))*(placed.length?1:.6)*grow;
+          context.fillRect(x,y,1.2,1.2);
+        }
+      }
+      for(const k of knots){
+        context.save();context.globalAlpha=intro;
+        const halo=context.createRadialGradient(k.x,k.y,0,k.x,k.y,k.r*6);
+        halo.addColorStop(0,'rgba(190,205,230,.14)');halo.addColorStop(1,'rgba(190,205,230,0)');
+        context.globalAlpha=1;context.fillStyle=halo;context.fillRect(k.x-k.r*6,k.y-k.r*6,k.r*12,k.r*12);
+        context.globalAlpha=.35+.3*Math.abs(Math.sin(time*.0012+k.seed*7));context.fillStyle='#d6dee8';
+        context.globalAlpha*=intro;context.fillRect(k.x-.6,k.y-.6,1.3,1.3);
+        context.restore();
+      }
+      // Filaments first, under the nodes: a bent strand whose colour fades from one domain to the other.
+      layer(.8);
+      for(const s of strands){
+        const {a,b}=s;const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
+        const reach=still?1:ease((time-500)/2200);
+        const nx=-dy/len,ny=dx/len;
+        const mx=(a.x+b.x)/2+nx*len*s.bend,my=(a.y+b.y)/2+ny*len*s.bend;
+        const lit=Math.min(1.7,Math.max(a.glow,b.glow)*.75+Math.min(a.glow,b.glow)*.25);
+        const strength=s.count?.35+.65*Math.min(1,s.count/10):.12;
+        const grad=context.createLinearGradient(a.x,a.y,b.x,b.y);
+        grad.addColorStop(0,hexAlpha(a.color,.07*strength*lit));grad.addColorStop(1,hexAlpha(b.color,.07*strength*lit));
+        context.globalAlpha=pointer?.55:1;context.strokeStyle=grad;context.lineWidth=s.count?4+8*strength:1;
+        if(reach>=1){context.beginPath();context.moveTo(a.x,a.y);context.quadraticCurveTo(mx,my,b.x,b.y);context.stroke();}
+        for(const bead of s.beads){
+          if(bead.t>reach)continue;
+          const t=bead.t,u=1-t,wave=Math.sin(t*Math.PI*s.waves+s.phase+time*.0005)*len*.035*Math.sin(t*Math.PI);
+          const [x,y]=moteAt(bead,u*u*a.x+2*u*t*mx+t*t*b.x+nx*(bead.off+wave),u*u*a.y+2*u*t*my+t*t*b.y+ny*(bead.off+wave));
+          context.fillStyle=t<.5?a.color:b.color;
+          context.globalAlpha=(.2+.55*Math.abs(Math.sin(time*.0015+bead.seed*9)))*strength*lit;
+          context.fillRect(x,y,bead.size,bead.size);
+        }
+        // Light pulses travelling the filament: more relations, more traffic.
+        if(!still&&reach>=1){
+          const pulses=s.count?Math.min(4,1+Math.floor(s.count/6)):0;
+          for(let i=0;i<pulses;i++){
+            const t=((time*(.00007+.00002*i)+i/pulses+s.phase)%1+1)%1,u=1-t;
+            const wave=Math.sin(t*Math.PI*s.waves+s.phase+time*.0005)*len*.035*Math.sin(t*Math.PI);
+            const x=u*u*a.x+2*u*t*mx+t*t*b.x+nx*wave,y=u*u*a.y+2*u*t*my+t*t*b.y+ny*wave;
+            const col=t<.5?a.color:b.color;const rad=5+6*strength;
+            const glow=context.createRadialGradient(x,y,0,x,y,rad*2.4);
+            glow.addColorStop(0,hexAlpha('#ffffff',.85*Math.min(1,lit)));glow.addColorStop(.25,hexAlpha(col,.5*Math.min(1,lit)));glow.addColorStop(1,hexAlpha(col,0));
+            context.globalAlpha=Math.sin(t*Math.PI);context.fillStyle=glow;
+            context.fillRect(x-rad*2.4,y-rad*2.4,rad*4.8,rad*4.8);
+          }
+        }
+      }
+      layer(1);
+      const labelBoxes:Array<{x:number;y:number;w:number;h:number}>=[];
+      placed.forEach((cluster,index)=>{
+        const target=focus===null?1:focus===cluster.id?1.9:.28;
+        cluster.glow+=(target-cluster.glow)*(still?1:.08);
+        const born=still?1:ease((time-index*180)/1400);
+        if(born<=0)return;
+        const g=cluster.glow*born;
+        const halo=context.createRadialGradient(cluster.x,cluster.y,0,cluster.x,cluster.y,cluster.r*2.4);
+        halo.addColorStop(0,hexAlpha(cluster.color,.22*g));halo.addColorStop(1,hexAlpha(cluster.color,0));
+        context.globalAlpha=1;context.fillStyle=halo;
+        context.fillRect(cluster.x-cluster.r*2.4,cluster.y-cluster.r*2.4,cluster.r*4.8,cluster.r*4.8);
+        // Breathing core and a slow tilted ring: each domain reads as a living node.
+        const breath=still?1:.85+.15*Math.sin(time*.0016+index);
+        const coreR=cluster.r*.28*breath;
+        const core=context.createRadialGradient(cluster.x,cluster.y,0,cluster.x,cluster.y,coreR);
+        core.addColorStop(0,hexAlpha('#ffffff',.55*Math.min(1,g)));core.addColorStop(.3,hexAlpha(cluster.color,.45*Math.min(1,g)));core.addColorStop(1,hexAlpha(cluster.color,0));
+        context.globalAlpha=1;context.fillStyle=core;context.fillRect(cluster.x-coreR,cluster.y-coreR,coreR*2,coreR*2);
+        context.save();context.translate(cluster.x,cluster.y);context.rotate(-.35+index*.4);
+        context.strokeStyle=hexAlpha(cluster.color,.28*Math.min(1.3,g));context.lineWidth=1;
+        const arc=time*.0004*(index%2?1:-1);
+        context.beginPath();context.ellipse(0,0,cluster.r*.95*born,cluster.r*.36*born,0,arc,arc+Math.PI*1.35);context.stroke();
+        context.restore();
+        const spin=time*.00005;
+        context.fillStyle=cluster.color;
+        for(const m of cluster.members){
+          const cos=Math.cos(spin),sin=Math.sin(spin);
+          const x=cluster.x+(m.dx*cos-m.dy*sin)*(.4+.6*born),y=cluster.y+(m.dx*sin+m.dy*cos)*(.4+.6*born);
+          context.globalAlpha=Math.min(1,(.35+.55*Math.abs(Math.sin(time*.0018+m.seed*7)))*Math.min(1,g));
+          context.fillRect(x,y,m.size,m.size);
+        }
+        context.globalAlpha=Math.min(1,.45+.55*Math.min(1,g));
+        context.fillStyle=cluster.color;
+        context.font='500 10.5px "IBM Plex Mono", ui-monospace, monospace';
+        // Labels flip to the left of the cluster instead of running off the right edge.
+        const label=cluster.label.toUpperCase();
+        const labelWidth=Math.max(context.measureText(label).width,cluster.detail?context.measureText(cluster.detail).width:0);
+        const labelX=cluster.x+cluster.r*.9+labelWidth>width-12?cluster.x-cluster.r*.9-labelWidth:cluster.x+cluster.r*.9;
+        // Labels never overlap: push down until the box is free.
+        let labelY=cluster.y-cluster.r*.9;const h=cluster.detail?28:16;
+        while(labelBoxes.some(o=>labelX<o.x+o.w+8&&labelX+labelWidth+8>o.x&&labelY-12<o.y+o.h&&labelY-12+h>o.y))labelY+=h+4;
+        labelBoxes.push({x:labelX,y:labelY-12,w:labelWidth,h});
+        context.globalAlpha*=born;
+        context.fillText(label,labelX,labelY);
+        if(cluster.detail){context.fillStyle='#7A889C';context.fillText(cluster.detail,labelX,labelY+14);}
+      });
+      layer(0);
+      context.globalAlpha=1;time+=16;
+      context.present();
+      if(!still&&visible)frame=requestAnimationFrame(draw);
+    };
+
+    const setFocus=(next:string|null)=>{
+      if(next===focus)return;
+      focus=next;
+      if(next)document.documentElement.dataset.domainFocus=next;else delete document.documentElement.dataset.domainFocus;
+      if(still)draw();
+    };
+    const onFocusEvent=(event:Event)=>setFocus((event as CustomEvent<string|null>).detail??null);
+    const onPointer=(event:PointerEvent)=>{
+      const box=canvas.getBoundingClientRect();
+      const x=event.clientX-box.left,y=event.clientY-box.top;
+      pointer={x,y};
+      const hit=placed.find(c=>Math.hypot(x-par.x-c.x,(y-par.y-c.y)/.62)<c.r*1.3);
+      setFocus(hit?.id??null);
+      canvas.style.cursor=hit?'crosshair':'';
+    };
+    const onLeave=()=>{pointer=null;setFocus(null);};
+
+    const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(([entry])=>{
+      const was=visible;visible=entry.isIntersecting;
+      if(visible&&!was&&!still)frame=requestAnimationFrame(draw);
+    }):null;
+    observer?.observe(canvas);
+    // O hero muda de altura depois do carregamento (fontes, dados); medir só no
+    // resize da janela deixava o canvas esticado.
+    const onResize=()=>{if(canvas.clientWidth===width&&canvas.clientHeight===height)return;resize();if(still)draw();};
+    const sizer=typeof ResizeObserver==='function'?new ResizeObserver(onResize):null;
+    sizer?.observe(canvas);
+    resize();draw();
+    window.addEventListener('resize',onResize);
+    window.addEventListener('nexo:domain-focus',onFocusEvent);
+    canvas.addEventListener('pointermove',onPointer);
+    canvas.addEventListener('pointerleave',onLeave);
+    return()=>{
+      cancelAnimationFrame(frame);observer?.disconnect();sizer?.disconnect();
+      window.removeEventListener('resize',onResize);window.removeEventListener('nexo:domain-focus',onFocusEvent);
+      canvas.removeEventListener('pointermove',onPointer);canvas.removeEventListener('pointerleave',onLeave);
+      delete document.documentElement.dataset.domainFocus;
+    };
+  },[clusterKey,id]);
+
+  return <svg data-tower-svg-native="starfield" ref={ref} className={className} aria-hidden="true" focusable="false"/>;
+}
+
+function hexAlpha(hex:string,alpha:number){
+  const value=hex.replace('#','');
+  const n=parseInt(value.length===3?value.split('').map(c=>c+c).join(''):value,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${Math.max(0,Math.min(1,alpha))})`;
+}

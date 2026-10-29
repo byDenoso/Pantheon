@@ -1,0 +1,6 @@
+/* Estilos mínimos para o rodapé do app (carregado pelo index.html). Usa só as variáveis do tema atual. */
+.nexo-footer-nav { display: flex; flex-wrap: wrap; gap: 0 22px; margin-left: auto; }
+.atlas-app[data-area=public] .atlas-footer .nexo-footer-nav a { margin-left: 0; color: var(--fg-2); min-height: 44px; display: flex; align-items: center; }
+.atlas-app[data-area=public] .atlas-footer .nexo-footer-nav a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 5px; }
+.atlas-app[data-area=public] .atlas-footer .nexo-footer-nav ~ a { margin-left: 0; }
+@media (max-width: 600px) { .nexo-footer-nav { margin-left: 0; } }
