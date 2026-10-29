@@ -1,10 +1,11 @@
 name: NEXO Writer robot
 
-# The only unattended Tower writer: proposals may remain append-only in the public TCC inbox; this job reads only the delta since its Pantheon cursor, applies it with the canonical writer bundle, and signals the ATLAS.
-# Runs in this public repository (no Actions minutes quota). No proposal content is ever printed.
+# The only unattended Tower writer. SHADOW consumes the private spool, confirms
+# writes by readback and refreshes operational projections; legacy LIVE stays off.
+# Public logs contain only technical counts and safe status codes.
 on:
   schedule:
-    - cron: '7,22,37,52 * * * *'   # off-peak minutes every 15 min: GitHub drops some scheduled runs under load (21:07-22:07 UTC were all lost), so a miss costs 15 min, not 1 h; proposals still wake it instantly
+    - cron: '7,22,37,52 * * * *'   # off-peak, best-effort cadence; dispatch is available for recovery
   workflow_dispatch:
     inputs:
       autonomy_preparation_revision:
@@ -18,6 +19,12 @@ on:
       - "scripts/nexo_shadow_writer.py"
       - "scripts/nexo_shadow_curation.py"
       - "scripts/nexo_tower_operations.py"
+      - "scripts/nexo_scientific_state.py"
+      - "scripts/nexo_research_planner.py"
+      - "scripts/tests/test_nexo_scientific_state.py"
+      - "scripts/tests/test_nexo_research_planner.py"
+      - "scripts/tests/test_nexo_research_planner_cli.py"
+      - "scripts/tests/test_tower_operations.py"
       - "test/test_nexo_shadow_writer.py"
       - "nexo-wake/*.json"
       - "nexo-control/execution-assessment-approvals.json"
@@ -37,18 +44,26 @@ jobs:
     # Same existing Writer workflow and credential, isolated from legacy JSON LIVE.
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Verify Writer, scientific selection and operational projections
+        run: |
+          python -m unittest discover -s test -p 'test_nexo_shadow_writer.py' -v
+          python -m unittest scripts.tests.test_nexo_scientific_state scripts.tests.test_nexo_research_planner scripts.tests.test_nexo_research_planner_cli scripts.tests.test_tower_operations -v
+      - name: Install existing Sheets transport dependencies
+        run: pip install --quiet google-auth requests
       - name: Write authorized SHADOW rows from private spool
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
         run: |
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" || { echo "::error::Existing Writer credential absent"; exit 1; }
-          pip install --quiet google-auth requests
-          python -m unittest discover -s test -p 'test_nexo_shadow_writer.py' -v
           python scripts/nexo_shadow_writer.py --apply --operations
       # Read-only public-battery inspection is intentionally not run here:
       # it never dispatched jobs and caused extra Sheets quota reads/false failures.

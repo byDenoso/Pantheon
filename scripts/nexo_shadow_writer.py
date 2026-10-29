@@ -207,6 +207,11 @@ def validate_new_event(data):
             raise ValueError('CELL_PLATFORM_LIMIT')
     if len(json.dumps({'requests':append_request(data)['requests']}).encode()) > 2_000_000:
         raise ValueError('BATCH_PLATFORM_LIMIT')
+    if __package__:
+        from .nexo_scientific_state import science_event
+    else:
+        from nexo_scientific_state import science_event
+    science_event(data)  # Opt-in schema validation; legacy rows are unchanged.
 
 def _process(session, stored, seen, counts, *, number, data, state, digest, mark_tab, mark_column, apply, queued=None):
     key = (data["tab"], data["stable_id"])
@@ -223,6 +228,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
                 and match_target(stored[data["tab"]], data)):
             mark(session, mark_tab, mark_column, number, "APPLIED:" + digest)
             counts["reconciled"] += 1
+            return "APPLIED:" + digest
         return
     seen[key] = fingerprint
     append_request(data)
@@ -236,12 +242,13 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
         if not present:
             raise AppliedReadbackMissing("APPLIED_READBACK_MISSING")
         counts["duplicate"] += 1
-        return
+        return applied
     if present:
         counts["duplicate"] += 1
         if apply:
             mark(session, mark_tab, mark_column, number, applied)
             counts["reconciled"] += 1
+            return applied
         return
     if state == claimed:
         counts["attempted_before"] += 1
@@ -266,6 +273,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
     stored[data["tab"]] = refreshed
     mark(session, mark_tab, mark_column, number, applied)
     counts["written"] += 1
+    return applied
 
 def flush_verified_appends(session, stored, counts, queued):
     """Verify acknowledged, individually reserved appends without repeated full scans.
@@ -313,6 +321,10 @@ def flush_verified_appends(session, stored, counts, queued):
     queued.clear()
 
 def run(session, *, apply=False, snapshot=None):
+    if __package__:
+        from .nexo_scientific_state import build_state, science_event, reservation_error
+    else:
+        from nexo_scientific_state import build_state, science_event, reservation_error
     stored = {tab: target_index(session, tab) for tab in TABS}
     seen = {}
     pending = []
@@ -324,6 +336,8 @@ def run(session, *, apply=False, snapshot=None):
               "tail_readback_fallbacks": 0,
               "preexisting_invalid": 0, "preexisting_quarantined": 0,
               "new_failures": 0,
+              "scientific_reservations_accepted": 0,
+              "scientific_reservations_rejected": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
 
     legacy_rows = page_rows(session, SPOOL, LEGACY_TAB, "E")
@@ -397,6 +411,45 @@ def run(session, *, apply=False, snapshot=None):
             continue
         groups.setdefault((data["tab"], data["stable_id"]), []).append(item)
     readback_queue = []
+    source_rows = {(item['mark_tab'], item['mark_column'], item['number']): item
+                   for item in pending}
+
+    def flush_readback_queue():
+        # Keep the projection snapshot current only after both exact target
+        # readback and the per-source APPLIED marker have succeeded. The source
+        # events are immutable; this updates only this run's observation.
+        receipts = [(tab, col, number, digest)
+                    for _, digest, tab, col, number in readback_queue]
+        flush_verified_appends(session, stored, counts, readback_queue)
+        for tab, col, number, digest in receipts:
+            source_rows[(tab, col, number)]['state'] = 'APPLIED:' + digest
+
+    def scientific_safety_pending(candidate):
+        # Uncertain attempts and already-calculated evidence can DENY another
+        # reservation even when target readback is absent. Future QUESTION or
+        # unattempted STARTED proposals must never authorize work or mutually
+        # block the first legitimate reservation. Inspect the whole spool so
+        # an uncertain predecessor remains binding regardless of row order.
+        observations = []
+        candidate_key = (candidate['data']['tab'], candidate['data']['stable_id'])
+        for other in pending:
+            data, state = other['data'], other['state']
+            if (data['tab'], data['stable_id']) == candidate_key:
+                continue
+            try:
+                event = science_event(data)
+            except (ValueError, TypeError, KeyError):
+                if state.startswith(('CLAIMED:', 'APPLIED:')):
+                    observations.append(other)
+                continue
+            if event is None:
+                continue
+            if (event['kind'] == 'CALCULATED'
+                    or (event['kind'] == 'STARTED' and state.startswith(('CLAIMED:', 'APPLIED:')))
+                    or (event['kind'] == 'DEPENDENCY' and event['dependency']['status'] != 'verified')):
+                observations.append(other)
+        return observations
+
     for key, items in groups.items():
         fingerprints = {tuple(item["data"]["values"]) for item in items}
         if len(fingerprints) != 1 or key[1] in invalid_ids:
@@ -415,10 +468,32 @@ def run(session, *, apply=False, snapshot=None):
                    1 if item["state"].startswith("CLAIMED:") else 2)
         for item in items:
             try:
-                _process(session, stored, seen, counts, **item, apply=apply,
-                         queued=readback_queue)
-                if len(readback_queue) >= READBACK_BATCH_SIZE:
-                    flush_verified_appends(session, stored, counts, readback_queue)
+                reservation = False
+                if not item['state'] and not match_target(stored[item['data']['tab']], item['data']):
+                    event = science_event(item['data'])
+                    if event is not None and event['kind'] == 'STARTED':
+                        # Reservations share the existing serial Writer. Flush
+                        # preceding declarations, then admit against canonical
+                        # readback, never against unaccepted future proposals.
+                        flush_readback_queue()
+                        reason = reservation_error(build_state(stored, scientific_safety_pending(item)), event)
+                        if reason is not None:
+                            counts['scientific_reservations_rejected'] += 1
+                            counts['invalid'] += 1
+                            if apply:
+                                rejected = 'INVALID:SCIENCE_RESERVATION_' + reason
+                                mark(session, item['mark_tab'], item['mark_column'], item['number'], rejected)
+                                item['state'] = rejected
+                            continue
+                        reservation = True
+                observed_state = _process(session, stored, seen, counts, **item,
+                                          apply=apply, queued=readback_queue)
+                if observed_state is not None:
+                    item['state'] = observed_state
+                if reservation or len(readback_queue) >= READBACK_BATCH_SIZE:
+                    flush_readback_queue()
+                if reservation and apply:
+                    counts['scientific_reservations_accepted'] += 1
             except IdentityConflict:
                 counts["conflict"] += 1
             except AppliedReadbackMissing:
@@ -427,7 +502,7 @@ def run(session, *, apply=False, snapshot=None):
                 counts["invalid"] += 1
             # Authentication, transport and unknown failures still stop this run.
             # No retry, alternative route or lost-receipt replay is introduced.
-    flush_verified_appends(session, stored, counts, readback_queue)
+    flush_readback_queue()
     mural_rows = list(stored['MURAL'].values())
     if any(len(row) == 8 and isinstance(row[3], str) and
            row[3].startswith('NEXO_CURATION_V1 ') and row[5] == 'PEDIDO_CURADORIA'
@@ -517,7 +592,7 @@ def main():
                     else:
                         from nexo_tower_operations import build_views, publish_views
                     team = values(session, SHADOW, "'EQUIPE'!A1:F100")
-                    roster = {r[1]:r[0] for r in team[1:] if len(r)>1 and r[0] in ('S1','S2','S3','S4','P')}
+                    roster = {r[1]:r[0] for r in team[1:] if len(r)>1 and r[0] in ('S1','S2','S3','S4','S5','S6','S7','P')}
                     views = build_views(**snapshot, counts=result, roster=roster,
                         revision=os.getenv('GITHUB_SHA','unknown'), duration=time.monotonic()-started)
                     operations = publish_views(session, views, sys.modules[__name__])
