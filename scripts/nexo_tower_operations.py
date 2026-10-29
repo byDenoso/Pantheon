@@ -60,7 +60,10 @@ def maintenance_rows(mural, now):
 def executor_receipt(row):
     """Validate receipt shape only; hashes are declarations, not independent replay."""
     try:
-        method = json.loads(row[5])
+        # Canonical rows use both raw JSON and the explicit versioned envelope.
+        # Accept only the exact prefix, never a receipt embedded in arbitrary prose.
+        text = row[5].strip()
+        method = json.loads(text.removeprefix('EXECUTOR_RECEIPT_V1 '))
         receipt = method.get('EXECUTOR_RECEIPT_V1', method)
         if not isinstance(receipt, dict):
             return False
