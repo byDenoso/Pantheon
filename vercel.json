@@ -1,10 +1,14 @@
 {
-  "ignoreCommand": "prev=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; [ -n \"$prev\" ] || exit 1; git cat-file -e \"$prev^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"$prev\" HEAD -- nexo-one vercel.json ':(exclude)nexo-one/tower-head.json' ':(exclude)nexo-one/tcc-public-inbox-ack.json'",
+  "ignoreCommand": "prev=\"${VERCEL_GIT_PREVIOUS_SHA:-}\"; [ -n \"$prev\" ] || exit 1; git cat-file -e \"$prev^{commit}\" 2>/dev/null || exit 1; git diff --quiet \"$prev\" HEAD -- nexo-one nexo-atlas api vercel.json ':(exclude)nexo-one/tower-head.json' ':(exclude)nexo-one/tcc-public-inbox-ack.json'",
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd nexo-one && npm ci --no-audit --no-fund --ignore-scripts",
-  "buildCommand": "cd nexo-one && npm run build",
+  "installCommand": "cd nexo-one && npm ci --no-audit --no-fund --ignore-scripts && cd ../nexo-atlas && npm ci --no-audit --no-fund --ignore-scripts",
+  "buildCommand": "cd nexo-one && npm run build && cd ../nexo-atlas && npm run build:private && node scripts/build-vercel-shell.mjs",
   "outputDirectory": "nexo-one/dist",
   "rewrites": [
+    {
+      "source": "/api/auth/google/callback",
+      "destination": "/api/index?route=auth/google/callback"
+    },
     {
       "source": "/api/atlas-private-assets/:asset*",
       "destination": "/api/index?route=atlas-private-asset&asset=:asset*"
@@ -18,13 +22,13 @@
       "destination": "/api/index?route=:route/:subroute"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|atlas-v67/).*)",
       "destination": "/index.html"
     }
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": "nexo-one/server/private-ui/**"
+      "includeFiles": "**/server/private-ui/**"
     }
   }
 }

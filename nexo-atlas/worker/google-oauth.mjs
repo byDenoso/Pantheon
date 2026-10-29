@@ -42,7 +42,7 @@ export async function finishGoogleLogin(request, env, store, fetcher=fetch, now=
   const identity=random();
   const written=await store('SET',`atlas:google:identity:${digest(identity)}`,JSON.stringify({sub:owner.sub,exp:now+3600000}),'EX',3600,'NX');
   if (written!=='OK') throw new Error('AUTH_STORE_UNAVAILABLE');
-  const headers=new Headers({Location:'/#/privado','Cache-Control':'no-store','Referrer-Policy':'no-referrer'});
+  const headers=new Headers({Location:'/atlas-v67/#/privado','Cache-Control':'no-store','Referrer-Policy':'no-referrer'});
   headers.append('Set-Cookie',cookie(FLOW,'',0,'Lax'));
   headers.append('Set-Cookie',cookie(IDENTITY,identity,3600));
   return new Response(null,{status:302,headers});
