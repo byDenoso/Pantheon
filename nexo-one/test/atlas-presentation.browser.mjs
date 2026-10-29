@@ -36,10 +36,12 @@ try {
   assert.equal(await page.locator('form, input, textarea').count(), 0);
   await choose('Métodos'); assert.equal(await page.evaluate(() => document.activeElement?.id), 's-methods'); assert.equal(await page.evaluate(() => location.hash), '');
   await page.evaluate(() => scrollTo(0, 0));
-  for (const [button, name, background] of [['Escuro', 'dark', 'rgb(0, 0, 0)'], ['Claro', 'light', 'rgb(255, 255, 255)']]) {
-    await choose(button); assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), background);
+  assert.equal(await page.getByRole('button', {name: 'Escuro', exact: true}).count(), 0);
+  for (const scheme of ['light', 'dark']) {
+    await page.emulateMedia({colorScheme: scheme});
+    assert.equal(await page.locator('.atlas-app[data-area="public"]').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)');
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    if (shots) await page.screenshot({path: join(shots, `public-pt-${name}.png`), fullPage: true});
+    if (shots) await page.screenshot({path: join(shots, `public-pt-${scheme}.png`), fullPage: true});
   }
   await choose('EN'); assert.equal(await page.locator('h1').innerText(), 'Computational\ncosmology.');
   assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');

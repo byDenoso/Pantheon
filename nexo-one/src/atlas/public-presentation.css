@@ -210,3 +210,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 .atlas-catalog-link{width:fit-content;max-width:100%;text-decoration:none}
 .atlas-catalog-access p{max-width:44rem;color:var(--fg-2)}
+
+/* Public presentation identity: blue on white, independent of device/private theme. */
+.atlas-app[data-area="public"]{
+  color-scheme:light;
+  --bg:#ffffff;--bg-2:#f4f7fe;--fg:#0a1220;--fg-2:#48566c;--line:#c9d6ee;
+  --cyan:#1e5bff;--on-cyan:#ffffff;--orange:#12348f;--focus:#12348f;
+  --nexo-control:#637c92;--nexo-amber:#815318;
+  background:var(--bg);color:var(--fg);
+}
+.atlas-app[data-area="public"] .atlas-web-art{filter:invert(1) hue-rotate(180deg);mix-blend-mode:multiply}
+.atlas-app[data-area="public"] .atlas-web-motion{mix-blend-mode:multiply}

@@ -31,9 +31,9 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
           </nav>
           <div className="atlas-controls">
             <LocaleSwitch/>
-            <div className="atlas-seg" role="group" aria-label={m.themeLabel}>
+            {area === 'private' && <div className="atlas-seg" role="group" aria-label={m.themeLabel}>
               {opts.map(([k, label]) => <button key={k} type="button" aria-pressed={pref === k} onClick={() => choose(k)}>{label}</button>)}
-            </div>
+            </div>}
           </div>
         </div>
       </header>
