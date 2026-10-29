@@ -2,6 +2,7 @@ import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createPublicCampaignSnapshot, validatePublicCampaignSnapshot} from './public-campaign-projection.mjs';
 import {googleToken} from '../adapters/google.mjs';
+import {GOOGLE_AUTH_DIAGNOSTICS} from '../adapters/connect.mjs';
 
 const MAX_BYTES = 8 * 1024 * 1024;
 async function readDriveSnapshot(env, {fetcher = fetch, tokenProvider = googleToken} = {}) {
@@ -41,5 +42,11 @@ export async function publicCampaignAtlas(env = {}, options) {
     // on authenticated routes even if an older publication included them.
     const snapshot = createPublicCampaignSnapshot(input.campaigns.map(c => ({...c, tests:[], testsCoverage:'UNAVAILABLE'})), input);
     return {status: 200, body: {...snapshot, contract: 'ATLAS_PUBLIC_V1', campaignsContract: snapshot.contract, items: [], links: []}};
-  } catch { return {status: 503, body: {error: 'PUBLIC_CAMPAIGNS_UNAVAILABLE'}}; }
+  } catch (error) {
+    const safeCodes = ['PUBLIC_CAMPAIGN_FILE_INVALID','PUBLIC_CAMPAIGN_AUTH_REQUIRED','PUBLIC_CAMPAIGN_FILE_UNAVAILABLE','PUBLIC_CAMPAIGN_SNAPSHOT_TOO_LARGE'];
+    const diagnostic = GOOGLE_AUTH_DIAGNOSTICS.includes(error?.googleDiagnostic) ? error.googleDiagnostic
+      : safeCodes.includes(error?.message) ? error.message : 'PUBLIC_CAMPAIGN_SNAPSHOT_UNAVAILABLE';
+    console.warn(JSON.stringify({component:'NEXO_PUBLIC_CAMPAIGNS',diagnostic}));
+    return {status: 503, body: {error: 'PUBLIC_CAMPAIGNS_UNAVAILABLE'}};
+  }
 }
