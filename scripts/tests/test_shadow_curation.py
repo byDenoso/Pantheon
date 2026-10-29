@@ -96,6 +96,7 @@ class CurationTests(unittest.TestCase):
         s=Session();row=event(eid=c.CURRENT_ROLE_ID+'-20261025-001')
         self.assertEqual(self.run_request(s,row)['applied'],1)
         self.assertEqual(s.roadmap[4],'P4')
+        self.assertEqual(c.parse(event(eid=c.PREVIOUS_ROLE_ID+'-20261027-001'))['op'],'roadmap.set')
         self.assertEqual(c.parse(event(eid=c.ROLE_ID+'-20261024-001'))['op'],'roadmap.set')
 
     def test_verified_oldest_p_identity_can_reconcile_history(self):
