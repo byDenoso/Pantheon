@@ -1,0 +1,8 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "run existing Writer to reconcile one private spool transport canary",
+  "requested_at": "2026-10-29T19:13:45Z",
+  "category": "WRITER_PRO_HOMOLOGATION",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT_PRO",
+  "contains_private_data": false
+}
