@@ -10,6 +10,8 @@ import {goToPublicSection} from '../publicNavigation.ts';
 import '../public-presentation.css';
 
 const CosmicWebCanvas = lazy(() => import('./CosmicWebCanvas.tsx'));
+const STATIC_PUBLIC_SHELL = import.meta.env.VITE_STATIC_PUBLIC_SHELL === true;
+const PUBLIC_CATALOG_URL = 'https://nexoresearch.org/';
 const art = new URL('../assets/cosmic-web.png', import.meta.url).href;
 
 export default function PublicApp() {
@@ -20,6 +22,8 @@ export default function PublicApp() {
 
   useEffect(() => { document.title = m.heroTitle; }, [m.heroTitle]);
   useEffect(() => {
+    // Pages hosts only the shell. The reviewed catalogue lives on the public site.
+    if (STATIC_PUBLIC_SHELL) return;
     const ac = new AbortController();
     loadPublic((u, i) => fetch(u, i), ac.signal, `${import.meta.env.BASE_URL}public-campaigns.json`).then(s => { if (!ac.signal.aborted) setPub(s); })
       .catch(e => { if (!ac.signal.aborted && !(e instanceof ApiError && e.code === 'ABORTED')) setPub({status: 'unavailable', items: [], tests: []}); });
@@ -68,7 +72,10 @@ export default function PublicApp() {
         <section className="atlas-section" id="s-works" tabIndex={-1} aria-labelledby="h-works">
           <p className="atlas-eyebrow"><span aria-hidden="true">03 / </span>{t.works.label}</p>
           <h2 id="h-works">{t.works.title}</h2>
-          <div className="atlas-items" aria-live="polite" data-status={pub.status}>
+          {STATIC_PUBLIC_SHELL ? <div className="atlas-items atlas-catalog-access">
+            <p>{locale === 'pt-BR' ? 'Consulte os estudos, resultados e figuras no catálogo público do NEXO.' : 'Browse studies, results and figures in the NEXO public catalogue.'}</p>
+            <a className="atlas-btn atlas-catalog-link" href={PUBLIC_CATALOG_URL}>{locale === 'pt-BR' ? 'Acessar os trabalhos' : 'Explore the research'}<span aria-hidden="true">↗</span></a>
+          </div> : <div className="atlas-items" aria-live="polite" data-status={pub.status}>
             {pub.status === 'loading' && <p>{m.loading}</p>}
             {pub.status === 'unavailable' && <p className="atlas-empty">{m.unavailable}</p>}
             {pub.status === 'empty' && <p className="atlas-empty">{m.emptyTitle}</p>}
@@ -83,7 +90,7 @@ export default function PublicApp() {
                 {it.credit && <small>{m.creditLabel}: {it.credit}</small>}
               </article>
             ))}
-          </div>
+          </div>}
         </section>
 
         <section className="atlas-section atlas-contact-section" id="s-contact" tabIndex={-1} aria-labelledby="h-contact">

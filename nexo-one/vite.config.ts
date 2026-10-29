@@ -9,6 +9,7 @@ export default defineConfig(({command}) => ({
   resolve: command === 'build' ? {alias: [{find: /(?:\.\.\/|\.\/)+(?:data\/)?fixtures\/scenarios\.ts$/, replacement: fileURLToPath(new URL('./src/data/fixtures/production-empty.ts', import.meta.url))}]} : undefined,
   plugins: [(() => { let output = ''; return {name: 'atlas-public-shell-only', apply: 'build' as const, configResolved(config: {root: string; build: {outDir: string}}) {output = resolve(config.root, config.build.outDir);}, async closeBundle() {await sealStaticPublication(output);}}; })()],
   base: pagesBase,
+  define: {'import.meta.env.VITE_STATIC_PUBLIC_SHELL': JSON.stringify(Boolean(process.env.GITHUB_PAGES))},
   build: {
     target: 'es2022',
     sourcemap: false,

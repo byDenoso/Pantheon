@@ -63,7 +63,12 @@ test('no external font or CDN reference is introduced by the new modules', () =>
   const dir = join(src, 'atlas');
   const walk = d => readdirSync(d).flatMap(n => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p]; });
   for (const f of [...walk(dir), join(src, 'main.tsx')].filter(f => /\.(?:ts|tsx|css)$/.test(f))) {
-    const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    let code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    // User-initiated navigation to the canonical public catalogue is not an
+    // external asset, font, API call or automatic transfer.
+    if (f === join(src, 'atlas/ui/PublicApp.tsx')) {
+      code = code.replace("const PUBLIC_CATALOG_URL = 'https://nexoresearch.org/';", '');
+    }
     assert.doesNotMatch(code, /https?:\/\//, f);
   }
 });
