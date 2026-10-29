@@ -5,6 +5,7 @@ import {goToPublicSection} from '../publicNavigation.ts';
 import {useTheme, type ThemePref} from './useTheme.ts';
 
 const SECTIONS = ['lines', 'methods', 'works', 'contact'] as const;
+const PRIVATE_URL = import.meta.env.VITE_STATIC_PUBLIC_SHELL === true ? 'https://nexo-one-two.vercel.app/#/privado' : '#/privado';
 export default function Shell({area, children}: {area: 'public' | 'private'; children: ReactNode}) {
   const m = useMessages();
   const t = PRESENTATION[useLocale()];
@@ -27,7 +28,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
         <div id="atlas-header-menu" className={`atlas-header-menu${menuOpen ? ' is-open' : ''}`}>
           <nav aria-label={m.navLabel} className="atlas-nav">
             {area === 'public' && <ul className="atlas-toc">{SECTIONS.map(id => <li key={id}><button type="button" onClick={() => { setMenuOpen(false); goToPublicSection(id); }}>{t.nav[id]}</button></li>)}</ul>}
-            {area === 'public' ? <a href="#/privado" onClick={() => setMenuOpen(false)}>{m.privateLink}</a> : <a href="#/">{m.backPublic}</a>}
+            {area === 'public' ? <a href={PRIVATE_URL} onClick={() => setMenuOpen(false)}>{m.privateLink}</a> : <a href="#/">{m.backPublic}</a>}
           </nav>
           <div className="atlas-controls">
             <LocaleSwitch/>

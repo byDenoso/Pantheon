@@ -58,7 +58,7 @@ test('empty allowlist is an honest sentence, errors remain distinct, no placehol
   assert.equal(MESSAGES.en.emptyTitle, 'No public research materials are available on this page yet.');
   const app = rd('src/atlas/ui/PublicApp.tsx');
   assert.match(app, /pub\.status === 'empty' && <p className="atlas-empty">\{m\.emptyTitle\}<\/p>/);
-  assert.match(app, /pub\.status === 'ready' && pub\.tests\.map/);
+  assert.doesNotMatch(app, /pub\.tests\.map|PublicTestView/);
   assert.match(app, /pub\.status === 'ready' && pub\.items\.map/);
   assert.doesNotMatch(app, /fixture|demo|sample|synthetic/i);
 });

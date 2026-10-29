@@ -40,7 +40,7 @@ const Campaign = memo(function Campaign({campaign: c, locale}: {campaign: Public
     <dl>{fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value ? pick(value, locale) : l.unknown}</dd></div>)}</dl>
     <div className="atlas-campaign-limits"><h4>{l.limits}</h4>{c.limitations === null ? <p>{l.unknown}</p> : c.limitations.length ? <ul>{c.limitations.map((limit, i) => <li key={i}>{pick(limit, locale)}</li>)}</ul> : <p>{l.unknown}</p>}</div>
     {c.closure && <div className="atlas-campaign-result"><h4>{l.closed}{c.closure.outcome ? `: ${l.outcomes[c.closure.outcome]}` : ''}</h4><p>{pick(c.closure.summary, locale)}</p><time dateTime={c.closure.closedAt}>{date(c.closure.closedAt, locale)}</time></div>}
-    <CampaignTests campaign={c} locale={locale}/>
+    {c.tests.length > 0 && <CampaignTests campaign={c} locale={locale}/>}
     <Sources items={c.references} locale={locale}/>
     <small>{l.updated}: <time dateTime={c.updatedAt}>{date(c.updatedAt, locale)}</time></small>
     <details><summary>{l.technical}</summary><p>{c.id} · {c.questionId}</p></details>
