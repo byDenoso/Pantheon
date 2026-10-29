@@ -3,11 +3,13 @@ on:
   pull_request:
     paths:
       - '.github/workflows/nexo-writer-robot.yml'
+      - '.github/workflows/nexo-heartbeat.yml'
       - '.github/workflows/nexo-test-battery.yml'
       - '.github/workflows/nexo-writer-selection-ci.yml'
       - '.github/workflows/nexo-alert.yml'
       - '.github/workflows/nexo-recipe-smoke.yml'
       - 'scripts/**'
+      - 'test/test_nexo_shadow_writer.py'
       - 'nexo-one/server/compiler/automation-health.mjs'
       - 'nexo-one/test/automation-health-system.test.mjs'
       - 'nexo-control/execution-assessment-approvals.json'
@@ -15,11 +17,13 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/nexo-writer-robot.yml'
+      - '.github/workflows/nexo-heartbeat.yml'
       - '.github/workflows/nexo-test-battery.yml'
       - '.github/workflows/nexo-writer-selection-ci.yml'
       - '.github/workflows/nexo-alert.yml'
       - '.github/workflows/nexo-recipe-smoke.yml'
       - 'scripts/**'
+      - 'test/test_nexo_shadow_writer.py'
       - 'nexo-one/server/compiler/automation-health.mjs'
       - 'nexo-one/test/automation-health-system.test.mjs'
       - 'nexo-control/execution-assessment-approvals.json'
@@ -28,6 +32,7 @@ permissions:
 jobs:
   verify-main-selection:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,6 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: python -m unittest discover -s scripts/tests -v
+      - name: Verify deterministic selection, persistence and recovery
+        run: python -m unittest discover -s scripts/tests -v
       - run: python -m unittest discover -s test -p 'test_nexo_shadow_writer.py' -v
       - run: node --test nexo-one/test/automation-health-system.test.mjs

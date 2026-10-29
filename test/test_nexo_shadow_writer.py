@@ -91,6 +91,24 @@ def _recovery_plain(d, state=''):
     return [d['stable_id'],d['values'][0],d['values'][1],d['tab'],*d['values'],'','',state]
 
 
+def _science_data(kind, key, *, question='stable-question-one', run_id='run-one', estimand='measured contrast'):
+    from scripts import nexo_scientific_state as science
+    identity={'question':question,'estimand':estimand,'observable':'catalog counts',
+              'data':[{'id':'catalog','version':'1','sha256':'a'*64}],
+              'design':{'selection':'fixed quality selection'}}
+    event={'schema':science.SCHEMA,'event_id':key,'science_id':science.scientific_id(identity),
+           'identity':identity,'kind':kind,'at':'2026-01-01T00:00:00Z','role':'S1'}
+    if kind=='QUESTION':
+        event.update(activity='E1',dependencies=[{'id':'catalog','status':'verified',
+            'evidence':'local loader receipt','checked_at':'2026-01-01T00:00:00Z',
+            'expires_at':'2035-01-01T00:00:00Z'}])
+    else:
+        event.update(run_id=run_id,lease_until='2035-01-01T00:00:00Z')
+    data=_recovery_data(key,science.PREFIX+json.dumps(event))
+    data['values'][0]=event['at']
+    return data
+
+
 class Response:
     def raise_for_status(self):
         pass
@@ -115,15 +133,104 @@ class Session:
 
 
 class Recovery(unittest.TestCase):
-    def invoke(self, rows, *, records=None, apply=True, fail=False, legacy=None):
+    def invoke(self, rows, *, records=None, apply=True, fail=False, legacy=None, snapshot=None):
         session=Session(records,fail)
         sources={w.PLAIN_TAB:[(1,w.PLAIN_HEADER),*[(i+2,r) for i,r in enumerate(rows)]],
                  w.LEGACY_TAB:[(1,['stable_id','created_at','role','envelope_b64url'])]+(legacy or [])}
         with patch.object(w,'page_rows',side_effect=lambda s,sh,tab,col,first=1:iter(sources[tab])), \
              patch.object(w,'target_index',side_effect=lambda s,tab:dict(s.records[tab])), \
              patch.object(w,'mark',side_effect=lambda s,tab,col,n,value:s.marks.append((n,value))):
-            result=w.run(session,apply=apply)
+            result=w.run(session,apply=apply,snapshot=snapshot)
         return result, session
+
+    def test_projection_snapshot_tracks_only_verified_source_markers(self):
+        d=_recovery_data(); snapshot={}
+        self.invoke([_recovery_plain(d),_recovery_plain(d)],snapshot=snapshot)
+        self.assertEqual(snapshot['pending'][0]['state'],'APPLIED:'+w.digest_for(d))
+        # Its identical sibling was not acknowledged until the next cycle.
+        self.assertEqual(snapshot['pending'][1]['state'],'')
+        self.assertEqual(snapshot['stored']['MURAL'][d['stable_id']],tuple(d['values']))
+
+    def test_preflight_snapshot_does_not_fabricate_applied(self):
+        d=_recovery_data(); snapshot={}
+        self.invoke([_recovery_plain(d)],apply=False,snapshot=snapshot,
+            records={'MURAL':{d['stable_id']:tuple(d['values'])},'RESULTADOS':{}})
+        self.assertEqual(snapshot['pending'][0]['state'],'')
+
+    def test_serial_science_reservations_reject_duplicate_and_continue_independent(self):
+        from scripts import nexo_scientific_state as science
+        q1=_science_data('QUESTION','question-one')
+        q2=_science_data('QUESTION','question-two',question='independent-question',estimand='count variance')
+        start1=_science_data('STARTED','start-one')
+        duplicate=_science_data('STARTED','start-two',run_id='run-two')
+        independent=_science_data('STARTED','start-three',question='independent-question',run_id='run-three',estimand='count variance')
+        snapshot={}
+        counts,session=self.invoke([_recovery_plain(d) for d in (q1,q2,start1,duplicate,independent)],snapshot=snapshot)
+        self.assertEqual(counts['scientific_reservations_accepted'],2)
+        self.assertEqual(counts['scientific_reservations_rejected'],1)
+        self.assertEqual(counts['written'],4)
+        self.assertNotIn(duplicate['stable_id'],session.records['MURAL'])
+        self.assertIn(independent['stable_id'],session.records['MURAL'])
+        self.assertTrue(snapshot['pending'][3]['state'].startswith('INVALID:SCIENCE_RESERVATION_'))
+        projected=science.build_state(snapshot['stored'],snapshot['pending'])
+        self.assertEqual(projected['metrics']['running'],2)
+        self.assertEqual(projected['metrics']['reconciliation_required'],0)
+
+    def test_existing_reservation_retry_reconciles_without_second_admission(self):
+        question=_science_data('QUESTION','question-one')
+        started=_science_data('STARTED','start-one')
+        records={'MURAL':{d['stable_id']:tuple(d['values']) for d in (question,started)},'RESULTADOS':{}}
+        counts,session=self.invoke([_recovery_plain(started,'CLAIMED:'+w.digest_for(started))],records=records)
+        self.assertEqual(counts['scientific_reservations_accepted'],0)
+        self.assertEqual(counts['reconciled'],1)
+        self.assertEqual(session.posts,[])
+
+    def test_expired_reservation_never_grants_a_replacement(self):
+        from scripts import nexo_scientific_state as science
+        question=_science_data('QUESTION','question-one')
+        started=_science_data('STARTED','start-old')
+        record=json.loads(started['values'][3][len(science.PREFIX):])
+        record['lease_until']='2026-01-02T00:00:00Z'
+        started['values'][3]=science.PREFIX+json.dumps(record)
+        retry=_science_data('STARTED','start-new',run_id='run-new')
+        records={'MURAL':{d['stable_id']:tuple(d['values']) for d in (question,started)},'RESULTADOS':{}}
+        counts,session=self.invoke([_recovery_plain(retry)],records=records)
+        self.assertEqual(counts['scientific_reservations_rejected'],1)
+        self.assertEqual(session.posts,[])
+        self.assertTrue(session.marks[0][1].startswith('INVALID:SCIENCE_RESERVATION_'))
+
+    def test_uncertain_reservation_denies_replacement_regardless_of_spool_order(self):
+        question=_science_data('QUESTION','question-one')
+        old=_science_data('STARTED','start-uncertain',run_id='run-uncertain')
+        new=_science_data('STARTED','start-replacement',run_id='run-replacement')
+        for marker in ('CLAIMED:','APPLIED:'):
+            for reverse in (False,True):
+                with self.subTest(marker=marker,reverse=reverse):
+                    rows=[_recovery_plain(old,marker+w.digest_for(old)),_recovery_plain(new)]
+                    if reverse:rows.reverse()
+                    records={'MURAL':{question['stable_id']:tuple(question['values'])},'RESULTADOS':{}}
+                    counts,session=self.invoke(rows,records=records)
+                    self.assertEqual(counts['scientific_reservations_accepted'],0)
+                    self.assertEqual(counts['scientific_reservations_rejected'],1)
+                    self.assertEqual(counts['unresolved'],1)
+                    self.assertEqual(session.posts,[])
+
+    def test_calculated_pending_evidence_denies_fresh_execution(self):
+        from scripts.tests.test_nexo_scientific_state import event,envelope,identity
+        from scripts import nexo_scientific_state as science
+        question=envelope(event(key='question-current',at='2026-01-01T00:00:00Z',
+            dependencies=[{'id':'data','status':'verified','evidence':'loader receipt',
+                          'checked_at':'2026-01-01T00:00:00Z','expires_at':'2035-01-01T00:00:00Z'}]))
+        calculated=envelope(event('CALCULATED',key='calculation-pending',at='2026-01-01T01:00:00Z'),'RESULTADOS')
+        started=envelope(event('STARTED',key='replacement-start',at='2026-01-01T02:00:00Z',
+                               run_id='replacement',lease_until='2035-01-01T00:00:00Z'))
+        calc_row=[calculated['stable_id'],calculated['values'][0],'S1','RESULTADOS',
+                  *calculated['values'],'CLAIMED:'+w.digest_for(calculated)]
+        counts,session=self.invoke([_recovery_plain(started),calc_row],
+            records={'MURAL':{question['stable_id']:tuple(question['values'])},'RESULTADOS':{}})
+        self.assertEqual(counts['scientific_reservations_accepted'],0)
+        self.assertEqual(counts['scientific_reservations_rejected'],1)
+        self.assertEqual(session.posts,[])
 
     def test_fresh_event_written_and_marked(self):
         d=_recovery_data(); counts,s=self.invoke([_recovery_plain(d)])

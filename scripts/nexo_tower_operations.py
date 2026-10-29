@@ -8,7 +8,7 @@ import hashlib
 import json
 import re
 
-VERSION = 'TOWER_OPERATIONS_V1'
+VERSION = 'TOWER_OPERATIONS_V2'
 VIEW_TITLES = ('AUTONOMIA', 'INCIDENTES', 'EXECUCOES', 'MANUTENCAO', 'CHECKPOINTS')
 RECENT_LIMIT = 500
 MAINTENANCE = (
@@ -60,8 +60,6 @@ def maintenance_rows(mural, now):
 def executor_receipt(row):
     """Validate receipt shape only; hashes are declarations, not independent replay."""
     try:
-        # Canonical rows use both raw JSON and the explicit versioned envelope.
-        # Accept only the exact prefix, never a receipt embedded in arbitrary prose.
         text = row[5].strip()
         method = json.loads(text.removeprefix('EXECUTOR_RECEIPT_V1 '))
         receipt = method.get('EXECUTOR_RECEIPT_V1', method)
@@ -69,7 +67,9 @@ def executor_receipt(row):
             return False
         if not all(isinstance(receipt.get(k), str) and receipt[k] for k in ('run_id', 'runtime', 'class')):
             return False
-        if receipt['runtime'] not in ('local_sandbox', 'github_actions') or receipt['class'] not in ('E0', 'E1', 'E2'):
+        # Existing immutable private-local receipts use this explicit alias.
+        # Compatibility does not certify execution or relax their other fields.
+        if receipt['runtime'] not in ('local_sandbox', 'local_private_sandbox', 'github_actions') or receipt['class'] not in ('E0', 'E1', 'E2'):
             return False
         if not all(isinstance(receipt.get(k), str) and re.fullmatch(r'[a-f0-9]{64}', receipt[k]) for k in ('script_sha256', 'output_sha256')):
             return False
@@ -81,14 +81,57 @@ def executor_receipt(row):
         return False
 
 
+def confirmed_event_ids(stored, pending):
+    """Logical events with exact target readback and a matching source receipt.
+
+    An APPLIED label alone is insufficient. Identical duplicate source rows do
+    not create another logical event; conflicting variants remain unresolved.
+    This does not certify artifact bytes, scientific validity or a scheduler.
+    """
+    if __package__:
+        from .nexo_shadow_writer import digest_for
+    else:
+        from nexo_shadow_writer import digest_for
+    variants, confirmed = {}, set()
+    for item in pending:
+        data = item.get('data', {})
+        tab, key, row = data.get('tab'), data.get('stable_id'), data.get('values')
+        if tab not in ('MURAL', 'RESULTADOS') or not isinstance(key, str) or not isinstance(row, (list, tuple)):
+            continue
+        index = stored.get(tab, {})
+        target = index.get(key)
+        fingerprint = tuple(row)
+        # The Writer isolates only this explicitly rejected historical variant
+        # after proving a different immutable target. Preserve other conflicts.
+        if (item.get('state') == 'INVALID:TARGET_CONTENT_VARIANT_ALREADY_PRESENT'
+                and target is not None and tuple(target) != fingerprint
+                and key not in getattr(index, 'conflicts', ())):
+            continue
+        variants.setdefault(key, set()).add((tab, fingerprint))
+        digest = item.get('digest') if item.get('mark_tab') == 'Sheet1' else digest_for(data)
+        if (digest and item.get('state') == 'APPLIED:' + digest
+                and target is not None and tuple(target) == fingerprint
+                and key not in getattr(index, 'conflicts', ())):
+            confirmed.add(key)
+    return {key for key in confirmed if len(variants[key]) == 1}
+
+
 def build_views(stored, pending, counts, *, now=None, roster=None, revision='unknown', duration=0):
     from zoneinfo import ZoneInfo
+    if __package__:
+        from .nexo_scientific_state import build_state, checkpoint_next_action
+    else:
+        from nexo_scientific_state import build_state, checkpoint_next_action
     now = now or dt.datetime.now(ZoneInfo('America/Sao_Paulo'))
     if now.tzinfo is None:
         raise ValueError('TIMEZONE_REQUIRED')
     stamp = now.isoformat(timespec='seconds')
     mural = list(stored.get('MURAL', {}).values())
     results = list(stored.get('RESULTADOS', {}).values())
+    confirmed = confirmed_event_ids(stored, pending)
+    science = build_state(stored, pending, now=now)
+    scientific_events = {key: question for question in science['questions'].values()
+                         for key in question['event_ids']}
     roster = roster or {}
     incidents = [['id', 'estado', 'origem', 'dono', 'causa', 'acao', 'observado_em', 'escopo']]
     active = counts.get('new_failures', 0)
@@ -110,7 +153,7 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
         padded = list(row) + [''] * (10-len(row))
         source_role = padded[1]
         task_ids = re.findall(r'(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])', source_role)
-        declared = re.match(r'^(S[1-4]|P)(?:\b|\|)', source_role)
+        declared = re.match(r'^(S[1-7]|P)(?:\b|\|)', source_role)
         conflict = bool(declared and any(t in roster and roster[t] != declared[1] for t in task_ids))
         if conflict:
             identity_conflicts += 1
@@ -127,6 +170,26 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
             'CONFLICT' if conflict else ('EXECUTOR_RECEIPT_SHAPE_VALID_NOT_REPLAYED' if valid_receipt else 'DECLARED_NOT_INDEPENDENTLY_VERIFIED'),
             'LOCAL_OR_MISSING' if missing else 'POINTER_PRESENT_NOT_REVALIDATED',
             f'RESULTADOS · id={padded[3]}'])
+        question = scientific_events.get(padded[3])
+        if question is not None:
+            executions[-1][4] = str(question['activity']) + '/' + question['lifecycle']
+            executions[-1][5] = question['science_id'] + ' | ' + question['evidence_status']
+            executions[-1][6] = ('ARTIFACT_READBACK_RECORDED' if question['artifact_verified']
+                                 else 'ARTIFACT_READBACK_PENDING')
+    represented = {scientific_events[row[0]]['science_id'] for row in executions[1:]
+                   if row[0] in scientific_events}
+    for question in science['questions'].values():
+        if question['science_id'] in represented:
+            continue
+        executions.append([question['science_id'], question['first_at'], question['role'],
+            question['identity']['question'], str(question['activity']) + '/' + question['lifecycle'],
+            question['evidence_status'], 'ARTIFACT_READBACK_PENDING',
+            'MURAL/SHADOW_V2 · ids=' + ','.join(question['event_ids'][-3:])])
+    for issue in science['incidents']:
+        incidents.append([str(issue['event_id']), 'SCIENTIFIC_STATE_RECONCILIATION',
+            str(issue['tab']), 'P', issue['reason'],
+            'Reconciliar o evento tipado; preservar cálculos e continuar perguntas independentes.',
+            stamp, 'SCIENCE_STATE'])
     # A bounded navigation view; full evidence remains in RESULTADOS.
     executions = executions[:1] + executions[1:][-RECENT_LIMIT:]
     status = 'ATTENTION' if active or identity_conflicts else 'READBACK_VERIFIED'
@@ -139,6 +202,29 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
     metric('results_records', 'RECORDS_NOT_TEST_COUNT', len(results), 'RESULTADOS', 'Linhas incluem QA, revisão e ciência; não somar como testes independentes.', scope='EVIDENCE')
     metric('mural_records', 'OBSERVED', len(mural), 'MURAL')
     metric('verified_quantitative_runs', 'RECEIPT_SHAPE_ONLY_NOT_REPLAYED', receipt_complete, 'RESULTADOS.metodo', 'Não equiparar recibo declarado a execução reproduzida.', scope='EVIDENCE')
+    scientific_metrics = (
+        ('scientific_eligible_questions', 'eligible', 'TYPED_READINESS_EVIDENCE'),
+        ('distinct_quantitative_questions', 'distinct_quantitative', 'COMPLETE_RECEIPTS_NOT_INDEPENDENTLY_REPLAYED'),
+        ('quantitative_reviews', 'quantitative_reviews', 'REVIEW_NOT_NEW_QUESTION'),
+        ('scientific_results_recorded', 'records_persisted', 'CANONICAL_RESULT_READBACK'),
+        ('scientific_running', 'running', 'RECONCILE_EXISTING_RUN'),
+        ('scientific_blocked', 'blocked', 'SCOPED_DEPENDENCIES'),
+        ('scientific_reconciliation_required', 'reconciliation_required', 'NO_BLIND_REPLAY'),
+        ('scientific_duplicate_executions', 'duplicate_executions', 'NOT_DISTINCT_TESTS'),
+    )
+    for name, key, state in scientific_metrics:
+        metric(name, state, science['metrics'].get(key, 0), 'NEXO_SCIENCE_V1 · existing Writer events',
+               'Somente identidade científica tipada; declarações não equivalem a reprodução independente.', scope='SCIENCE_STATE')
+    for result_state, name, state in (
+        ('persisted', 'scientific_results_persisted', 'ARTIFACT_READBACK_RECORDED'),
+        ('calculated', 'scientific_calculations_pending', 'PERSIST_EXISTING_NO_RECOMPUTATION'),
+    ):
+        metric(name, state, sum(q['result_state'] == result_state for q in science['questions'].values()),
+               'NEXO_SCIENCE_V1 · existing Writer events',
+               'Estado do resultado permanece separado do encerramento da investigação.', scope='SCIENCE_STATE')
+    metric('scientific_legacy_unclassified', 'PRESERVED_NOT_AUTOMATICALLY_RECLASSIFIED',
+           science['legacy_unclassified'], 'MURAL/RESULTADOS',
+           'Recuperar evidência com evento vinculado quando necessário; não contar linhas como testes.', scope='SCIENCE_STATE')
     metric('written_this_cycle', 'READBACK_VERIFIED', counts.get('written', 0), 'Writer counters')
     metric('active_failures', 'ATTENTION' if active else 'CLEAR', active, 'Writer counters')
     metric('historical_quarantine', 'PRESERVED', counts.get('preexisting_invalid',0)+counts.get('preexisting_quarantined',0), 'Spool', 'Não liberar recusas; causa e escopo continuam visíveis.')
@@ -153,6 +239,9 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
                '50 mil linhas: avaliar particionamento com paridade; jamais excluir automaticamente.')
     metric('remote_dispatch', 'NOT_CERTIFIED_BY_WRITER', 'read-only intake ≠ execução', 'Backend receipt required', 'Usar somente backend autorizado e comprovado; cálculo local segue independente.')
     checkpoints = {}
+    checkpoint_times = {}
+    checkpoint_pending = {}
+    checkpoint_actions = {}
     for row in mural:
         if len(row) != 8 or row[5] != 'CHECKPOINT' or not row[3].startswith('NEXO_CHECKPOINT_V1 '):
             continue
@@ -160,18 +249,49 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
             cp = json.loads(row[3].split(' ',1)[1])
             task = cp.get('task_id')
             if (task not in roster or row[1] != roster[task] or not row[7].startswith(task+'-')
-                    or not isinstance(cp.get('run_id'),str) or not cp['run_id']
-                    or any(type(cp.get(k)) is not int or cp[k]<1 for k in ('mural_row','result_row'))
-                    or not isinstance(cp.get('pending_ids'),list)
-                    or not all(isinstance(x,str) and x for x in cp['pending_ids'])
-                    or not isinstance(cp.get('next_action'),str)):
+                    or not isinstance(cp.get('run_id'),str) or not cp['run_id']):
                 continue
-            checkpoints[task]=[task,cp['run_id'],row[0],str(cp['mural_row']),str(cp['result_row']),
-                               json.dumps(cp['pending_ids'],ensure_ascii=False),cp['next_action'],row[7]]
+            # Source cursors, pending IDs and next_action are optional metadata.
+            # A recent checkpoint must not disappear because the producer omitted
+            # a non-authoritative hint. Never advance a cursor on missing data.
+            cursors = [str(cp[k]) if type(cp.get(k)) is int and cp[k] >= 1 else ''
+                       for k in ('mural_row','result_row')]
+            pending_ids = cp.get('pending_ids', [])
+            if not isinstance(pending_ids, list) or not all(isinstance(x,str) and x for x in pending_ids):
+                pending_ids = []
+            next_action_source = cp.get('next_action', '')
+            if not isinstance(next_action_source, str):
+                next_action_source = '' 
+            # A delayed historical receipt must not replace a newer checkpoint.
+            try:
+                observed_at = dt.datetime.fromisoformat(row[0].replace('Z', '+00:00'))
+                if observed_at.tzinfo is None:
+                    observed_at = None
+            except ValueError:
+                observed_at = None
+            if (checkpoint_times.get(task) is not None
+                    and (observed_at is None or observed_at < checkpoint_times[task])):
+                continue
+            checkpoint_times[task] = observed_at
+            remaining = [key for key in pending_ids if key not in confirmed]
+            checkpoint_pending[task] = (len(pending_ids) - len(remaining), len(remaining))
+            next_action = checkpoint_next_action(science, roster[task], next_action_source)
+            checkpoint_actions[task] = next_action != next_action_source
+            checkpoints[task]=[task,cp['run_id'],row[0],*cursors,
+                               json.dumps(remaining,ensure_ascii=False),next_action,row[7]]
         except (ValueError,TypeError,AttributeError):
             continue
     cp_rows=[['task_id','run_id_declarado','data','cursor_mural','cursor_resultados','pending_ids','proxima_acao','recibo']]
     cp_rows.extend(checkpoints.values())
+    metric('checkpoint_pending_resolved', 'EXACT_TARGET_AND_APPLIED',
+           sum(value[0] for value in checkpoint_pending.values()), 'CHECKPOINTS × spool × target readback',
+           'Pendências resolvidas somente na projeção; checkpoints fonte permanecem intactos.')
+    metric('checkpoint_pending_unresolved', 'RECONCILIATION_REQUIRED',
+           sum(value[1] for value in checkpoint_pending.values()), 'CHECKPOINTS × spool × target readback',
+           'Conferir recibo e destino antes de repetir qualquer tentativa.')
+    metric('checkpoint_actions_reconciled', 'DERIVED_SELECTION_NOT_DISPATCH',
+           sum(checkpoint_actions.values()), 'NEXO_SCIENCE_V1 × CHECKPOINTS',
+           'O texto histórico permanece no MURAL; seleção não reserva nem executa trabalho.')
     incidents = incidents[:1] + incidents[1:][-RECENT_LIMIT:]
     return {'AUTONOMIA':summary, 'INCIDENTES':incidents, 'EXECUCOES':executions,
             'MANUTENCAO':maintenance_rows(mural, now), 'CHECKPOINTS':cp_rows}
