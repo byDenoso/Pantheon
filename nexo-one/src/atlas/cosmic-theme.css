@@ -15,6 +15,13 @@
   }
 }
 .atlas-header { background: var(--bg); }
+.atlas-app[data-area="private"] .atlas-header { min-height: 72px; padding: 12px 28px; gap: 16px 24px; }
+.atlas-app[data-area="private"] .atlas-header-menu { display: flex; align-items: center; gap: 24px; }
+.atlas-app[data-area="private"] .atlas-nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; text-underline-offset: 4px; }
+.atlas-app[data-area="private"] .atlas-brand { font-size: 22px; }
+.atlas-app[data-area="private"] .atlas-seg { border-color: var(--line); border-radius: 6px; background: var(--bg-2); }
+.atlas-app[data-area="private"] .atlas-seg button { font-size: 12px; }
+.atlas-app[data-area="private"] .atlas-seg button[aria-pressed="true"] { background: var(--nexo-surface-raised); color: var(--cyan); box-shadow: inset 0 -2px var(--cyan); }
 .atlas-header-menu, .atlas-controls { min-width: 0; }
 .atlas-brand { letter-spacing: .035em; }
 .atlas-mark { box-shadow: none; border: 1px solid var(--cyan); }
@@ -29,6 +36,32 @@
 .atlas-btn { border-radius: 6px; }
 .atlas-data dd { font-variant-numeric: tabular-nums; }
 .atlas-warn { color: var(--nexo-amber); }
+/* Same PIN/session flow, with a bounded reading column and explicit focus. */
+.private-root:not(.has-frame) { max-width: 600px; padding: clamp(28px, 7vh, 76px) 24px 48px; }
+.private-root:not(.has-frame) > .atlas-row { display: block; margin-bottom: 28px; }
+.private-root:not(.has-frame) h1 { margin: 0 0 12px; font-size: clamp(26px, 4vw, 34px); font-weight: 600; letter-spacing: -.025em; }
+.private-root:not(.has-frame) .atlas-row > a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; text-underline-offset: 4px; }
+.private-root .atlas-form { max-width: none; padding: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-2); gap: 12px; }
+.private-root .atlas-form > p { margin: 0 0 12px; color: var(--fg-2); line-height: 1.65; }
+.private-root .atlas-form label { font-size: 14px; font-weight: 600; }
+.private-root .atlas-form small { color: var(--fg-2); }
+.private-root .atlas-form input { min-height: 48px; background: var(--bg); }
+.private-root .atlas-form .atlas-btn { margin-top: 8px; min-height: 48px; }
+.private-root .atlas-form .atlas-warn { color: var(--nexo-amber); margin: 8px 0 0; }
+.private-root.has-frame > .atlas-row h1 { font-size: 20px; margin: 4px 0; }
+.private-root.has-frame > .atlas-row a { font-size: 13px; }
+.private-root.has-frame > p { margin: 6px 0 12px; color: var(--fg-2); }
+.atlas-private-frame { border-radius: 6px; }
+@media (max-width: 980px) {
+  .atlas-app[data-area="private"] .atlas-header-menu { flex-wrap: wrap; gap: 8px 20px; }
+}
+@media (max-width: 600px) {
+  .atlas-app[data-area="private"] .atlas-header { padding: 12px 16px; }
+  .atlas-app[data-area="private"] .atlas-header-menu { width: 100%; }
+  .atlas-app[data-area="private"] .atlas-controls { width: 100%; gap: 8px; }
+  .private-root:not(.has-frame) { padding: 28px 16px; }
+  .private-root .atlas-form { padding: 20px; }
+}
 @media (max-width: 560px) {
   .atlas-brand { flex-wrap: wrap; }
   .atlas-brand small { flex-basis: 100%; }
