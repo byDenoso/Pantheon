@@ -56,8 +56,8 @@ test('public TruthGraph distinguishes projection limits from material degradatio
   assert.equal(rows.get('SCIENCE').material, false);
 });
 
-test('GitHub Pages compiles SystemState locally instead of inheriting Vercel health', async () => {
+test('GitHub Pages generates the Atlas public projection locally without inheriting Vercel health', async () => {
   const workflow = await readFile(new URL('../../.github/workflows/nexo-one-pages.yml', import.meta.url), 'utf8');
-  assert.match(workflow, /build-pages-system\.mjs/);
+  assert.match(workflow, /build-pages-public\.mjs/);
   assert.doesNotMatch(workflow, /nexo-one-two\.vercel\.app\/api\/system/);
 });

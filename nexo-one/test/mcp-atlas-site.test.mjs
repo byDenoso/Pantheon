@@ -29,7 +29,8 @@ test('MCP Atlas retains its routed shell while unauthenticated topology publicat
   assert.match(site,/data-mcp-theme/);
   assert.match(site,/data-mcp-graph-view/);
   assert.match(site,/loadPublishedContext<Topology>/);
-  assert.doesNotMatch(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app/);
+  assert.match(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app\/#\/privado\s*$/m);
+  assert.doesNotMatch(workflow,/VITE_NEXO_AUTH_BRIDGE_URL:|NEXO_PIN(?:_HASH)?:|NEXO_SESSION_SECRET:/);
   assert.doesNotMatch(site,/react-force-graph-3d|ForceGraph3D/);
   assert.match(site,/routeParams\(\)/);
   const bridge=await text('mcp/index.html');

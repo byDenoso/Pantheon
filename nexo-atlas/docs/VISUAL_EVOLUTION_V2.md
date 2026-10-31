@@ -3,7 +3,7 @@
 Registro técnico para revisão de PR, atualizado em 2026-10-30.
 Base: `byDenoso/Pantheon@ef55ea47496568e4e1713daf59265aa40d89d62e` (`ef55ea4`).
 Branch de trabalho: `feat/atlas-visual-evolution-v2`.
-Estado: implementação e checagem visual concluídas; gates funcionais finais aprovados; produção preservada para revisão.
+Estado: implementação validada localmente; correção dos contratos de CI preparada; evidência visual e seus limites registrados abaixo; produção preservada para revisão.
 
 ## Fontes e superfícies verificadas
 
@@ -64,8 +64,8 @@ No público, `Shell`, `PublicResearchHub`, `PublicStudyPage`, `PublicVisualGalle
 - Valores científicos, incertezas, conclusões, proveniência e vínculos para evidências; nenhuma nova afirmação científica foi introduzida.
 - Autenticação, PIN, sessão, identidade, proteção de assets, ciclo de vida do iframe privado e transportes de dados.
 - Rotas e destinos científicos existentes; o atalho público para o privado foi retirado por solicitação do proprietário. Handlers funcionais permanecem, exceto o comportamento local de foco e fechamento das preferências.
-- Dependências, lockfiles, CI, deploy, configuração de ambientes e código científico do TCC.
-- O escopo de código concentra-se em CSS, imports locais de fontes e estrutura de preferências; a lista definitiva de arquivos deve ser lida no diff do PR.
+- Dependências, lockfiles, workflows de CI, deploy, configuração de ambientes e código científico do TCC.
+- O escopo de produto concentra-se em CSS, imports locais de fontes e estrutura de preferências. A manutenção dos testes ajusta somente expectativas do contrato de publicação vigente; a lista definitiva de arquivos deve ser lida no diff do PR.
 
 O snapshot público antes e depois do build verificado mantém **673096 bytes** e o mesmo SHA-256:
 
@@ -83,9 +83,9 @@ Essa igualdade refere-se a `dist/client/atlas-public.json`; não representa uma 
 | `nexo-atlas` na versão V2 final | Typecheck e build aprovados; **525/525 testes**, sem falhas, cancelamentos ou testes ignorados. A execução final ocorreu após a harmonização de método/publicações e com build já encerrado. |
 | Snapshot de Pages final | `PAGES_PUBLIC_READY`; **673096 bytes**, 169 testes na projeção e 0 campanhas. Hash e tamanho acima iguais ao baseline. A projeção foi gerada após o build final. |
 | Rotas públicas publicadas | 19 estudos + método + publicações: **21/21 HTTP 200**. Os 19 estudos também carregaram no navegador, e seus títulos coincidiram na V2. |
-| `nexo-one` | Sete arquivos de testes selecionados aprovados; build privado com **107 assets** e `style:lint` aprovado. Não equivale à execução completa de toda a suíte privada. |
+| `nexo-one` | Após a correção contratual: recorte de oito arquivos **48/48 aprovado**; suíte completa com **1275 testes, 1274 aprovados, 0 falhas e 1 ignorado**, exit 0. Build privado com **107 assets** e `style:lint` aprovados na validação visual anterior. |
 | Revisão independente | Correções aplicadas: contraste de ações, preferências estáticas até 900 px e interrupção da propagação de `Escape`. A revisão final restaura os acentos originais e remove a entrada privada do público. |
-| Checagem visual | Capturas reais de homepage, mapa, figuras, investigação, método, publicações, grafo privado e testes. Temas claro/escuro e larguras CSS 320, 390 e 768 px conferidos em fluxos representativos. |
+| Checagem visual | Capturas reais de homepage, mapa, figuras, investigação, método, publicações, grafo privado e testes. Temas claro/escuro e larguras CSS 320, 390 e 768 px conferidos em fluxos representativos. As capturas antecedem o último ajuste isolado do azul da segunda linha do título. |
 | Interações no navegador | Preferências, PT-BR/EN, tema, pausa, Escape em dois níveis, seleção de medida e fechamento do diálogo, busca de teste sintético, detalhe de teste, inspetor do grafo e navegação interna exercitados. |
 | Remoção do acesso privado público | Homepage, 19 investigações, método e publicações: **22 páginas renderizadas, zero links para a área privada**, incluindo o menu móvel da homepage. |
 
@@ -101,6 +101,18 @@ node scripts/build-pages-public.mjs --check
 Evidências locais da auditoria: `public-v2-final.log` consolida o gate final; `public-baseline-pristine-tests.log`, `public-v2-npm-test-escalated.log`, `public-v2-typecheck.log`, `public-v2-style-lint.log`, `public-before-manifest.json` e `live-routes.json` preservam as etapas anteriores no diretório de trabalho `atlas-audit/`.
 Os logs não são parte do bundle público. O arquivo chamado `public-v2-style-lint.log` registra o comando de lint de `nexo-one`.
 
+### Correção dos contratos do CI
+
+O [run 41149920901 do PR #498](https://github.com/byDenoso/Pantheon/actions/runs/41149920901), no commit `f992b25c86743323e54939bb1a7ea8cc39ea8ee6`, terminou com `executor-runtime-smoke: success` e `verify: failure`. O typecheck de `nexo-one` passou; a suíte registrou **1275 testes, 1265 aprovados, 9 falhas e 1 ignorado**. O comando parou em `npm test`; as etapas posteriores de build e navegador desse job não foram executadas.
+
+As nove falhas derivam de expectativas anteriores à migração do público para `nexo-atlas`: diretório `nexo-one/dist`, builders `build-pages-system.mjs`/`static-publication.mjs` e origem privada obtida por variável do repositório. O workflow vigente já compila `nexo-atlas`, gera `atlas-public.json`, executa `build-pages-public.mjs --check` e publica `nexo-atlas/dist/client`. Os oito arquivos de teste afetados e o workflow são idênticos entre a base `ef55ea4` e `f992b25`; as asserções que falharam dependem desse workflow inalterado. A divergência é preexistente ao redesign.
+
+O patch mantém as verificações negativas de credenciais, Tower privada, histórico e bridges, o destino exato `nexo-atlas/dist/client`, a checagem anterior ao upload e o readback das URLs antigas. As expectativas agora apontam para o builder e o diretório efetivos; a expansão de `npm run check` é conferida no `package.json`, incluindo typecheck, build e suíte completa. Além dos **9 casos que falharam**, uma **asserção de ordenação** no mesmo `pages.test.mjs` foi corrigida: o código antigo aceitava `indexOf(...) === -1` como posição anterior ao upload. A versão atual exige a presença do gate e sua execução anterior ao upload. Nenhum workflow foi alterado.
+
+Depois do patch, os oito arquivos passaram **48/48**; a suíte completa passou com **1274 aprovados, 0 falhas e 1 ignorado, de 1275 testes**. O caso ignorado é `actual TCC mechanical review and closure requests project without fabricated reviews or scientific outcomes`, em `test/public-campaigns.test.mjs`: ele requer `runtime/nexo_agent_api/evolution.py` em `TCC_RUNTIME_REPO` ou no checkout irmão `TCC`, ausente nessa execução. O resultado remoto citado descreve a revisão anterior à correção; o status do commit corrigido é registrado nos checks do PR. O resultado local, por si só, não comprova CI aprovado.
+
+Evidências em `atlas-audit/`: `pr-498-verify-original.log`, `pr-498-contract-tests-corrected.log` e `pr-498-nexo-one-full-corrected.log`.
+
 ### Avisos e restrições do ambiente
 
 - O baseline já emitia avisos de chunks maiores que 500 kB e import dinâmico ineficaz de `PublicVisualGallery.tsx`, também importado estaticamente. Esta mudança não inclui divisão de bundles.
@@ -114,5 +126,5 @@ Os logs não são parte do bundle público. O arquivo chamado `public-v2-style-l
 O privado publicado permaneceu na tela de PIN, sem sessão autenticada. A validação do workspace usa fixtures sintéticas e não confirma disponibilidade de integrações privadas reais.
 As capturas em larguras móveis usam viewport CSS em iframe; não são testes em aparelho físico e não comprovam comportamento específico de navegadores móveis.
 A transferência de um CSV pelo navegador de auditoria não foi concluída pela ferramenta de download. O exportador e os dados não receberam alterações; esta etapa não é declarada como validação de download ponta a ponta. Publicações não tem itens no catálogo atual, portanto não houve um item real para exercitar a cópia de BibTeX.
-Os gates funcionais e a checagem visual após a harmonização de método/publicações foram concluídos. A revisão inclui capturas e prévia privada explicitamente sintética, sem acesso a dados privados reais.
+Os gates funcionais e a checagem visual após a harmonização de método/publicações foram concluídos. O último ajuste isolado do azul da segunda linha do título não recebeu nova captura; a correção posterior dos testes não altera a interface. A revisão inclui capturas e prévia privada explicitamente sintética, sem acesso a dados privados reais.
 Nenhum deploy ou merge foi realizado. A proposta permanece isolada em branch para revisão antes da publicação em produção.

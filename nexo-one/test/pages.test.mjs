@@ -91,9 +91,11 @@ test('GitHub Pages publishes no Tower data while private compiler validation is 
   assert.doesNotMatch(workflow, /byDenoso\/NEXO-Obsidian-Vault|_vault|_tcc/);
   assert.doesNotMatch(workflow, /METALEARNING_CURRENT\.json|PEER_DETECTION_BATTERY_V1\.json|human-gates-details\.json/);
   assert.doesNotMatch(workflow, /cp .*projection\.json|truthgraph\.snapshot\.json/);
-  assert.match(workflow, /node scripts\/build-pages-system\.mjs/);
-  assert.match(workflow, /node scripts\/static-publication\.mjs --check/);
-  assert.ok(workflow.indexOf('scripts/static-publication.mjs --check') < workflow.indexOf('actions/upload-pages-artifact@v4'));
+  assert.match(workflow, /node scripts\/build-pages-public\.mjs/);
+  assert.match(workflow, /node scripts\/build-pages-public\.mjs --check/);
+  const finalCheck = workflow.lastIndexOf('node scripts/build-pages-public.mjs --check');
+  const upload = workflow.indexOf('actions/upload-pages-artifact@v4');
+  assert.ok(finalCheck >= 0 && upload > finalCheck);
   assert.match(boundary, /APPROVED_PUBLIC_DATA = Object\.freeze\(\[\]\)/);
 
   // Source integrity still matters for protected server-side compilation. It
@@ -521,17 +523,19 @@ test('new projected domains expand without compiler switch edits', async () => {
   assert.match(primitives, /DOMAIN_GLYPH\[domain\] \?\? '◇'/);
 });
 
-test('GitHub Pages deploys only a verified shell and negatively reads back former data URLs', async () => {
+test('GitHub Pages deploys the verified Atlas public artifact and negatively reads back former data URLs', async () => {
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
   const vite = await text('vite.config.ts');
+  const scripts = JSON.parse(await text('../nexo-atlas/package.json')).scripts;
 
   assert.match(workflow, /actions\/configure-pages@v5/);
   assert.match(workflow, /actions\/upload-pages-artifact@v4/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
   assert.match(workflow, /deploy:\n    needs: build/);
-  assert.match(workflow, /path: nexo-one\/dist/);
-  assert.match(workflow, /npm run typecheck/);
-  assert.match(workflow, /node --test test\/static-publication-boundary\.test\.mjs/);
+  assert.match(workflow, /path:\s*nexo-atlas\/dist\/client\s*$/m);
+  assert.match(workflow, /npm run check/);
+  assert.equal(scripts.check, 'npm run typecheck && npm run build && npm test');
+  assert.equal(scripts.test, 'node --test test/*.test.mjs');
   assert.match(vite, /main: 'index\.html'/);
   assert.match(vite, /mcp: 'mcp\/index\.html'/);
   assert.match(vite, /atlas3d: 'atlas3d\/index\.html'/);
@@ -578,7 +582,9 @@ test('Pages preserves publication ordering without hydrating any historical data
   assert.match(workflow, /deploy:\n    needs: build/);
   assert.doesNotMatch(workflow, /schedule:|deploy_needed|PAGES_NO_OP|NEXO_GALAXY_PREVIOUS|xargs -r -P 8/);
   assert.doesNotMatch(workflow, /Hydrate previous valid galaxy history|galaxy\/snapshots\/\$\{?id/);
-  assert.ok(workflow.indexOf('scripts/static-publication.mjs --check') < workflow.indexOf('actions/upload-pages-artifact@v4'));
+  const finalCheck = workflow.lastIndexOf('node scripts/build-pages-public.mjs --check');
+  const upload = workflow.indexOf('actions/upload-pages-artifact@v4');
+  assert.ok(finalCheck >= 0 && upload > finalCheck);
   assert.match(workflow, /galaxy\/latest\.json/);
   assert.match(workflow, /galaxy\/index\.json/);
   assert.match(workflow, /403\|404\|410\)/);
