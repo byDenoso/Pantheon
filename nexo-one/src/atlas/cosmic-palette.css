@@ -1,12 +1,13 @@
 /* Shared only inside NEXO. The frame can consume this CSS independently.
    Tokens carry no data and change no authentication or lifecycle behavior. */
 :root {
-  --nexo-bg: #f4f7fc;
+  --nexo-bg: #f6f8fb;
   --nexo-surface: #ffffff;
-  --nexo-text: #102236;
-  --nexo-muted: #465e73;
-  --nexo-line: #c4d1df;
-  --nexo-control: #637c92;
+  --nexo-surface-raised: #edf2f8;
+  --nexo-text: #152334;
+  --nexo-muted: #526177;
+  --nexo-line: #d5deea;
+  --nexo-control: #73839a;
   --nexo-accent: #076d83;
   --nexo-on-accent: #ffffff;
   --nexo-highlight: #4d4baf;
@@ -14,12 +15,13 @@
   color-scheme: light;
 }
 :root[data-theme="dark"], .pw {
-  --nexo-bg: #080e18;
-  --nexo-surface: #101d2b;
-  --nexo-text: #e8f4ff;
-  --nexo-muted: #a5b8cb;
-  --nexo-line: #2b3e53;
-  --nexo-control: #637c92;
+  --nexo-bg: #090d14;
+  --nexo-surface: #101722;
+  --nexo-surface-raised: #151e2b;
+  --nexo-text: #e8eef5;
+  --nexo-muted: #a5b2c5;
+  --nexo-line: #29364a;
+  --nexo-control: #73839a;
   --nexo-accent: #42c8df;
   --nexo-on-accent: #081721;
   --nexo-highlight: #adb9ff;
@@ -27,12 +29,13 @@
   color-scheme: dark;
 }
 .pw[data-theme="light"] {
-  --nexo-bg: #f4f7fc;
+  --nexo-bg: #f6f8fb;
   --nexo-surface: #ffffff;
-  --nexo-text: #102236;
-  --nexo-muted: #465e73;
-  --nexo-line: #c4d1df;
-  --nexo-control: #637c92;
+  --nexo-surface-raised: #edf2f8;
+  --nexo-text: #152334;
+  --nexo-muted: #526177;
+  --nexo-line: #d5deea;
+  --nexo-control: #73839a;
   --nexo-accent: #076d83;
   --nexo-on-accent: #ffffff;
   --nexo-highlight: #4d4baf;
@@ -41,12 +44,13 @@
 }
 @media (prefers-color-scheme: dark) {
 :root:not([data-theme]) {
-  --nexo-bg: #080e18;
-  --nexo-surface: #101d2b;
-  --nexo-text: #e8f4ff;
-  --nexo-muted: #a5b8cb;
-  --nexo-line: #2b3e53;
-  --nexo-control: #637c92;
+  --nexo-bg: #090d14;
+  --nexo-surface: #101722;
+  --nexo-surface-raised: #151e2b;
+  --nexo-text: #e8eef5;
+  --nexo-muted: #a5b2c5;
+  --nexo-line: #29364a;
+  --nexo-control: #73839a;
   --nexo-accent: #42c8df;
   --nexo-on-accent: #081721;
   --nexo-highlight: #adb9ff;

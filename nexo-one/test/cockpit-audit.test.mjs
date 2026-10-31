@@ -16,12 +16,13 @@ test('views have stable hash deep links and browser history restoration', async 
   assert.match(app, /window\.scrollTo\(\{ top: 0, left: 0, behavior: 'auto' \}\)/);
 });
 
-test('static Pages sends private access to the private cockpit instead of a dead local session endpoint', async () => {
+test('static Pages keeps the private cockpit target separate from its public projection', async () => {
   const app = await text('src/app/App.tsx');
   const workflow = await text('../.github/workflows/nexo-one-pages.yml');
 
   assert.match(app, /VITE_PRIVATE_COCKPIT_URL/);
-  assert.match(workflow, /VITE_PRIVATE_COCKPIT_URL:\s*\$\{\{ vars\.VITE_PRIVATE_COCKPIT_URL \}\}/);
+  assert.match(workflow, /VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app\/#\/privado\s*$/m);
+  assert.match(workflow, /VITE_PUBLIC_API_URL:\s*\/atlas-public\.json\s*$/m);
 });
 
 test('mobile keeps the private session control visible', async () => {

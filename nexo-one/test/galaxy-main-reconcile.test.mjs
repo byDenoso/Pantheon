@@ -102,7 +102,7 @@ test('Pages never hydrates or republishes galaxy history and still verifies its 
   assert.match(workflow,/galaxy\/latest\.json/);
   assert.match(workflow,/galaxy\/index\.json/);
   assert.match(workflow,/403\|404\|410\)/);
-  assert.match(workflow,/scripts\/static-publication\.mjs --check/);
+  assert.match(workflow,/scripts\/build-pages-public\.mjs --check/);
   assert.match(builder,/assertPublicDataPublicationAllowed\(\)/);
   assert.ok(builder.indexOf('assertPublicDataPublicationAllowed();')<builder.indexOf('const projection=await readJson'));
   assert.match(builder,/server\/compiler\/galaxy-v1\.mjs/);

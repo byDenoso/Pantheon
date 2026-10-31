@@ -56,9 +56,9 @@ test('numeric PIN mode is protected by Apps Script server-side rate limiting',as
   assert.match(code,/RATE_LIMITED/);
 });
 
-test('GitHub Pages includes only a private-cockpit link and no legacy auth bridge or credentials',async()=>{
+test('GitHub Pages configures the private cockpit target without a legacy auth bridge or credentials',async()=>{
   const workflow=await text('../.github/workflows/nexo-one-pages.yml');
-  assert.match(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*\$\{\{ vars\.VITE_PRIVATE_COCKPIT_URL \}\}/);
+  assert.match(workflow,/VITE_PRIVATE_COCKPIT_URL:\s*https:\/\/nexo-one-two\.vercel\.app\/#\/privado\s*$/m);
   assert.doesNotMatch(workflow,/VITE_NEXO_AUTH_BRIDGE_URL:/);
   assert.doesNotMatch(workflow,/NEXO_PIN_HASH:/);
   assert.doesNotMatch(workflow,/NEXO_SESSION_SECRET:/);

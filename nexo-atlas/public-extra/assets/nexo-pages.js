@@ -65,13 +65,23 @@
 
   const toggle = document.querySelector('.atlas-menu-toggle');
   const menu = document.getElementById('atlas-header-menu');
+  const preferences = document.querySelector('.atlas-preferences');
+  document.addEventListener('click', (event) => {
+    if (preferences?.open && !preferences.contains(event.target)) preferences.open = false;
+  });
   if (toggle && menu) {
     const set = (open) => {
       menu.classList.toggle('is-open', open);
       toggle.setAttribute('aria-expanded', String(open));
+      if (!open && preferences) preferences.open = false;
     };
     toggle.addEventListener('click', () => set(!menu.classList.contains('is-open')));
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && preferences?.open) {
+        preferences.open = false;
+        preferences.querySelector('summary')?.focus();
+        return;
+      }
       if (event.key === 'Escape' && menu.classList.contains('is-open')) { set(false); toggle.focus(); }
     });
   }

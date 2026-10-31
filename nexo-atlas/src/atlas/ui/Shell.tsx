@@ -8,7 +8,6 @@ import {useTheme, type ThemePref} from './useTheme.ts';
 import CosmologicalBackdrop from './CosmologicalBackdrop.tsx';
 
 const SECTIONS = ['works', 'lines', 'methods', 'contact'] as const;
-const PRIVATE_COCKPIT_URL = String(import.meta.env.VITE_PRIVATE_COCKPIT_URL || '/#/privado').trim();
 export default function Shell({area, children}: {area: 'public' | 'private'; children: ReactNode}) {
   const m = useMessages();
   const locale = useLocale();
@@ -23,6 +22,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
   const surface=useRef<HTMLDivElement>(null);
   useVisitorMotion(surface,area==='public'&&!cinemaPaused&&!reducedMotion);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const preferences = useRef<HTMLDetailsElement>(null);
   const header = useRef<HTMLElement>(null);
   const opts: [ThemePref, string][] = [['light', m.themeLight], ['dark', m.themeDark], ['system', m.themeSystem]];
   useEffect(() => { setMenuOpen(false); }, [area]);
@@ -63,8 +63,15 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
         <div id="atlas-header-menu" className={`atlas-header-menu${menuOpen ? ' is-open' : ''}`}>
           <nav aria-label={m.navLabel} className="atlas-nav">
             {area === 'public' && <ul className="atlas-toc">{SECTIONS.map(id => <li key={id}><button type="button" aria-current={activeSection===id?'location':undefined} onClick={() => { setMenuOpen(false); goToPublicSection(id); }}>{t.nav[id]}</button></li>)}</ul>}
-            {area === 'public' ? <a href={PRIVATE_COCKPIT_URL} onClick={() => setMenuOpen(false)}>{m.privateLink}</a> : <a href="/#/">{m.backPublic}</a>}
+            {area === 'private' && <a href="/#/">{m.backPublic}</a>}
           </nav>
+          <details className="atlas-preferences" ref={preferences} onKeyDown={event => {
+            if (event.key === 'Escape' && preferences.current?.open) {
+              event.preventDefault(); event.stopPropagation(); preferences.current.open = false;
+              preferences.current.querySelector('summary')?.focus();
+            }
+          }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false; }}>
+          <summary>{locale === 'en' ? 'Preferences' : 'Preferências'}</summary>
           <div className="atlas-controls">
             <LocaleSwitch/>
             <button type="button" className="atlas-cinema-toggle" aria-pressed={cinemaPaused || reducedMotion} disabled={reducedMotion} onClick={() => setCinemaPaused(value => !value)}>
@@ -75,6 +82,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
               {opts.map(([k, label]) => <button key={k} type="button" aria-pressed={pref === k} onClick={() => choose(k)}>{label}</button>)}
             </div>
           </div>
+          </details>
         </div>
       </header>
       {children}
