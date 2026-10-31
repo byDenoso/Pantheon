@@ -31,20 +31,20 @@ html:not([data-lang]) [lang="en"], html[data-lang="pt-BR"] [lang="en"], html[dat
 @font-face{font-family:"IBM Plex Sans";src:url(/assets/nexo-plex-sans-600.woff2) format("woff2");font-style:normal;font-weight:600;font-display:swap}
 :root{
   --bg:#f5f7fa;--bg-2:#fff;--fg:#142236;--fg-2:#4c5e73;--line:#ccd5e0;
-  --cyan:#006779;--on-cyan:#fff;--orange:#314ca0;--focus:#006779;
+  --cyan:#1e5bff;--on-cyan:#fff;--orange:#12348f;--focus:#12348f;
 }
 :root[data-theme="dark"]{
   --bg:#090d14;--bg-2:#101722;--fg:#e8eef5;--fg-2:#a5b2c5;--line:#29364a;
-  --cyan:#67d4e4;--on-cyan:#090d14;--orange:#b2c2ff;--focus:#67d4e4;
+  --cyan:#6890ff;--on-cyan:#000b1f;--orange:#b9dbff;--focus:#b9dbff;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme]){
     --bg:#090d14;--bg-2:#101722;--fg:#e8eef5;--fg-2:#a5b2c5;--line:#29364a;
-    --cyan:#67d4e4;--on-cyan:#090d14;--orange:#b2c2ff;--focus:#67d4e4;
+    --cyan:#6890ff;--on-cyan:#000b1f;--orange:#b9dbff;--focus:#b9dbff;
   }
 }
 .atlas-app[data-area="public"]{
-  --font-body:"IBM Plex Sans",var(--font);--font-heading:var(--font-body);--action:var(--cyan);
+  --font-body:"IBM Plex Sans",var(--font);--font-heading:var(--font-body);--action:#1e5bff;
   font:400 15px/1.65 var(--font-body);background:var(--bg);
 }
 .atlas-app[data-area="public"] :is(button,input,select){font-family:var(--font-body)}

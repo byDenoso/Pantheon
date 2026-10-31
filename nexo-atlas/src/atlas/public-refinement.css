@@ -4,7 +4,7 @@
 .atlas-app[data-area="public"]{
   --font-body:"IBM Plex Sans",var(--font);--font-heading:var(--font-body);
   --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
-  --action:var(--cyan);--control-line:#728196;--nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
+  --action:#1e5bff;--on-action:#ffffff;--control-line:#728196;--nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
   font:400 15px/1.6 var(--font-body);background:var(--bg);
 }
 .atlas-app[data-area="public"] :is(h1,h2,h3,h4){text-wrap:balance}
@@ -18,12 +18,12 @@
 .atlas-app[data-area="public"] .atlas-hero-art{min-height:290px;height:290px;align-self:center}
 .atlas-app[data-area="public"] .atlas-hero-art .atlas-note{color:var(--fg-2);font-size:11px;text-shadow:none}
 .atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow{font-size:10px;letter-spacing:.12em;margin-bottom:20px}
-.atlas-app[data-area="public"] .atlas-hero-copy h1 span:last-child{color:var(--fg)}
+.atlas-app[data-area="public"] .atlas-hero-copy h1 span:last-child{color:var(--cyan)}
 .atlas-app[data-area="public"] .atlas-hero-actions .atlas-btn,
 .atlas-app[data-area="public"] .atlas-text-action{min-height:44px;font-size:15px;padding:10px 16px;min-width:0;gap:20px;border-radius:5px}
-.atlas-app[data-area="public"] .atlas-hero-actions .atlas-btn{background:var(--cyan);color:var(--on-cyan)}
+.atlas-app[data-area="public"] .atlas-hero-actions .atlas-btn{background:var(--action);color:var(--on-action)}
 .atlas-app[data-area="public"] .atlas-public-main .atlas-btn,
-.atlas-app[data-area="public"] .atlas-campaign-tabs button[aria-pressed="true"]{color:var(--on-cyan)}
+.atlas-app[data-area="public"] .atlas-campaign-tabs button[aria-pressed="true"]{color:var(--on-action)}
 .atlas-app[data-area="public"] .atlas-text-action{color:var(--fg);border:1px solid var(--line)}
 .atlas-app[data-area="public"] .nexo-research-launch{padding-top:20px;gap:24px}
 .atlas-app[data-area="public"] .nexo-research-shortcut>svg{width:26px;height:26px}

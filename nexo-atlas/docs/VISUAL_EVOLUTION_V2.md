@@ -12,7 +12,7 @@ Estado: implementação e checagem visual concluídas; gates funcionais finais a
 | `https://nexoresearch.org/` | `nexo-atlas/`. O workflow `.github/workflows/nexo-one-pages.yml`, apesar do nome histórico, compila este diretório e publica `dist/client`. O HTML do build base coincidiu byte a byte com o HTML servido. |
 | Estudos públicos | As 19 rotas de `src/atlas/publicStudyRoutes.json` responderam HTTP 200 e carregaram seus títulos no navegador. Os 19 títulos da V2 coincidiram com os publicados; o build de Pages materializa cada rota a partir da aplicação pública. |
 | `/metodo.html` e `/publicacoes.html` | Ambas responderam HTTP 200. São páginas de `public-extra/`, com CSS próprio; a harmonização inclui `public-extra/assets/nexo-pages.css`, preferências nos dois HTMLs e fontes IBM Plex locais. |
-| Link público para o privado | `https://nexo-one-two.vercel.app/#/privado`, com fonte em `nexo-one/`. A tela publicada de PIN foi observada sem autenticação. |
+| Destino privado identificado na auditoria inicial | `https://nexo-one-two.vercel.app/#/privado`, com fonte em `nexo-one/`. A tela publicada de PIN foi observada sem autenticação. O link de entrada foi removido da navegação pública nesta V2, conforme solicitação do proprietário. |
 | Workspace privado | `nexo-one/src/private-workspace/` e `src/knowledge/`; rotas internas preservadas no código e exercitadas com dados sintéticos, sem confirmação de sessão privada publicada. |
 | Núcleo científico | `byDenoso/TCC` foi consultado; não recebe alterações neste trabalho. |
 
@@ -40,11 +40,11 @@ No público, `Shell`, `PublicResearchHub`, `PublicStudyPage`, `PublicVisualGalle
 
 | Área | Mudança |
 | --- | --- |
-| Tema | Fundo escuro `#090D14`, superfície `#101722`, texto `#E8EEF5` e destaque `#67D4E4`; tema claro mantido, com superfícies neutras e destaque `#006779`. |
-| Contraste | Texto de ações usa `--on-cyan`, inclusive botões do catálogo e abas selecionadas. Cor de texto secundário, bordas e foco foram ajustadas nos tokens existentes. A revisão de tokens não equivale a uma certificação global de acessibilidade. |
+| Tema e identidade | Fundo escuro `#090D14`, superfície `#101722` e texto `#E8EEF5`; azul original público preservado: `#1E5BFF` nas ações e no tema claro, `#6890FF` nos destaques escuros, incluindo o destaque da segunda linha do título principal. O workspace conserva seus cianos originais `#076D83`/`#42C8DF`. |
+| Contraste | Ações azuis usam texto branco por `--on-action`; nós e seleções preservam `--on-cyan` próprio de cada tema. Texto secundário, bordas e foco usam os tokens existentes. A revisão de tokens não equivale a uma certificação global de acessibilidade. |
 | Tipografia | IBM Plex Sans para leitura e controles; IBM Plex Mono para valores e contagens. Fontes já disponíveis nas dependências são empacotadas localmente; marca institucional e imagens cosmológicas existentes são preservadas. |
 | Densidade pública | Hierarquia mais compacta, títulos proporcionais, colunas de leitura limitadas, menos espaço entre registros e separadores discretos. Conteúdo, gráficos e detalhes continuam acessíveis. |
-| Navegação pública | Idioma, tema e movimento agrupados em um `details` de preferências; a navegação de seções e o link privado mantêm seus destinos. |
+| Navegação pública | Idioma, tema e movimento agrupados em um `details` de preferências. O link “Área privada” foi removido da homepage, investigações, método e publicações, em desktop e móvel. A navegação entre seções públicas foi preservada. |
 | Workspace privado | Sidebar de 208 px em desktop, linhas de pesquisa mais compactas, números tabulares, cabeçalhos e estados com hierarquia consistente. |
 | Grafo privado | Ajustes de superfície, contraste, controles e painel de inspeção em CSS; topologia, seleção, busca, zoom e modelos de dados não foram reimplementados. |
 | Método e publicações | Harmonização das páginas estáticas com a apresentação pública; alterações de JavaScript limitadas ao fechamento e à gestão de foco das preferências. Typecheck, build, projeção de Pages e suíte de 525 testes aprovados após estas adições. |
@@ -63,7 +63,7 @@ No público, `Shell`, `PublicResearchHub`, `PublicStudyPage`, `PublicVisualGalle
 - Contrato `ATLAS_PUBLIC_V1`, projeções, filtros, paginação, catálogo, agrupamentos e dados dos gráficos.
 - Valores científicos, incertezas, conclusões, proveniência e vínculos para evidências; nenhuma nova afirmação científica foi introduzida.
 - Autenticação, PIN, sessão, identidade, proteção de assets, ciclo de vida do iframe privado e transportes de dados.
-- Rotas e destinos existentes; handlers funcionais permanecem, exceto o comportamento local de foco e fechamento das preferências.
+- Rotas e destinos científicos existentes; o atalho público para o privado foi retirado por solicitação do proprietário. Handlers funcionais permanecem, exceto o comportamento local de foco e fechamento das preferências.
 - Dependências, lockfiles, CI, deploy, configuração de ambientes e código científico do TCC.
 - O escopo de código concentra-se em CSS, imports locais de fontes e estrutura de preferências; a lista definitiva de arquivos deve ser lida no diff do PR.
 
@@ -84,9 +84,10 @@ Essa igualdade refere-se a `dist/client/atlas-public.json`; não representa uma 
 | Snapshot de Pages final | `PAGES_PUBLIC_READY`; **673096 bytes**, 169 testes na projeção e 0 campanhas. Hash e tamanho acima iguais ao baseline. A projeção foi gerada após o build final. |
 | Rotas públicas publicadas | 19 estudos + método + publicações: **21/21 HTTP 200**. Os 19 estudos também carregaram no navegador, e seus títulos coincidiram na V2. |
 | `nexo-one` | Sete arquivos de testes selecionados aprovados; build privado com **107 assets** e `style:lint` aprovado. Não equivale à execução completa de toda a suíte privada. |
-| Revisão independente | Correções aplicadas: texto `--on-cyan`, preferências estáticas até 900 px e interrupção da propagação de `Escape`. |
+| Revisão independente | Correções aplicadas: contraste de ações, preferências estáticas até 900 px e interrupção da propagação de `Escape`. A revisão final restaura os acentos originais e remove a entrada privada do público. |
 | Checagem visual | Capturas reais de homepage, mapa, figuras, investigação, método, publicações, grafo privado e testes. Temas claro/escuro e larguras CSS 320, 390 e 768 px conferidos em fluxos representativos. |
 | Interações no navegador | Preferências, PT-BR/EN, tema, pausa, Escape em dois níveis, seleção de medida e fechamento do diálogo, busca de teste sintético, detalhe de teste, inspetor do grafo e navegação interna exercitados. |
+| Remoção do acesso privado público | Homepage, 19 investigações, método e publicações: **22 páginas renderizadas, zero links para a área privada**, incluindo o menu móvel da homepage. |
 
 Comandos de referência para repetir as verificações públicas, em `nexo-atlas/`:
 
