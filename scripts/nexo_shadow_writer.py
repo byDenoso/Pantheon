@@ -351,13 +351,14 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     seen = {}
     pending = []
     invalid_ids = set()
+    malformed_plain = []
     counts = {"eligible": 0, "written": 0, "invalid": 0, "legacy": 0,
               "plain": 0, "duplicate": 0, "attempted_before": 0, "reconciled": 0,
               "unresolved": 0, "conflict": 0, "quarantined": 0,
               "readback_batches": 0, "batch_acknowledged": 0, "tail_readback_tabs": 0,
               "tail_readback_fallbacks": 0,
               "preexisting_invalid": 0, "preexisting_quarantined": 0,
-              "new_failures": 0,
+              "new_failures": 0, "isolated_schema_collisions": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
 
     legacy_rows = page_rows(session, SPOOL, LEGACY_TAB, "E")
@@ -408,6 +409,34 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
                 counts['preexisting_invalid'] += 1
             if row and isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
+                if (len(row) >= 4 and row[3] in TABS
+                        and (len(row) <= 14 or not row[14])):
+                    malformed_plain.append((number, row[0], row[3]))
+
+    # An unmarked malformed row can share its ID with a fresh valid row. If
+    # neither has been applied, quarantine BOTH sources without choosing one.
+    # This changes only spool state cells; neither payload is rewritten and
+    # no scientific append occurs. All other collisions stay fail-closed.
+    if apply:
+        for number, stable_id, tab in malformed_plain:
+            if sum(other_id == stable_id for _, other_id, _ in malformed_plain) != 1:
+                continue
+            twins = [item for item in pending
+                     if item["data"]["stable_id"] == stable_id
+                     and item["data"]["tab"] == tab]
+            index = stored[tab]
+            if (len(twins) != 1 or twins[0]["state"]
+                    or stable_id in index or stable_id in index.conflicts):
+                continue
+            if twins[0]["mark_tab"] != PLAIN_TAB or twins[0]["mark_column"] != "O":
+                continue
+            mark(session, PLAIN_TAB, "O", number, "INVALID:SCHEMA_ID_COLLISION")
+            mark(session, PLAIN_TAB, "O", twins[0]["number"],
+                 "INVALID:UNRESOLVED_SOURCE_COLLISION")
+            twins[0]["state"] = "INVALID:UNRESOLVED_SOURCE_COLLISION"
+            invalid_ids.discard(stable_id)
+            counts["preexisting_invalid"] += 1
+            counts["isolated_schema_collisions"] += 1
 
     # Validate all identities before the first side effect. Otherwise the first
     # colliding proposal could be applied before the second exposes the conflict.
