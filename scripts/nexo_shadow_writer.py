@@ -426,7 +426,7 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
                      and item["data"]["tab"] == tab]
             index = stored[tab]
             if (len(twins) != 1 or twins[0]["state"]
-                    or stable_id in index or stable_id in index.conflicts):
+                    or stable_id in index or stable_id in getattr(index, 'conflicts', ())):
                 continue
             if twins[0]["mark_tab"] != PLAIN_TAB or twins[0]["mark_column"] != "O":
                 continue
