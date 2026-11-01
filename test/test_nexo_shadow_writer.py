@@ -179,6 +179,47 @@ class Recovery(unittest.TestCase):
         self.assertEqual(counts['conflict'],2); self.assertEqual(counts['written'],1)
         self.assertNotIn(a['stable_id'],s.records['MURAL'])
 
+    def test_malformed_collision_isolated_without_emitting_either_variant(self):
+        colliding = _recovery_data('malformed-collision-identity')
+        malformed = _recovery_plain(colliding)
+        malformed[12] = 'unexpected_trailing_payload'
+        clean = _recovery_data('unrelated-clean-event')
+        counts, session = self.invoke([malformed, _recovery_plain(colliding),
+                                       _recovery_plain(clean)])
+        self.assertEqual(counts['isolated_schema_collisions'], 1)
+        self.assertEqual(counts['written'], 1)
+        self.assertEqual(counts['conflict'], 0)
+        self.assertEqual(counts['preexisting_invalid'], 1)
+        self.assertEqual(counts['preexisting_quarantined'], 1)
+        self.assertEqual(session.marks[:2], [
+            (2, 'INVALID:SCHEMA_ID_COLLISION'),
+            (3, 'INVALID:UNRESOLVED_SOURCE_COLLISION'),
+        ])
+        self.assertNotIn(colliding['stable_id'], session.records['MURAL'])
+        self.assertEqual(w.result_status(counts, True), 'READBACK_VERIFIED')
+
+    def test_malformed_collision_remains_blocked_in_read_only_preflight(self):
+        colliding = _recovery_data('malformed-collision-preflight')
+        malformed = _recovery_plain(colliding)
+        malformed[12] = 'unexpected_trailing_payload'
+        counts, session = self.invoke([malformed, _recovery_plain(colliding)],
+                                      apply=False)
+        self.assertEqual(counts['isolated_schema_collisions'], 0)
+        self.assertEqual(counts['conflict'], 1)
+        self.assertEqual(session.marks, [])
+        self.assertEqual(session.posts, [])
+
+    def test_malformed_collision_with_existing_target_is_not_autocorrected(self):
+        colliding = _recovery_data('malformed-collision-with-target')
+        malformed = _recovery_plain(colliding)
+        malformed[12] = 'unexpected_trailing_payload'
+        counts, session = self.invoke([malformed, _recovery_plain(colliding)],
+            records={'MURAL': {colliding['stable_id']: tuple(colliding['values'])},
+                     'RESULTADOS': {}})
+        self.assertEqual(counts['isolated_schema_collisions'], 0)
+        self.assertEqual(counts['conflict'], 1)
+        self.assertEqual(session.marks, [])
+
     def test_target_content_conflict_does_not_stop_other_identity(self):
         a=_recovery_data(); b=_recovery_data('event-independent'); other=_recovery_data(text='prior')
         counts,s=self.invoke([_recovery_plain(a),_recovery_plain(b)],records={'MURAL':{a['stable_id']:tuple(other['values'])},'RESULTADOS':{}})
