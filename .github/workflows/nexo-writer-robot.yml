@@ -4,7 +4,7 @@ name: NEXO Writer robot
 # Runs in this public repository (no Actions minutes quota). No proposal content is ever printed.
 on:
   schedule:
-    - cron: '7,22,37,52 * * * *'   # off-peak minutes every 15 min: GitHub drops some scheduled runs under load (21:07-22:07 UTC were all lost), so a miss costs 15 min, not 1 h; proposals still wake it instantly
+    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'   # 5-minute recovery cadence; existing push wakeups remain unchanged; GitHub schedule is best-effort
   workflow_dispatch:
     inputs:
       autonomy_preparation_revision:
