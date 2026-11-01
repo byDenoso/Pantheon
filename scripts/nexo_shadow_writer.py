@@ -181,6 +181,33 @@ def mark(session, tab, column, number, value):
     if values(session, SPOOL, a1) != [[value]]:
         raise RuntimeError("STATE_READBACK_FAILED")
 
+def mark_applied_batch(session, entries):
+    """Acknowledge target-verified appends using one Sheets write and readback.
+
+    Each target row has ALREADY passed exact-content verification. A failed or
+    ambiguous batch acknowledgement is never retried here: on the next run
+    CLAIMED rows reconcile against the canonical target before marking APPLIED.
+    """
+    if not entries:
+        return
+    ranges = [f"'{tab}'!{column}{number}" for tab, column, number, _ in entries]
+    payload = {"valueInputOption": "RAW", "data": [
+        {"range": a1, "majorDimension": "ROWS", "values": [[state]]}
+        for a1, (_, _, _, state) in zip(ranges, entries)
+    ]}
+    response = session.post(f"{API}/{SPOOL}/values:batchUpdate",
+                            json=payload, timeout=60)
+    response.raise_for_status()
+    response = safe_get(session, f"{API}/{SPOOL}/values:batchGet",
+                        params={"ranges": ranges, "valueRenderOption": "UNFORMATTED_VALUE"},
+                        timeout=60)
+    readbacks = response.json().get("valueRanges", [])
+    if (len(readbacks) != len(entries) or
+            any(item.get("values", []) != [[entry[3]]]
+                for item, entry in zip(readbacks, entries))):
+        raise RuntimeError("STATE_READBACK_FAILED")
+
+
 def match_target(index, data):
     if data["stable_id"] in getattr(index, "conflicts", ()):
         raise IdentityConflict("DUPLICATE_TARGET_ID")
@@ -267,7 +294,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
     mark(session, mark_tab, mark_column, number, applied)
     counts["written"] += 1
 
-def flush_verified_appends(session, stored, counts, queued):
+def flush_verified_appends(session, stored, counts, queued, *, batch_applied=False):
     """Verify acknowledged, individually reserved appends without repeated full scans.
 
     Only use a narrow tail range when it contains exactly the rows we appended,
@@ -305,14 +332,21 @@ def flush_verified_appends(session, stored, counts, queued):
     for data, _, _, _, _ in queued:
         if not match_target(refreshed[data["tab"]], data):
             raise RuntimeError("WRITE_READBACK_UNKNOWN")
-    for data, digest, mark_tab, mark_column, number in queued:
-        mark(session, mark_tab, mark_column, number, "APPLIED:" + digest)
-        counts["written"] += 1
+    if batch_applied and len(queued) > 1:
+        mark_applied_batch(session, [
+            (mark_tab, mark_column, number, "APPLIED:" + digest)
+            for _, digest, mark_tab, mark_column, number in queued
+        ])
+        counts["batch_acknowledged"] += len(queued)
+    else:
+        for data, digest, mark_tab, mark_column, number in queued:
+            mark(session, mark_tab, mark_column, number, "APPLIED:" + digest)
+    counts["written"] += len(queued)
     stored.update(refreshed)
     counts["readback_batches"] += 1
     queued.clear()
 
-def run(session, *, apply=False, snapshot=None):
+def run(session, *, apply=False, snapshot=None, batch_applied=False):
     stored = {tab: target_index(session, tab) for tab in TABS}
     seen = {}
     pending = []
@@ -320,7 +354,7 @@ def run(session, *, apply=False, snapshot=None):
     counts = {"eligible": 0, "written": 0, "invalid": 0, "legacy": 0,
               "plain": 0, "duplicate": 0, "attempted_before": 0, "reconciled": 0,
               "unresolved": 0, "conflict": 0, "quarantined": 0,
-              "readback_batches": 0, "tail_readback_tabs": 0,
+              "readback_batches": 0, "batch_acknowledged": 0, "tail_readback_tabs": 0,
               "tail_readback_fallbacks": 0,
               "preexisting_invalid": 0, "preexisting_quarantined": 0,
               "new_failures": 0,
@@ -418,7 +452,8 @@ def run(session, *, apply=False, snapshot=None):
                 _process(session, stored, seen, counts, **item, apply=apply,
                          queued=readback_queue)
                 if len(readback_queue) >= READBACK_BATCH_SIZE:
-                    flush_verified_appends(session, stored, counts, readback_queue)
+                    flush_verified_appends(session, stored, counts, readback_queue,
+                                       batch_applied=batch_applied)
             except IdentityConflict:
                 counts["conflict"] += 1
             except AppliedReadbackMissing:
@@ -427,7 +462,8 @@ def run(session, *, apply=False, snapshot=None):
                 counts["invalid"] += 1
             # Authentication, transport and unknown failures still stop this run.
             # No retry, alternative route or lost-receipt replay is introduced.
-    flush_verified_appends(session, stored, counts, readback_queue)
+    flush_verified_appends(session, stored, counts, readback_queue,
+                                       batch_applied=batch_applied)
     mural_rows = list(stored['MURAL'].values())
     if any(len(row) == 8 and isinstance(row[3], str) and
            row[3].startswith('NEXO_CURATION_V1 ') and row[5] == 'PEDIDO_CURADORIA'
@@ -509,7 +545,7 @@ def main():
     operations = 'NOT_REQUESTED'
     try:
         with AuthorizedSession(creds) as session:
-            result = run(session, apply=flag, snapshot=snapshot)
+            result = run(session, apply=flag, snapshot=snapshot, batch_applied=flag)
             if args.operations and flag:
                 try:
                     if __package__:
