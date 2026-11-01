@@ -44,6 +44,8 @@ jobs:
         env:
           VITE_PUBLIC_API_URL: /atlas-public.json
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app/#/privado
+          # Owner selection from the private cockpit (/cockpit on the nexo-one backend).
+          VITE_PUBLIC_SELECTION_URL: https://nexo-one-two.vercel.app/api/atlas-public-selection
         run: |
           set -euo pipefail
           npm run check
