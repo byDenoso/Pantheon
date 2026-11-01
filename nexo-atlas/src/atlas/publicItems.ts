@@ -3,6 +3,7 @@ import {guardPublicCampaigns, type PublicCampaign} from './canonicalPublicCampai
 // allowlist: whatever the API returns is shown only if it passes this guard, and an
 // empty list renders the "not approved yet" state. Nothing is bundled.
 import {fetchPublic, ApiError, isObj, type Fetch, type Locale} from './api.ts';
+import {SELECTION_URL, applySelection, fetchSelection} from './publicSelection.ts';
 import {isCompletePublicTest} from './publicCompleteness.ts';
 import {guardVisual,visualsForTest,type PublicVisual} from './publicVisuals.ts';
 
@@ -85,17 +86,32 @@ export function guardTests(raw: unknown[]): PublicTest[] {
   return out;
 }
 
-export type PublicState = {status: 'loading' | 'empty' | 'ready' | 'unavailable'; items: PublicItem[]; tests: PublicTest[]; campaigns?: PublicCampaign[]; coverage?: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE'; generatedAt?: string; visuals?:PublicVisual[]};
+export type PublicState = {status: 'loading' | 'empty' | 'ready' | 'unavailable'; items: PublicItem[]; tests: PublicTest[]; selection?: 'LIVE'; campaigns?: PublicCampaign[]; coverage?: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE'; generatedAt?: string; visuals?:PublicVisual[]};
 
-export async function loadPublic(fetchImpl: Fetch, signal?: AbortSignal): Promise<PublicState> {
+export async function loadPublic(fetchImpl: Fetch, signal?: AbortSignal, selectionUrl: string = SELECTION_URL): Promise<PublicState> {
   try {
-    const payload = await fetchPublic(fetchImpl, signal);
+    let payload = await fetchPublic(fetchImpl, signal);
+    // Owner selection from the private cockpit. Configured URL + unreadable selection = unavailable (fail closed).
+    let live: {campaigns: unknown[]; updatedAt?: string} | null = null;
+    if (selectionUrl) {
+      const selection = await fetchSelection(fetchImpl, selectionUrl, signal);
+      if (selection.mode === 'LIVE') { const applied = await applySelection(payload, selection); payload = applied.payload; live = {campaigns: applied.campaigns ?? [], updatedAt: applied.updatedAt}; }
+    }
     const items = guardItems(payload.items);
     const tests = guardTests(payload.tests ?? []);
-    const visuals=(payload.visuals??[]).map(guardVisual);
-    if(visuals.some(v=>!v)||new Set(visuals.map(v=>v!.id)).size!==visuals.length)throw new ApiError('CONTRACT',200);
+    const guarded=(payload.visuals??[]).map(guardVisual);
+    if(guarded.some(v=>!v)||new Set(guarded.map(v=>v!.id)).size!==guarded.length)throw new ApiError('CONTRACT',200);
+    // A hidden study takes its figures with it; the selection never invents a figure.
+    const visuals=live?(guarded as PublicVisual[]).filter(v=>v.subject.kind==='legacy-test'&&tests.some(t=>visualsForTest([v],t).length)):guarded;
     const visualFields=payload.visuals===undefined?{}:{visuals:visuals as PublicVisual[]};
     const verifyVisuals=(campaigns:PublicCampaign[]=[])=>{for(const v of visuals as PublicVisual[]){const s=v.subject;if(s.kind==='legacy-test'){if(!tests.some(t=>visualsForTest([v],t).length))throw new ApiError('CONTRACT',200);}else{const t=campaigns.find(c=>c.id===s.campaignId)?.tests.find(t=>t.id===s.testId);if(t?.stage!=='REVIEWED'||!t.result||t.updatedAt!==s.updatedAt||JSON.stringify(t.result)!==JSON.stringify(s.result))throw new ApiError('CONTRACT',200);}}};
+    if (live) {
+      const campaigns = guardPublicCampaigns(live.campaigns);
+      if (campaigns.length !== live.campaigns.length) throw new ApiError('CONTRACT', 200);
+      verifyVisuals(campaigns);
+      if (campaigns.length) return {status: 'ready', selection: 'LIVE', items, tests, campaigns, coverage: 'COMPLETE', generatedAt: live.updatedAt, ...visualFields};
+      return items.length || tests.length ? {status: 'ready', selection: 'LIVE', items, tests, ...visualFields} : {status: 'empty', selection: 'LIVE', items: [], tests: [], ...visualFields};
+    }
     if (payload.campaigns !== undefined) {
       const campaigns = guardPublicCampaigns(payload.campaigns);
       if (campaigns.length !== payload.campaigns.length) throw new ApiError('CONTRACT', 200);
@@ -106,6 +122,7 @@ export async function loadPublic(fetchImpl: Fetch, signal?: AbortSignal): Promis
     return items.length || tests.length ? {status: 'ready', items, tests,...visualFields} : {status: 'empty', items: [], tests: [],...visualFields};
   } catch (e) {
     if (e instanceof ApiError && e.code === 'ABORTED') throw e;
+    if (signal?.aborted) throw new ApiError('ABORTED', 0);
     // No bundled example, private record or inferred result is used as a fallback.
     return {status: 'unavailable', items: [], tests: []};
   }

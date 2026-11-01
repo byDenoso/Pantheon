@@ -21,6 +21,7 @@ export default defineConfig(({command}) => ({
         main: 'index.html',
         mcp: 'mcp/index.html',
         atlas3d: 'atlas3d/index.html',
+        cockpit: 'cockpit.html',
       },
     },
   },

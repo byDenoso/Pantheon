@@ -3,6 +3,7 @@ import {operationalPrincipal} from '../mcp/operational-auth.mjs';
 import {atlasAuthenticated,atlasSameOrigin,atlasSessionRoute} from '../auth/atlas-session.mjs';
 import {publicCampaignAtlas} from './public-campaign-route.mjs';
 import {googleRuntimeEnvironment} from '../adapters/connect.mjs';
+import {publicSelectionView} from './cockpit-route.mjs';
 // Approval is explicit and code-reviewed. No Tower/source fields are approved.
 // Never project arbitrary input by deleting a list of known-sensitive fields.
 export function publicAtlas(){return {contract:'ATLAS_PUBLIC_V1',items:[],links:[]};}
@@ -11,6 +12,13 @@ export const AUTH_ROUTES=new Set(['session','google-drive-return']);
 export async function atlasBoundary(req,env,{route,body={},now=Date.now(),store}={}){
   if(route==='atlas-locale')return {status:req.method==='GET'?200:405,body:req.method==='GET'?atlasLocale(req,env):{error:'METHOD_NOT_ALLOWED'}};
   if(route==='atlas-public')return req.method !== 'GET' ? {status:405,body:{error:'METHOD_NOT_ALLOWED'}} : (env.NEXO_PUBLIC_CAMPAIGNS_FILE || env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID) ? publicCampaignAtlas(googleRuntimeEnvironment(env,req.headers)) : {status:200,body:publicAtlas()};
+  // Owner-approved public selection (cockpit). Anonymous read of approved public text only;
+  // it never reads Drive and carries no source row, digest or audit data.
+  if(route==='atlas-public-selection'){
+    if(req.method!=='GET')return {status:405,body:{error:'METHOD_NOT_ALLOWED'}};
+    const view=await publicSelectionView({env,...(store?{store}:{})});
+    return {...view,headers:view.status===200?{'Cache-Control':'public, max-age=0, must-revalidate','CDN-Cache-Control':'max-age=10, stale-while-revalidate=30','Vercel-CDN-Cache-Control':'max-age=10, stale-while-revalidate=30',Vary:'Origin'}:{}};
+  }
   if(route==='atlas-session')return atlasSessionRoute(req,env,now,body,store);
   // These existing machine handlers must still apply their own independent OIDC
   // verification. This exception never grants browser/session access to them.
