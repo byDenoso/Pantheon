@@ -76,5 +76,79 @@ class TestIncrementalReadback(unittest.TestCase):
         self.assertTrue(w.match_target(index, a))
 
 
+
+class TestBatchAppliedMarkers(unittest.TestCase):
+    class Response:
+        status_code = 200
+
+        def __init__(self, data=None):
+            self.data = data or {}
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.data
+
+    class Session:
+        def __init__(self, mismatch=False):
+            self.writes = []
+            self.reads = []
+            self.mismatch = mismatch
+
+        def post(self, url, **kwargs):
+            self.writes.append((url, kwargs))
+            return TestBatchAppliedMarkers.Response()
+
+        def get(self, url, **kwargs):
+            self.reads.append((url, kwargs))
+            states = [item["values"] for item in self.writes[0][1]["json"]["data"]]
+            if self.mismatch:
+                states[-1] = [["CLAIMED:old"]]
+            return TestBatchAppliedMarkers.Response({
+                "valueRanges": [{"values": state} for state in states]
+            })
+
+    def test_batch_ack_requires_exact_readback(self):
+        session = self.Session()
+        entries = [(w.PLAIN_TAB, "O", 12, "APPLIED:first"),
+                   (w.PLAIN_TAB, "O", 13, "APPLIED:second")]
+        w.mark_applied_batch(session, entries)
+        self.assertEqual(len(session.writes), 1)
+        self.assertEqual(len(session.reads), 1)
+        self.assertTrue(session.writes[0][0].endswith("/values:batchUpdate"))
+        self.assertTrue(session.reads[0][0].endswith("/values:batchGet"))
+        self.assertEqual(session.writes[0][1]["json"]["valueInputOption"], "RAW")
+        self.assertEqual(session.reads[0][1]["params"]["ranges"],
+                         ["'SHADOW_V2'!O12", "'SHADOW_V2'!O13"])
+
+    def test_ambiguous_batch_ack_fails_closed_without_replay(self):
+        session = self.Session(mismatch=True)
+        entries = [(w.PLAIN_TAB, "O", 12, "APPLIED:first"),
+                   (w.PLAIN_TAB, "O", 13, "APPLIED:second")]
+        with self.assertRaisesRegex(RuntimeError, "STATE_READBACK_FAILED"):
+            w.mark_applied_batch(session, entries)
+        self.assertEqual(len(session.writes), 1)
+        self.assertEqual(len(session.reads), 1)
+
+    def test_verified_target_uses_one_batch_ack(self):
+        stored = w.TargetIndex()
+        stored.last_row = 20
+        a, b = event("readback-one"), event("readback-two")
+        queue = [(a, "digest-a", w.PLAIN_TAB, "O", 15),
+                 (b, "digest-b", w.PLAIN_TAB, "O", 16)]
+        counts = counters()
+        counts["batch_acknowledged"] = 0
+        with patch.object(w, "values", return_value=[a["values"], b["values"]]), \
+             patch.object(w, "mark_applied_batch") as batch, \
+             patch.object(w, "mark", side_effect=AssertionError("no scalar ack")):
+            w.flush_verified_appends(None, {"MURAL": stored}, counts, queue,
+                                     batch_applied=True)
+        batch.assert_called_once()
+        self.assertEqual(counts["written"], 2)
+        self.assertEqual(counts["batch_acknowledged"], 2)
+        self.assertEqual(len(queue), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
