@@ -86,8 +86,8 @@ export default function PublicApp() {
             {catalogOpen&&<>
             {pub.status === 'ready' && pub.campaigns !== undefined && pub.campaigns.length > 0 && <PublicCampaignsView campaigns={pub.campaigns} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage} visuals={pub.visuals}/>}
             {pub.status==='ready'&&pub.campaigns?.length===0&&<p>{locale==='en'?'The investigations are awaiting publication of an update.':'As investigações aguardam a publicação de uma atualização.'}</p>}
-            {pub.status === 'ready' && pub.campaigns === undefined && pub.tests.length > 0 && <h3>{locale === 'pt-BR' ? 'Resultados publicados' : 'Published results'}</h3>}
-            {pub.status === 'ready' && pub.campaigns === undefined && pub.tests.length > 0 && <PublicTestList tests={pub.tests} locale={locale} visuals={pub.visuals}/>}
+            {pub.status === 'ready' && (pub.campaigns === undefined || pub.selection === 'LIVE') && pub.tests.length > 0 && <h3>{locale === 'pt-BR' ? 'Resultados publicados' : 'Published results'}</h3>}
+            {pub.status === 'ready' && (pub.campaigns === undefined || pub.selection === 'LIVE') && pub.tests.length > 0 && <PublicTestList tests={pub.tests} locale={locale} visuals={pub.visuals}/>}
             {pub.status === 'ready' && pub.items.map(it => (
               <article key={it.id} className="atlas-item">
                 <span className="atlas-kind">{m.kinds[it.kind]}</span>

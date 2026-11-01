@@ -7,7 +7,7 @@ import {researchEntries} from '../researchExplorer.ts';
 
 export default function ResearchLaunch({pub,locale,explore}:{pub:PublicState;locale:Locale;explore:(tab:string)=>void}) {
   const en=locale==='en',entries=useMemo(()=>researchEntries(pub),[pub]);
-  const records=pub.campaigns!==undefined?pub.campaigns.reduce((n,c)=>n+c.tests.length,0):pub.tests.length;
+  const records=pub.campaigns!==undefined?pub.campaigns.reduce((n,c)=>n+c.tests.length,0)+(pub.selection==='LIVE'?pub.tests.length:0):pub.tests.length;
   const links=[{id:'map',title:en?'Explore questions':'Explore as perguntas',body:en?'Follow the connections':'Navegue pelas conexões',icon:'map'}, {id:'figures',title:en?'See the figures':'Veja as figuras',body:en?'Read the published values':'Leia os valores publicados',icon:'plot'}, {id:'compare',title:en?'Compare studies':'Compare os estudos',body:en?'Methods, results and limits':'Métodos, resultados e limites',icon:'compare'}];
   return <div className="nexo-research-launch">
     <div className="nexo-launch-records"><p className="atlas-eyebrow">{en?'Public research':'Pesquisa pública'}</p>{pub.status==='ready'?<p><strong>{publicCount(pub,entries.length,en)}</strong> {en?'questions':'perguntas'}<span aria-hidden="true"> / </span><strong>{publicCount(pub,records,en,true)}</strong> {en?'analyses':'análises'}</p>:<p>{pub.status==='loading'?(en?'Loading the public catalog…':'Carregando o catálogo público…'):(en?'Open the research catalog':'Abra o catálogo de pesquisa')}</p>}</div>

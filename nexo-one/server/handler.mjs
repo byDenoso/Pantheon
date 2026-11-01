@@ -2,6 +2,7 @@ import {encodePrivateResponse} from './atlas/private-response.mjs';
 import {readPrivateUiAsset} from './atlas/private-assets.mjs';
 import {readAtlasPrivatePublication} from './atlas/private-source.mjs';
 import {readAtlasPrivateShadow} from './atlas/private-shadow-source.mjs';
+import {cockpitView,saveCockpitSelection} from './atlas/cockpit-route.mjs';
 import {atlasBoundary} from './atlas/boundary.mjs';
 import {inboxDrop,inboxRobot} from './inbox-gateway.mjs';
 import {toNodeHandler} from '@modelcontextprotocol/node';
@@ -118,11 +119,11 @@ async function readPublishedTowerSystem({env=process.env,signal,now=Date.now(),f
   publishedSystemCache={key,expiresAt:0,value:publishedSystemCache.key===key?publishedSystemCache.value:null,inflight};
   return inflight;
 }
-async function requestBody(req){
+async function requestBody(req,limit=65536){
   if(req.body&&typeof req.body==='object'&&!Buffer.isBuffer(req.body))return req.body;
   if(typeof req.body==='string'){try{return JSON.parse(req.body);}catch{return {};}}
   if(!req||typeof req[Symbol.asyncIterator]!=='function')return {};
-  let raw='';for await(const chunk of req){raw+=Buffer.from(chunk).toString('utf8');if(raw.length>65536)throw new Error('REQUEST_BODY_TOO_LARGE');}
+  let raw='';for await(const chunk of req){raw+=Buffer.from(chunk).toString('utf8');if(raw.length>limit)throw new Error('REQUEST_BODY_TOO_LARGE');}
   if(!raw.trim())return {};try{return JSON.parse(raw);}catch{throw new Error('INVALID_JSON');}
 }
 function personalError(error){
@@ -141,7 +142,7 @@ export default async function handler(req,res) {
   const url=new URL(req.url,'http://local'),path=url.pathname.replace(/\/+$/,''),route=path.startsWith('/api/atlas-private-assets/')?'atlas-private-asset':url.searchParams.get('route')||(path.endsWith('/mcp/status')?'mcp/status':path.endsWith('/personal/action')?'personal-action':path.split('/').pop());
   // Only the public campaign catalogue is readable from the static Pages site.
   // Private routes retain their existing same-origin authentication boundary.
-  if(route==='atlas-public' && ['https://nexoresearch.org','https://www.nexoresearch.org','https://bydenoso.github.io'].includes(String(req.headers.origin||''))){
+  if((route==='atlas-public'||route==='atlas-public-selection') && ['https://nexoresearch.org','https://www.nexoresearch.org','https://bydenoso.github.io'].includes(String(req.headers.origin||''))){
     res.setHeader('Access-Control-Allow-Origin',req.headers.origin);
     res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
     if(req.method==='OPTIONS'){res.statusCode=204;return res.end();}
@@ -152,6 +153,7 @@ export default async function handler(req,res) {
     const boundary=await atlasBoundary(req,env,{route,now,body:route==='atlas-session'?await requestBody(req):{}});
     if(boundary){
       if(boundary.setCookie)res.setHeader('Set-Cookie',boundary.setCookie);
+      for(const [name,value] of Object.entries(boundary.headers||{}))res.setHeader(name,value);
       if(boundary.status===429)res.setHeader('Retry-After','900');
       return send(boundary.body,boundary.status);
     }
@@ -200,6 +202,19 @@ export default async function handler(req,res) {
         res.statusCode=200;return res.end(encoded.bytes);
       }
       catch(error){console.error('atlas-private',error?.message);return send({error:'PRIVATE_SOURCE_UNAVAILABLE'},503);}
+    }
+    // Private cockpit: owner session already verified by atlasBoundary (writes also same-origin).
+    if(route==='atlas-cockpit'||route==='atlas-cockpit-selection'){
+      const readShadow=()=>readAtlasPrivateShadow(googleRuntimeEnvironment(env,req.headers));
+      if(route==='atlas-cockpit'){
+        if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
+        try{return send(await cockpitView({env,readShadow}));}catch{return send({error:'COCKPIT_UNAVAILABLE'},503);}
+      }
+      if(req.method!=='PUT')return send({error:'METHOD_NOT_ALLOWED'},405);
+      if((String(req.headers['content-type']||'').split(';')[0].trim().toLowerCase())!=='application/json')return send({error:'JSON_REQUIRED'},415);
+      let body;try{body=await requestBody(req,1024*1024);}catch(error){return send({error:error?.message==='REQUEST_BODY_TOO_LARGE'?'REQUEST_BODY_TOO_LARGE':'INVALID_JSON'},error?.message==='REQUEST_BODY_TOO_LARGE'?413:400);}
+      try{const result=await saveCockpitSelection(body,{env,readShadow});return send(result.body,result.status);}
+      catch{return send({error:'SELECTION_STORE_UNAVAILABLE'},503);}
     }
     if(route==='inbox-drop'){try{const [value,status]=await inboxDrop(url,env,req);return send(value,status);}catch(error){return send({ok:false,error:String(error?.message||error).slice(0,120)},502);}}
     if(route==='inbox-list'||route==='inbox-ack'){const [value,status]=await inboxRobot(route,url,req,env);return send(value,status);}

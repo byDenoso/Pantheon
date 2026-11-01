@@ -16,7 +16,9 @@ export function assertPublicDataPublicationAllowed() {
 }
 
 export function isPublicShellFile(file) {
-  return ['index.html', 'atlas3d/index.html', 'mcp/index.html', '.nojekyll', 'public-campaigns.json',
+  // cockpit.html is an empty, noindex shell: every byte of cockpit data comes from the
+  // authenticated same-origin API, never from the build.
+  return ['index.html', 'cockpit.html', 'atlas3d/index.html', 'mcp/index.html', '.nojekyll', 'public-campaigns.json',
     'google-drive-connect.html', 'google-drive-connect.js', 'google-drive-connect.css'].includes(file)
     || /^assets\/[A-Za-z0-9_.-]+\.(?:js|css|woff2?|ttf|svg|png|jpe?g|webp|gif|ico)$/.test(file)
     || file === 'vendor/g6.min.js';
