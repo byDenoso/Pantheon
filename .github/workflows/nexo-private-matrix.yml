@@ -1,0 +1,58 @@
+name: NEXO private matrix gateway
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_id:
+        description: Reviewed private execution manifest Drive ID
+        type: string
+        required: true
+      manifest_sha256:
+        description: Reviewed private execution manifest SHA256
+        type: string
+        required: true
+      campaign:
+        type: choice
+        options: [B5, B6]
+        required: true
+      model:
+        type: choice
+        options: [peer, lcdm]
+        required: true
+      replica:
+        type: choice
+        options: ['1', '2']
+        required: true
+      mode:
+        type: choice
+        options: [preflight, segment]
+        default: preflight
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: private-matrix-${{ inputs.campaign }}-${{ inputs.model }}-${{ inputs.replica }}
+  cancel-in-progress: false
+jobs:
+  gated:
+    # No dependency installation is performed. Runtime qualification and registry
+    # permission must be resolved separately before this workflow can pass.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.14'
+      - name: Verify private binding and evaluate real joint point before segment
+        env:
+          MANIFEST_ID: ${{ inputs.manifest_id }}
+          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+          CAMPAIGN: ${{ inputs.campaign }}
+          MODEL: ${{ inputs.model }}
+          REPLICA: ${{ inputs.replica }}
+          MODE: ${{ inputs.mode }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          OMP_NUM_THREADS: '1'
+        run: python scripts/private_matrix_gateway.py
