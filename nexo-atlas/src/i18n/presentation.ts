@@ -30,8 +30,8 @@ export const PRESENTATION: Record<Locale, Presentation> = {
       lead: 'Simulações e análise estatística para avaliar como os modelos se ajustam aos dados.',
       steps: [
         {title: 'Dados', body: 'Observações escolhidas conforme a questão que está sendo estudada.'},
-        {title: 'Cálculos', body: 'CAMB para calcular previsões dos modelos cosmológicos.'},
-        {title: 'Ajuste', body: 'Amostragem MCMC para estimar parâmetros a partir dos dados.'},
+        {title: 'Cálculos', body: 'Previsões teóricas com CAMB quando o teste exige.'},
+        {title: 'Ajuste', body: 'Estimativas de parâmetros, incluindo MCMC quando aplicável.'},
         {title: 'Limites', body: 'Avaliação das incertezas e das hipóteses adotadas em cada modelo.'},
       ],
     },
@@ -56,8 +56,8 @@ export const PRESENTATION: Record<Locale, Presentation> = {
       lead: 'Simulations and statistical analysis to assess how well models fit the data.',
       steps: [
         {title: 'Data', body: 'Observations selected for the question being studied.'},
-        {title: 'Calculations', body: 'CAMB calculates predictions from cosmological models.'},
-        {title: 'Parameter estimation', body: 'MCMC sampling estimates model parameters from the data.'},
+        {title: 'Calculations', body: 'CAMB calculates theoretical predictions when required by the test.'},
+        {title: 'Parameter estimation', body: 'Parameter estimation, including MCMC where applicable.'},
         {title: 'Limitations', body: 'Assessing uncertainties and the assumptions made in each model.'},
       ],
     },
