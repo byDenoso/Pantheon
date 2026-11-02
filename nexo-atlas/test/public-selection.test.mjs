@@ -47,6 +47,24 @@ test('loadPublic: LIVE selection drives tests and fronts; tests stay listed next
   assert.equal(state.campaigns[0].nextStep['pt-BR'], 'Próximo passo aprovado.');
 });
 
+test('LIVE publication time survives a selection without campaigns and preserves study dates', async () => {
+  const updatedAt = '2026-11-01T21:00:00.000Z';
+  const state = await loadPublic(fetcher({contract: 'ATLAS_PUBLIC_SELECTION_V1', mode: 'LIVE', version: 3,
+    updatedAt, include: [serverKey(rows[0])], tests: [], campaigns: []}), undefined, URL_SELECTION);
+  assert.equal(state.status, 'ready');
+  assert.equal(state.generatedAt, updatedAt);
+  assert.equal(state.tests[0].published_at, rows[0].published_at);
+  assert.equal(state.tests[0].updated_at, rows[0].updated_at ?? null);
+});
+
+test('empty LIVE selection retains its publication time', async () => {
+  const updatedAt = '2026-11-01T21:00:00.000Z';
+  const state = await loadPublic(fetcher({contract: 'ATLAS_PUBLIC_SELECTION_V1', mode: 'LIVE', version: 4,
+    updatedAt, include: [], tests: [], campaigns: []}), undefined, URL_SELECTION);
+  assert.equal(state.status, 'empty');
+  assert.equal(state.generatedAt, updatedAt);
+});
+
 test('loadPublic fails closed when the configured selection cannot be read', async () => {
   for (const response of [json({error: 'PUBLIC_SELECTION_UNAVAILABLE'}, 503), new Response('<html>', {status: 200, headers: {'content-type': 'text/html'}})]) {
     const state = await loadPublic(fetcher(response), undefined, URL_SELECTION);
