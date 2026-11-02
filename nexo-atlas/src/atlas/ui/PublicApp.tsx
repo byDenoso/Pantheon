@@ -3,16 +3,13 @@ import PublicStudyPage from './PublicStudyPage.tsx';
 import {useExplorerState} from './useExplorerState.ts';
 import {useCatalogPosition} from './useCatalogPosition.ts';
 import ArrowIcon from './ArrowIcon.tsx';
-import PublicCampaignsView from './PublicCampaignsView.tsx';
 import '../canonical-campaigns.css';
-import {lazy, Suspense, useEffect, useState} from 'react';
-import {pick} from '../publicItems.ts';
+import {lazy, Suspense, useEffect} from 'react';
 import usePublicResearch from './usePublicResearch.ts';
 import PublicResearchHub from './PublicResearchHub.tsx';
 import ResearchLaunch from './ResearchLaunch.tsx';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
-import PublicTestList from './PublicTestList.tsx';
 import Shell from './Shell.tsx';
 import {CosmologicalHero} from './CosmologicalBackdrop.tsx';
 import {goToPublicSection} from '../publicNavigation.ts';
@@ -21,6 +18,7 @@ import '../site-living.css';
 import '../game-motion.css';
 import '../public-refinement.css';
 import '../orbital-interface.css';
+import '../reading-mode.css';
 
 const CosmicWebCanvas = lazy(() => import('./CosmicWebCanvas.tsx'));
 const art = new URL('../assets/cosmic-web.png', import.meta.url).href;
@@ -32,8 +30,7 @@ export default function PublicApp() {
   const {pub,checking,pending,checkedAt,refresh}=usePublicResearch();
   const hasRequestedStudy=Boolean(requestedQuestion(window.location.pathname,window.location.search)||new URLSearchParams(window.location.search).get('campanha'));
   const [savedTab,setResearchTab]=useExplorerState<string>('tab','map');
-  const researchTab=['map','figures','updates','compare'].includes(savedTab)?savedTab:'map';
-  const [catalogOpen,setCatalogOpen]=useExplorerState<boolean>('catalog.open',false);
+  const researchTab=['map','figures','updates','compare','catalog'].includes(savedTab)?savedTab:'map';
   useCatalogPosition(pub.status==='ready',hasRequestedStudy);
   const explore=(tab:string)=>{setResearchTab(tab);goToPublicSection('works');};
 
@@ -80,28 +77,6 @@ export default function PublicApp() {
               {pub.status==='unavailable'&&<button type="button" className="atlas-text-action nexo-state-retry" disabled={checking} onClick={refresh}>{locale==='en'?'Try again':'Tentar novamente'}<ArrowIcon direction="right"/></button>}
             </div>
           </div>}
-          {pub.status==='ready'&&<>
-          <details className="nexo-study-catalog" open={catalogOpen} onToggle={event=>setCatalogOpen(event.currentTarget.open)}>
-          <summary>{locale==='en'?'Browse all published studies':'Explorar todos os estudos publicados'} <span aria-hidden="true">+</span></summary>
-          <div className="atlas-items" aria-live="polite" data-status={pub.status}>
-            {catalogOpen&&<>
-            {pub.status === 'ready' && pub.campaigns !== undefined && pub.campaigns.length > 0 && <PublicCampaignsView campaigns={pub.campaigns} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage} visuals={pub.visuals}/>}
-            {pub.status==='ready'&&pub.campaigns?.length===0&&<p>{locale==='en'?'The investigations are awaiting publication of an update.':'As investigações aguardam a publicação de uma atualização.'}</p>}
-            {pub.status === 'ready' && (pub.campaigns === undefined || pub.selection === 'LIVE') && pub.tests.length > 0 && <h3>{locale === 'pt-BR' ? 'Resultados publicados' : 'Published results'}</h3>}
-            {pub.status === 'ready' && (pub.campaigns === undefined || pub.selection === 'LIVE') && pub.tests.length > 0 && <PublicTestList tests={pub.tests} locale={locale} visuals={pub.visuals}/>}
-            {pub.status === 'ready' && pub.items.map(it => (
-              <article key={it.id} className="atlas-item">
-                <span className="atlas-kind">{m.kinds[it.kind]}</span>
-                <h3>{pick(it.title, locale)}</h3>
-                <p>{pick(it.plain, locale)}</p>
-                <details><summary>{m.technicalLabel}</summary><p>{pick(it.technical, locale)}</p></details>
-                {it.credit && <small>{m.creditLabel}: {it.credit}</small>}
-              </article>
-            ))}
-            </>}
-          </div>
-          </details>
-          </>}
         </section>
 
         <section className="atlas-section" id="s-lines" tabIndex={-1} aria-labelledby="h-lines">

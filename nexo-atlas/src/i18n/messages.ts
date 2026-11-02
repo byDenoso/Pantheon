@@ -22,8 +22,8 @@ export type Messages = {
 
 export const MESSAGES: Record<Locale, Messages> = {
   'pt-BR': {
-    brand: 'NEXO', tagline: 'Instituto de Pesquisa Nexo',
-    heroTitle: 'NEXO — Instituto de Pesquisa Nexo',
+    brand: 'NEXO', tagline: 'Cosmologia computacional',
+    heroTitle: 'NEXO · Cosmologia computacional — Dener Pereira',
     heroLead: 'O NEXO estuda a expansão do Universo e a formação de suas estruturas, comparando modelos cosmológicos com dados de observações.',
     techOpen: 'Ver detalhe técnico', techClose: 'Ocultar detalhe técnico', techTitle: 'Detalhe técnico',
     techBody: [
@@ -63,8 +63,8 @@ export const MESSAGES: Record<Locale, Messages> = {
     frameTitle: 'Atlas privado', frameUnavailable: 'A visão privada não abriu. Nenhum dado foi exibido.', frameRetry: 'Tentar de novo',
   },
   en: {
-    brand: 'NEXO', tagline: 'Nexo Cosmology Institute',
-    heroTitle: 'NEXO — Nexo Cosmology Institute',
+    brand: 'NEXO', tagline: 'Computational cosmology',
+    heroTitle: 'NEXO · Computational cosmology — Dener Pereira',
     heroLead: 'NEXO studies the expansion of the Universe and the formation of its structures by comparing cosmological models with observational data.',
     techOpen: 'Show technical detail', techClose: 'Hide technical detail', techTitle: 'Technical detail',
     techBody: [

@@ -32,7 +32,10 @@ test('public responsive rules protect typography, controls and the unchanged med
   assert.match(view,/usePublicResearch\(/);
   const monitor=readFileSync(new URL('../src/atlas/ui/usePublicResearch.ts',import.meta.url),'utf8');
   assert.match(monitor,/loadPublic\(/);
-  assert.match(view,/<PublicTestList tests=\{pub\.tests\}/);
+  // The full catalog lives in the research hub, as one of its views.
+  const hub=readFileSync(new URL('../src/atlas/ui/PublicResearchHub.tsx',import.meta.url),'utf8');
+  assert.match(hub,/<PublicTestList tests=\{pub\.tests\}/);
+  assert.doesNotMatch(view,/nexo-study-catalog/);
 });
 
 test('shared hover feedback is bounded to fine pointers and respects reduced motion',()=>{
