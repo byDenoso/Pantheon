@@ -6,7 +6,7 @@ import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client
 import handler from '../server/handler.mjs';
 import {atlasBoundary} from '../server/atlas/boundary.mjs';
 import {googleDriveConsentRoute} from '../server/auth/google-drive-consent.mjs';
-import {makeSession} from '../server/auth/session.mjs';
+import {atlasTestEnv,makeAtlasSession as makeSession,atlasTestStore} from './helpers/consent-session.fixture.mjs';
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const machineKey='synthetic-existing-machine-key';
 const machineEnv={NEXO_MCP_ACCESS_KEY_SHA256:digest(machineKey)};
@@ -37,14 +37,14 @@ test('signed Writer OIDC passes MCP scope; invalid claims and signatures fail cl
   for(const change of [{aud:'wrong'},{exp:now-1},{repository:'synthetic/fork'},{ref:'refs/heads/untrusted'},{workflow_ref:'byDenoso/Pantheon/.github/workflows/other.yml@refs/heads/main'}])assert.equal((await atlasBoundary(nodeReq('Bearer '+token(change)),{},{route:'mcp'})).status,401);
 });
 test('OAuth callback accepts only signed nonce-bound return, without granting session/data access',async t=>{
-  const now=Date.now();const env={NEXO_SESSION_SECRET:'synthetic-session-secret-at-least-32-characters',NEXO_PASSWORD_HASH:'configured',GOOGLE_CONNECTOR:'google/alizarin-saddle',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_OIDC_TOKEN:'synthetic-oidc',VERCEL_ENV:'production'};install(t,env);
-  const req={method:'GET',url:'/api/google-drive-consent',headers:{host:'nexo-one-two.vercel.app',origin:'https://nexo-one-two.vercel.app',cookie:'nexo_session='+makeSession(env,now)}};
-  const ready=await googleDriveConsentRoute(req,env,now);let callback;
-  const start=await googleDriveConsentRoute({...req,method:'POST'},env,now,{body:{action:'start',csrfToken:ready.body.csrfToken,approveReadOnly:true},startAuthorizationImpl:async(_connector,_options,flow)=>{callback=flow.callbackUrl;return {url:'https://connect.vercel.com/authorize/synthetic'};}});
+  const now=Date.now();const env={...atlasTestEnv,NEXO_SESSION_SECRET:'synthetic-session-secret-at-least-32-characters',NEXO_PASSWORD_HASH:'configured',GOOGLE_CONNECTOR:'google/alizarin-saddle',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_OIDC_TOKEN:'synthetic-oidc',VERCEL_ENV:'production'};install(t,env);
+  const req={method:'GET',url:'/api/google-drive-consent',headers:{host:'nexo-one-two.vercel.app',origin:'https://nexo-one-two.vercel.app',cookie:'__Host-atlas_session='+makeSession(env,now)}};
+  const ready=await googleDriveConsentRoute(req,env,now,{store:atlasTestStore});let callback;
+  const start=await googleDriveConsentRoute({...req,method:'POST'},env,now,{store:atlasTestStore,body:{action:'start',csrfToken:ready.body.csrfToken,approveReadOnly:true},startAuthorizationImpl:async(_connector,_options,flow)=>{callback=flow.callbackUrl;return {url:'https://connect.vercel.com/authorize/synthetic'};}});
   assert.equal(start.status,200);
   const flowCookie=start.setCookie.find(c=>c.startsWith('nexo_drive_consent=')).split(';')[0];
   const returned=output();await handler({method:'GET',url:callback,headers:{host:req.headers.host,cookie:flowCookie,'sec-fetch-site':'cross-site'}},returned);
   assert.equal(returned.statusCode,303);assert.equal(returned.headers.Location,'/google-drive-connect.html?returned=1');assert.ok(!JSON.stringify(returned.headers['Set-Cookie']).includes('__Host-atlas_session='));
   for(const url of [callback.replace(/state=[^&]+/,'state=wrong'),callback+'&state=duplicate']){const denied=output();await handler({method:'GET',url,headers:{host:req.headers.host,cookie:flowCookie}},denied);assert.equal(denied.statusCode,400);}
-  const denied=output();await handler({method:'GET',url:'/api/google-drive-consent',headers:req.headers},denied);assert.equal(denied.statusCode,401);
+  const denied=output();await handler({method:'GET',url:'/api/google-drive-consent',headers:{host:req.headers.host}},denied);assert.equal(denied.statusCode,401);
 });

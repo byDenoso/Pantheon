@@ -2,18 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {scryptSync,createHash,createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {makeSession} from '../server/auth/session.mjs';
-import {googleDriveConsentRoute,googleDriveConsentReturn,readOperationalSpoolHeader,GOOGLE_DRIVE_CONSENT,GOOGLE_SHEETS_SPOOL_CONSENT,GOOGLE_CONSENT_PROFILES} from '../server/auth/google-drive-consent.mjs';
+import {atlasTestEnv,makeAtlasSession as makeSession,atlasTestStore} from './helpers/consent-session.fixture.mjs';
+import {googleDriveConsentRoute as consentRoute,googleDriveConsentReturn,readOperationalSpoolHeader,GOOGLE_DRIVE_CONSENT,GOOGLE_SHEETS_SPOOL_CONSENT,GOOGLE_CONSENT_PROFILES} from '../server/auth/google-drive-consent.mjs';
 import {TOWER_ID} from '../server/mcp/operational-state.mjs';
 
 const now=Date.parse('2026-10-04T02:30:00Z');
 const salt='4'.repeat(32);
-const env={NEXO_SESSION_SECRET:'synthetic-owner-session-secret-at-least-32-bytes',
+const env={...atlasTestEnv,NEXO_SESSION_SECRET:'synthetic-owner-session-secret-at-least-32-bytes',
   NEXO_PASSWORD_HASH:`scrypt$${salt}$${scryptSync('synthetic-password',salt,64).toString('hex')}`,
   GOOGLE_CONNECTOR:'google/alizarin-saddle',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_OIDC_TOKEN:'synthetic-project-oidc',VERCEL_ENV:'production'};
+const googleDriveConsentRoute=(req,e,time,options={})=>consentRoute(req,e,time,{store:atlasTestStore,...options});
 const scope='https://www.googleapis.com/auth/drive.readonly';
 const request=(method='GET',session=makeSession(env,now),extra={})=>({method,url:'/api/google-drive-consent',headers:{
-  host:'nexo-one-two.vercel.app',origin:'https://nexo-one-two.vercel.app',cookie:`nexo_session=${session}`,...extra}});
+  host:'nexo-one-two.vercel.app',origin:'https://nexo-one-two.vercel.app',cookie:`__Host-atlas_session=${session}`,...extra}});
 const cookieHeader=out=>(Array.isArray(out.setCookie)?out.setCookie:[out.setCookie]).filter(Boolean).map(v=>v.split(';')[0]).join('; ');
 async function setup(){const req=request();const out=await googleDriveConsentRoute(req,env,now);return {req,csrfToken:out.body.csrfToken,csrfTokens:out.body.csrfTokens};}
 async function start({req,csrfToken},options={}){
@@ -156,7 +157,7 @@ for(const url of ['https://evil.example/authorize/x','http://connect.vercel.com/
 test('callback validates signed flow and exact nonce without issuing application access',async()=>{
   const state=await returned();
   assert.equal(state.result.location,'/google-drive-connect.html?returned=1');
-  assert.equal(state.result.setCookie.some(v=>v.startsWith('nexo_session=')),false);
+  assert.equal(state.result.setCookie.some(v=>v.startsWith('__Host-atlas_session=')),false);
   assert.ok(state.result.setCookie.some(v=>v.startsWith('nexo_drive_return=')&&v.includes('HttpOnly; Secure; SameSite=Strict')));
   assert.equal(state.result.body.status,'VERIFY_DRIVE_READBACK');
   const info=await googleDriveConsentRoute(state.req,env,now+20);assert.equal(info.body.canVerify,true);
@@ -196,11 +197,11 @@ test('Sheets callback profile is signed and cannot be changed or downgraded',asy
   assert.equal(downgrade.body.error,'CONSENT_PROFILE_MISMATCH');
 });
 test('legacy signed Drive-only callback without profile remains valid but cannot become Sheets consent',async()=>{
-  const state=await setup(),session=state.req.headers.cookie.split('nexo_session=')[1],nonce='a'.repeat(64);
+  const state=await setup(),session=state.req.headers.cookie.split('__Host-atlas_session=')[1],nonce='a'.repeat(64);
   const payload={v:1,kind:'flow',session:createHash('sha256').update(session).digest('hex'),nonce,iat:now,exp:now+600000};
   const encoded=Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature=createHmac('sha256',env.NEXO_SESSION_SECRET).update('nexo-drive-consent-v1:'+encoded).digest('base64url');
-  const req={...state.req,url:'/api/google-drive-return?state='+nonce,headers:{...state.req.headers,cookie:`nexo_session=${session}; nexo_drive_consent=${encoded}.${signature}`}};
+  const req={...state.req,url:'/api/google-drive-return?state='+nonce,headers:{...state.req.headers,cookie:`__Host-atlas_session=${session}; nexo_drive_consent=${encoded}.${signature}`}};
   const result=googleDriveConsentReturn(req,env,now+10);
   assert.equal(result.status,303);assert.equal(result.body.profile,'drive_readonly');
   const verifyReq={...state.req,method:'POST',headers:{...state.req.headers,cookie:state.req.headers.cookie+'; '+cookieHeader(result)}};

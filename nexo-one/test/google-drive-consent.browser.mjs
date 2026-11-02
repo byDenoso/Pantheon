@@ -3,14 +3,23 @@ import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import {scryptSync} from 'node:crypto';
 import {chromium} from 'playwright';
-import {sessionRoute} from '../server/auth/session-route.mjs';
+import {atlasSessionRoute} from '../server/auth/atlas-session.mjs';
+import {atlasTestEnv} from './helpers/consent-session.fixture.mjs';
 import {googleDriveConsentRoute,googleDriveConsentReturn} from '../server/auth/google-drive-consent.mjs';
 
 // Entirely synthetic loopback integration. No Google/Vercel request is made.
 const salt='5'.repeat(32),password='synthetic-browser-password';
-const env={NEXO_SESSION_SECRET:'synthetic-browser-session-secret-at-least-32-bytes',
-  NEXO_PASSWORD_HASH:`scrypt$${salt}$${scryptSync(password,salt,64).toString('hex')}`,
+const env={...atlasTestEnv,NEXO_SESSION_SECRET:'synthetic-browser-session-secret-at-least-32-bytes',
+  NEXO_ATLAS_PIN_HASH:`scrypt$${salt}$${scryptSync(password,salt,64).toString('hex')}`,
   GOOGLE_CONNECTOR:'google/alizarin-saddle',GOOGLE_CONNECT_SUBJECT_ID:'owner',VERCEL_ENV:'production',VERCEL_OIDC_TOKEN:'synthetic-project-oidc'};
+const sessions=new Map();
+const store=async(command,key,...args)=>{
+  if(command==='GET')return sessions.get(key)||null;
+  if(command==='SET'){sessions.set(key,args[0]);return 'OK';}
+  if(command==='DEL')return Number(sessions.delete(key));
+  if(command==='EVAL')return 1;
+  throw new Error('Unexpected synthetic store operation');
+};
 let callbackUrl='',starts=0,verifies=0,startMode='ok';
 const server=createServer(async(req,res)=>{
   res.setHeader('Cache-Control','no-store');res.setHeader('Referrer-Policy','no-referrer');
@@ -22,12 +31,12 @@ const server=createServer(async(req,res)=>{
   if(path.startsWith('/api/')){
     let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{};
     let decision;
-    if(path==='/api/session')decision=sessionRoute(req,env,Date.now(),body);
-    else{
-      const syntheticReq={...req,method:req.method,url:req.url,headers:{...req.headers,host:'nexo-one-two.vercel.app',
+    const syntheticReq={...req,method:req.method,url:req.url,headers:{...req.headers,host:'nexo-one-two.vercel.app',
         ...(req.headers.origin===baseUrl?{origin:'https://nexo-one-two.vercel.app'}:{})}};
+    if(path==='/api/atlas-session')decision=await atlasSessionRoute(syntheticReq,env,Date.now(),body,store);
+    else{
       decision=path==='/api/google-drive-return'?googleDriveConsentReturn(syntheticReq,env):await googleDriveConsentRoute(syntheticReq,env,Date.now(),{
-        body,startTimeoutMs:20,
+        body,store,startTimeoutMs:20,
         startAuthorizationImpl:async(connector,params,options)=>{
           starts++;assert.equal(connector,env.GOOGLE_CONNECTOR);assert.deepEqual(params.subject,{type:'user',id:'owner'});
           assert.ok(JSON.stringify(params.scopes)==='["https://www.googleapis.com/auth/drive.readonly"]'||JSON.stringify(params.scopes)==='["https://www.googleapis.com/auth/drive.readonly","https://www.googleapis.com/auth/spreadsheets"]');
@@ -71,9 +80,9 @@ try{
     await page.goto(baseUrl+'/google-drive-connect.html');
     await page.getByRole('button',{name:'Entrar na sessão privada'}).waitFor();
     const initialStarts=starts;
-    await page.getByLabel('Senha do NEXO').fill('wrong');await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
-    await page.getByRole('alert').waitFor();assert.equal(await page.getByLabel('Senha do NEXO').inputValue(),'');
-    await page.getByLabel('Senha do NEXO').fill(password);await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
+    await page.getByLabel('Código de acesso do Cockpit').fill('wrong');await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
+    await page.getByRole('alert').waitFor();assert.equal(await page.getByLabel('Código de acesso do Cockpit').inputValue(),'');
+    await page.getByLabel('Código de acesso do Cockpit').fill(password);await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
     await page.getByRole('button',{name:'Preparar confirmação do Google'}).waitFor();
     assert.equal(starts,initialStarts,'login never begins consent');
     const before=starts;assert.equal(await page.getByRole('link',{name:'Abrir confirmação do Google'}).isVisible(),false);
@@ -101,7 +110,7 @@ try{
   {
     const context=await browser.newContext(),page=await context.newPage();
     await page.route('https://connect.vercel.com/**',syntheticConsentReturn);
-    await page.goto(baseUrl+'/google-drive-connect.html');await page.getByLabel('Senha do NEXO').fill(password);
+    await page.goto(baseUrl+'/google-drive-connect.html');await page.getByLabel('Código de acesso do Cockpit').fill(password);
     await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
     await page.getByText(/não fica limitado a uma planilha específica/).waitFor();
     assert.equal(await page.getByRole('button',{name:'Preparar confirmação de Drive + Sheets'}).isEnabled(),true);
@@ -119,7 +128,7 @@ try{
   startMode='uncertain';
   const context=await browser.newContext(),page=await context.newPage();
   await page.route('https://connect.vercel.com/**',syntheticConsentReturn);
-  await page.goto(baseUrl+'/google-drive-connect.html');await page.getByLabel('Senha do NEXO').fill(password);
+  await page.goto(baseUrl+'/google-drive-connect.html');await page.getByLabel('Código de acesso do Cockpit').fill(password);
   await page.getByRole('button',{name:'Entrar na sessão privada'}).click();
   await page.getByLabel('Autorizo esta conexão persistente somente de leitura do Google Drive').check();
   const before=starts;await page.getByRole('button',{name:'Preparar confirmação do Google'}).click();
