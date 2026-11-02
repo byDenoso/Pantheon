@@ -40,3 +40,5 @@ export const login = (pin: string) => call<{authenticated: true; expiresAt: stri
 export const logout = () => call<{authenticated: false}>('/api/atlas-session', {method: 'DELETE', keepalive: true});
 export const loadCockpit = (signal?: AbortSignal) => call<Cockpit>('/api/atlas-cockpit', {signal});
 export const saveSelection = (body: SaveBody) => call<{saved: true; version: number; updatedAt: string}>('/api/atlas-cockpit-selection', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+
+export const loadPublicSelection = () => call<{contract: 'ATLAS_PUBLIC_SELECTION_V1'; mode: 'UNSET' | 'LIVE'; version?: number}>('/api/atlas-public-selection');

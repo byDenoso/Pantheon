@@ -110,7 +110,7 @@ export async function loadPublic(fetchImpl: Fetch, signal?: AbortSignal, selecti
       if (campaigns.length !== live.campaigns.length) throw new ApiError('CONTRACT', 200);
       verifyVisuals(campaigns);
       if (campaigns.length) return {status: 'ready', selection: 'LIVE', items, tests, campaigns, coverage: 'COMPLETE', generatedAt: live.updatedAt, ...visualFields};
-      return items.length || tests.length ? {status: 'ready', selection: 'LIVE', items, tests, ...visualFields} : {status: 'empty', selection: 'LIVE', items: [], tests: [], ...visualFields};
+      return items.length || tests.length ? {status: 'ready', selection: 'LIVE', items, tests, generatedAt: live.updatedAt, ...visualFields} : {status: 'empty', selection: 'LIVE', items: [], tests: [], generatedAt: live.updatedAt, ...visualFields};
     }
     if (payload.campaigns !== undefined) {
       const campaigns = guardPublicCampaigns(payload.campaigns);

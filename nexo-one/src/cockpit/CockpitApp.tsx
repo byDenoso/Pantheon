@@ -1,5 +1,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode} from 'react';
-import {HttpError, loadCockpit, login, logout, saveSelection, session, type Bi, type CampaignPublic, type Cockpit, type Row, type SaveError, type Selection, type TowerPublic} from './api.ts';
+import {HttpError, loadCockpit, loadPublicSelection, login, logout, saveSelection, session, type Bi, type CampaignPublic, type Cockpit, type Row, type SaveError, type Selection, type TowerPublic} from './api.ts';
+
+import {CandidateControls, Pager} from './WorkspaceTools.tsx';
+import {canRefresh, filterCandidates, newestFirst, pageRows, publicationState, reconcileDraft, createReadGate, type SelectionFilter} from './workspace.ts';
 
 type Theme = 'light' | 'dark' | 'system';
 type Draft = {catalog: string[]; tower: Record<string, TowerPublic>; campaigns: Record<string, {state: 'ongoing' | 'completed'; public: CampaignPublic}>};
@@ -94,15 +97,41 @@ function Section({id, n, title, lead, children, aside}: {id: string; n: string; 
   </section>;
 }
 
-function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; reload: () => Promise<void>; onLogout: () => void; theme: Theme; setTheme: (t: Theme) => void}) {
+function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refreshError, onAccessFailure}: {onAccessFailure: (status: number) => void; refreshing: boolean; refreshError: string; data: Cockpit; reload: () => Promise<void>; onLogout: () => void; theme: Theme; setTheme: (t: Theme) => void}) {
+  const alive = useRef(true);
+  useEffect(() => {alive.current = true; return () => {alive.current = false;};}, []);
   const selection = data.selection.available ? data.selection.value : null;
   const base = useMemo(() => draftFrom(selection, data), [data]);
   const [draft, setDraft] = useState<Draft>(base);
-  useEffect(() => setDraft(base), [base]);
+  const previousBase = useRef(base);
+  useEffect(() => {
+    const previous = previousBase.current;
+    setDraft(current => reconcileDraft(current, previous, base, normalized));
+    previousBase.current = base;
+  }, [base]);
   const [open, setOpen] = useState<string | null>(null), [showEn, setShowEn] = useState(false);
   const [tab, setTab] = useState<'catalog' | 'tower' | 'campaigns' | 'audit'>('catalog'), [query, setQuery] = useState('');
   const [saving, setSaving] = useState(false), [status, setStatus] = useState<{tone?: string; text: string} | null>(null), [errors, setErrors] = useState<SaveError[]>([]);
   const [active, setActive] = useState('agora');
+  const [automatic, setAutomatic] = useState(true);
+  const [publicVersion, setPublicVersion] = useState<number | null>(null), [checkingPublic, setCheckingPublic] = useState(false), [publicCheckError, setPublicCheckError] = useState('');
+  const checkPublic = useCallback(async () => {
+    setCheckingPublic(true); setPublicCheckError('');
+    try {
+      const published = await loadPublicSelection();
+      if (published.contract !== 'ATLAS_PUBLIC_SELECTION_V1' || !['LIVE', 'UNSET'].includes(published.mode) || published.mode === 'LIVE' && (!Number.isSafeInteger(published.version) || published.version! < 1)) throw new Error('CONTRACT');
+      setPublicVersion(published.mode === 'LIVE' ? published.version! : 0);
+    } catch { setPublicVersion(null); setPublicCheckError('Não foi possível conferir a API pública agora.'); }
+    finally { setCheckingPublic(false); }
+  }, []);
+  useEffect(() => { void checkPublic(); }, [checkPublic, selection?.version]);
+  const [frontQuery, setFrontQuery] = useState(''), [resultQuery, setResultQuery] = useState('');
+  const [frontFilter, setFrontFilter] = useState<SelectionFilter>('all'), [resultFilter, setResultFilter] = useState<SelectionFilter>('all');
+  const [frontState, setFrontState] = useState('');
+  const [frontPage, setFrontPage] = useState(1), [resultPage, setResultPage] = useState(1), [catalogPage, setCatalogPage] = useState(1);
+  useEffect(() => setFrontPage(1), [frontQuery, frontFilter, frontState]);
+  useEffect(() => setResultPage(1), [resultQuery, resultFilter]);
+  useEffect(() => setCatalogPage(1), [query]);
   useEffect(() => {
     const ids = ['agora', 'equipe', 'frentes', 'resultados', 'publico'];
     const io = new IntersectionObserver(entries => { for (const e of entries) if (e.isIntersecting) setActive(e.target.id); }, {rootMargin: '-30% 0px -60% 0px'});
@@ -115,6 +144,21 @@ function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; re
   const catalogRows = data.catalog.available ? data.catalog.rows : [];
   const dirty = normalized(draft) !== normalized(base);
   const unset = data.selection.available && !selection;
+  const draftVersion = useRef(selection?.version ?? 0);
+  useEffect(() => { if (!dirty) draftVersion.current = selection?.version ?? 0; }, [dirty, selection?.version]);
+  const versionConflict = dirty && draftVersion.current !== (selection?.version ?? 0);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (canRefresh({automatic, dirty, saving, loading: refreshing, visible: document.visibilityState === 'visible'})) void reload();
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, [automatic, dirty, saving, refreshing, reload]);
+  useEffect(() => {
+    if (!dirty) return;
+    const guard = (event: BeforeUnloadEvent) => {event.preventDefault(); event.returnValue = '';};
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [dirty]);
   const drift = new Map(data.drift.map(d => [d.id, d.status]));
   const errFor = (kind: string, id: string, field?: string) => errors.find(e => e.kind === kind && e.id === id && (field === undefined || e.field === field))?.code;
 
@@ -147,16 +191,19 @@ function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; re
     const nonEmpty = (b: Bi) => (b['pt-BR'].trim() || b.en.trim() ? b : null);
     try {
       const result = await saveSelection({
-        expectedVersion: selection?.version ?? 0, catalog: draft.catalog,
+        expectedVersion: draftVersion.current, catalog: draft.catalog,
         tower: Object.entries(draft.tower).map(([id, p]) => ({id, public: p})),
         campaigns: Object.entries(draft.campaigns).map(([id, c]) => ({id, state: c.state, public: {question: c.public.question, why: nonEmpty(c.public.why ?? empty()), currentStage: nonEmpty(c.public.currentStage ?? empty()), nextStep: nonEmpty(c.public.nextStep ?? empty()), closure: nonEmpty(c.public.closure ?? empty())}})),
       });
-      setStatus({tone: 'ok', text: `Publicado: versão ${result.version}. O site público passa a mostrar esta seleção em até ~10 segundos.`});
+      if (!alive.current) return;
+      draftVersion.current = result.version;
+      setStatus({tone: 'ok', text: `Seleção v${result.version} salva. O site público consulta as atualizações automaticamente.`});
       await reload();
     } catch (e) {
-      if (e instanceof HttpError && e.code === 'SELECTION_INVALID') { setErrors((e.detail.errors as SaveError[]) ?? []); setStatus({tone: 'bad', text: 'Nada foi publicado. Corrija os campos marcados.'}); const first = (e.detail.errors as SaveError[])?.[0]; if (first) setOpen(`${first.kind === 'tower' ? 't' : 'c'}:${first.id}`); }
+      if (!alive.current) return;
+      if (e instanceof HttpError && e.code === 'SELECTION_INVALID') { setErrors((e.detail.errors as SaveError[]) ?? []); setStatus({tone: 'bad', text: 'Nada foi publicado. Corrija os campos marcados.'}); const first = (e.detail.errors as SaveError[])?.[0]; if (first) {setOpen(`${first.kind === 'tower' ? 't' : 'c'}:${first.id}`); setTab(first.kind === 'campaigns' ? 'campaigns' : 'tower'); document.getElementById('publico')?.scrollIntoView();} }
       else if (e instanceof HttpError && e.code === 'VERSION_CONFLICT') setStatus({tone: 'bad', text: 'Outra sessão publicou antes. Recarregue para ver a versão atual; suas alterações ainda estão aqui.'});
-      else if (e instanceof HttpError && e.status === 401) setStatus({tone: 'bad', text: 'A sessão expirou. Entre de novo; nada foi publicado.'});
+      else if (e instanceof HttpError && [401, 503].includes(e.status)) onAccessFailure(e.status);
       else setStatus({tone: 'bad', text: 'Não foi possível publicar agora. Nada mudou no site público.'});
     } finally { setSaving(false); }
   };
@@ -164,9 +211,14 @@ function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; re
   const equipe = shadow?.equipe ?? [];
   const activeTeam = equipe.filter(r => tone(r.estado) === 'ok').length;
   const publishedCount = (selection ? selection.catalog.length : catalogRows.length) + (selection?.tower.length ?? 0);
-  const resultsNewest = [...towerCands].reverse();
+  const approvedResults = new Set(selection?.tower.map(r => r.id) ?? []), approvedFronts = new Set(selection?.campaigns.map(r => r.id) ?? []);
+  const changed = new Set(data.drift.map(r => r.id));
+  const frontsView = pageRows(filterCandidates(newestFirst(campCands, 'atualizado'), frontQuery, frontFilter, new Set(Object.keys(draft.campaigns)), changed, frontState), frontPage);
+  const resultsView = pageRows(filterCandidates(newestFirst(towerCands, 'data'), resultQuery, resultFilter, new Set(Object.keys(draft.tower)), changed), resultPage);
+  const frontStates = [...new Set(campCands.map(r => r.source.status).filter(Boolean))].sort();
   const q = query.trim().toLocaleLowerCase('pt-BR');
   const catalogView = catalogRows.filter(r => !q || r.question['pt-BR'].toLocaleLowerCase('pt-BR').includes(q));
+  const catalogPaged = pageRows(catalogView, catalogPage, 12);
 
   const towerEditor = (id: string, source?: Row) => {
     const p = draft.tower[id]; if (!p) return null;
@@ -209,8 +261,10 @@ function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; re
     <main className="ck-main">
       <div className="ck-hero" id="agora" style={{scrollMarginTop: 84}}>
         <div><p className="ck-eyebrow">Cockpit privado</p><h1>Estado da pesquisa, <em>agora.</em></h1><p>Equipe, frentes e resultados lidos da Tower SHADOW, e o controle do que aparece em nexoresearch.org.</p></div>
-        <div className="ck-stamp">Lido em {when(data.generatedAt)}<br/>SHADOW: {shadow ? when(shadow.modifiedAt) : 'indisponível'}<br/><button type="button" className="ck-btn" style={{marginTop: 8}} onClick={() => void reload()}>Atualizar leitura</button></div>
+        <div className="ck-stamp"><span className="ck-state" data-tone={shadow ? 'ok' : 'bad'}>{shadow ? 'SHADOW conectada' : 'Conexão indisponível'}</span><br/>Leitura: {when(data.generatedAt)}<br/>Fonte: {shadow ? when(shadow.modifiedAt) : 'indisponível'}<br/><button type="button" className="ck-btn" disabled={refreshing || dirty || saving} style={{marginTop: 8}} onClick={() => void reload()}>{refreshing ? 'Atualizando…' : 'Atualizar leitura'}</button></div>
       </div>
+      <div className="ck-livebar"><label><input type="checkbox" checked={automatic} onChange={e => setAutomatic(e.target.checked)}/> Atualizar a cada minuto</label><span>{dirty ? 'Atualização pausada durante a edição. Publique ou descarte o rascunho para continuar.' : automatic ? 'Acompanhamento ativo enquanto esta página estiver visível.' : 'Atualização manual.'}</span></div>
+      {refreshError && <p className="ck-note" data-tone="warn" role="alert">A última atualização falhou. Os dados abaixo são da leitura de {when(data.generatedAt)}. Tente atualizar novamente.</p>}
       {!shadow && <p className="ck-note" data-tone="warn" style={{marginTop: 18}}><strong>Fonte SHADOW fora do ar neste servidor</strong> ({(data.shadow as {reason: string}).reason}). Equipe, frentes e resultados novos não aparecem. O catálogo publicado e o que já foi aprovado continuam controláveis.</p>}
       <dl className="ck-kpis">
         <div className="ck-kpi"><dt>Resultados na leitura</dt><dd>{shadow ? towerCands.length : '—'}</dd></div>
@@ -219,39 +273,47 @@ function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; re
         <div className="ck-kpi"><dt>Análises no público</dt><dd>{publishedCount}<small>{unset ? ' estático' : ''}</small></dd></div>
         <div className="ck-kpi" data-tone={data.drift.length ? 'warn' : undefined}><dt>Publicados com fonte alterada</dt><dd>{data.drift.length}</dd></div>
       </dl>
-      {shadow && shadow.resumo.length > 0 && <div className="ck-panel" style={{marginTop: 22}}><div className="ck-scroll"><table className="ck-table"><thead><tr><th>Quando</th><th>Nível</th><th>O que mudou</th><th>Impacto</th></tr></thead><tbody>{[...shadow.resumo].sort((a, b) => String(b.data_hora).localeCompare(String(a.data_hora))).slice(0, 8).map((r, i) => <tr key={i}><td className="mono">{r.data_hora}</td><td><span className="ck-state" data-tone={tone(r.nivel)}>{r.nivel || '—'}</span></td><td>{r.o_que_mudou}</td><td>{r.impacto}</td></tr>)}</tbody></table></div></div>}
+      <div className="ck-overview">
+        <article className="ck-panel ck-publication-summary"><p className="ck-eyebrow">Publicação no site</p><h2>{selection ? `Versão ${selection.version} publicada` : 'Catálogo estático ativo'}</h2><p>{selection ? `Publicada em ${when(selection.updatedAt)}.` : 'A seleção do Cockpit ainda não foi ativada.'}</p><dl><div><dt>Catálogo</dt><dd>{selection?.catalog.length ?? catalogRows.length}</dd></div><div><dt>Resultados SHADOW</dt><dd>{selection?.tower.length ?? 0}</dd></div><div><dt>Frentes</dt><dd>{selection?.campaigns.length ?? 0}</dd></div></dl><p className="ck-public-check" role="status">{checkingPublic ? 'Conferindo a API pública…' : publicCheckError || (publicVersion === (selection?.version ?? 0) ? `API pública confirmou ${publicVersion ? `a versão ${publicVersion}` : 'o catálogo estático'}.` : publicVersion === null ? 'Aguardando conferência pública.' : `A API pública ainda retorna ${publicVersion ? `a versão ${publicVersion}` : 'o catálogo estático'}. Consulte novamente após a atualização.`)}</p><button type="button" className="ck-btn quiet" disabled={checkingPublic} onClick={() => void checkPublic()}>Conferir publicação</button><p>Novos dados da SHADOW ficam no privado até a revisão do texto e a publicação da seleção.</p><a className="ck-btn" href="#resultados">Revisar resultados</a> <a className="ck-btn quiet" href="#publico">Gerenciar publicação</a></article>
+        <article className="ck-panel ck-activity"><p className="ck-eyebrow">Registro da SHADOW</p><h2>Últimos movimentos</h2><p className="ck-muted">Registros da aba RESUMO; as datas de cada evento são preservadas.</p>{shadow?.resumo.length ? <div className="ck-activity-list">{[...shadow.resumo].sort((a, b) => String(b.data_hora).localeCompare(String(a.data_hora))).slice(0, 4).map((r, i) => <details key={i}><summary><span className="ck-meta">{r.data_hora} · {r.nivel || 'Registro'}</span><span className="ck-line-clamp">{r.o_que_mudou}</span></summary><p>{r.o_que_mudou}</p>{r.impacto && <p><strong>Impacto:</strong> {r.impacto}</p>}</details>)}</div> : <p>Sem registros de resumo nesta leitura.</p>}</article>
+      </div>
 
       <Section id="equipe" n="02" title="Equipe científica" lead="Papéis, cadência e estado declarados na aba EQUIPE.">
         {shadow ? <div className="ck-panel ck-scroll"><table className="ck-table"><thead><tr><th>Papel</th><th>Estado</th><th>Cadência</th><th>Frentes</th></tr></thead><tbody>{equipe.map((r, i) => <tr key={i}><td><strong>{r.papel}</strong></td><td><span className="ck-state" data-tone={tone(r.estado)}>{r.estado || '—'}</span></td><td className="mono">{r.cadencia}</td><td>{r.frentes}</td></tr>)}{!equipe.length && <tr><td colSpan={4}>Aba EQUIPE vazia.</td></tr>}</tbody></table></div> : <p className="ck-note">Sem leitura da SHADOW.</p>}
       </Section>
 
       <Section id="frentes" n="03" title="Frentes e campanhas" lead="Ligue uma frente para mostrá-la no público. Só o texto que você escrever aqui é publicado; o ID e as notas internas ficam no privado.">
-        <div className="ck-panel ck-list">{campCands.map(c => {
+        <CandidateControls label="frentes" query={frontQuery} setQuery={setFrontQuery} filter={frontFilter} setFilter={setFrontFilter} states={frontStates} state={frontState} setState={setFrontState}/>
+        <div className="ck-panel ck-list">{frontsView.rows.map(c => {
           const on = Boolean(draft.campaigns[c.id]), isOpen = open === `c:${c.id}`;
           return <div className="ck-item" key={c.id}>
-            <div className="ck-item-row"><span className="ck-state" data-tone={on ? 'live' : tone(c.source.status)} title={on ? 'No público' : c.source.status}>{on ? 'público' : ''}</span>
+            <div className="ck-item-row"><span className="ck-state" data-tone={on ? 'live' : tone(c.source.status)} title={publicationState(on, approvedFronts.has(c.id))}>{publicationState(on, approvedFronts.has(c.id))}</span>
               <div><h3>{c.source.titulo || c.source.item}</h3><div className="ck-meta"><span>{c.source.status || 'sem status'}</span>{c.source.prio && <span>prioridade {c.source.prio}</span>}{c.source.atualizado && <span>{c.source.atualizado}</span>}{drift.get(c.id) && <span style={{color: 'var(--warn)'}}>fonte alterada desde a aprovação</span>}</div>{c.source.proximo_teste && <p>Próximo: {c.source.proximo_teste}</p>}
                 {on && <button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `c:${c.id}`)}>{isOpen ? 'Fechar texto público' : 'Editar texto público'}</button>}</div>
-              <Switch checked={on} onChange={v => toggleCampaign(c.id, v)} label="No público"/></div>
+              <Switch checked={on} onChange={v => toggleCampaign(c.id, v)} label="Selecionar para publicar"/></div>
             {on && isOpen && campaignEditor(c.id, c.source)}
           </div>;
-        })}{!campCands.length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>{shadow ? 'Nenhuma frente na aba ROADMAP.' : 'Sem leitura da SHADOW.'}</p>}</div>
+        })}{!frontsView.total && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>{shadow ? 'Nenhuma frente corresponde aos filtros.' : 'Sem leitura da SHADOW.'}</p>}</div>
+        <Pager {...frontsView} setPage={setFrontPage} label="frentes"/>
       </Section>
 
       <Section id="resultados" n="04" title="Resultados recentes" lead="As últimas linhas de RESULTADOS. Ao ligar uma, o rascunho vem da própria linha; complete o método e revise antes de publicar.">
-        <div className="ck-panel ck-list">{resultsNewest.map(c => {
+        <CandidateControls label="resultados" query={resultQuery} setQuery={setResultQuery} filter={resultFilter} setFilter={setResultFilter}/>
+        <div className="ck-panel ck-list">{resultsView.rows.map(c => {
           const on = Boolean(draft.tower[c.id]), isOpen = open === `t:${c.id}`;
           return <div className="ck-item" key={c.id}>
-            <div className="ck-item-row"><span className="ck-state" data-tone={on ? 'live' : undefined}>{on ? 'público' : ''}</span>
-              <div><h3>{c.source.titulo}</h3><p>{c.source.resultado}</p><div className="ck-meta"><span>{c.source.data}</span>{c.source.numeros && <span>{c.source.numeros}</span>}{drift.get(c.id) && <span style={{color: 'var(--warn)'}}>fonte alterada desde a aprovação</span>}</div>
+            <div className="ck-item-row"><span className="ck-state" data-tone={on ? 'live' : undefined}>{publicationState(on, approvedResults.has(c.id))}</span>
+              <div><h3>{c.source.titulo}</h3><p className="ck-line-clamp">{c.source.resultado}</p><details className="ck-result-details"><summary>Ler resultado e limites</summary><SourcePanel row={c.source} keys={[['resultado', 'Resultado'], ['numeros', 'Números'], ['limites', 'Limites']]}/></details><div className="ck-meta"><span>{c.source.data}</span>{c.source.numeros && <span>{c.source.numeros}</span>}{drift.get(c.id) && <span style={{color: 'var(--warn)'}}>fonte alterada desde a aprovação</span>}</div>
                 {on && <button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `t:${c.id}`)}>{isOpen ? 'Fechar texto público' : 'Editar texto público'}</button>}</div>
-              <Switch checked={on} onChange={v => toggleTower(c.id, v)} label="No público"/></div>
+              <Switch checked={on} onChange={v => toggleTower(c.id, v)} label="Selecionar para publicar"/></div>
             {on && isOpen && towerEditor(c.id, c.source)}
           </div>;
-        })}{!resultsNewest.length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>{shadow ? 'Nenhuma linha em RESULTADOS.' : 'Sem leitura da SHADOW.'}</p>}</div>
+        })}{!resultsView.total && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>{shadow ? 'Nenhum resultado corresponde aos filtros.' : 'Sem leitura da SHADOW.'}</p>}</div>
+        <Pager {...resultsView} setPage={setResultPage} label="resultados"/>
       </Section>
 
       <Section id="publico" n="05" title="O que o público vê" lead="A seleção vale para nexoresearch.org assim que você publica. Itens não marcados somem do site; nada é apagado da Tower.">
+        {versionConflict && <p className="ck-note" data-tone="warn" role="alert">Outra sessão publicou uma versão nova. Seu rascunho foi preservado; revise as diferenças antes de recomeçar a edição pela seleção atual. A publicação está pausada para evitar sobrescrever essas mudanças.</p>}
         {unset && <p className="ck-note" style={{marginBottom: 14}}><strong>Hoje o público mostra o catálogo estático completo ({catalogRows.length}).</strong> Ao publicar pela primeira vez, o site passa a seguir só o que estiver marcado aqui. O rascunho já começa com todo o catálogo marcado.</p>}
         {data.drift.length > 0 && <p className="ck-note" data-tone="warn" style={{marginBottom: 14}}><strong>{data.drift.length} {data.drift.length === 1 ? 'item publicado mudou' : 'itens publicados mudaram'} na fonte</strong> depois da aprovação. O texto aprovado continua no ar; revise e publique de novo, ou desligue.</p>}
         {!data.catalog.available && <p className="ck-note" data-tone="warn" style={{marginBottom: 14}}>Catálogo publicado indisponível ({data.catalog.reason}). As marcações atuais do catálogo são mantidas.</p>}
@@ -263,19 +325,20 @@ function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; re
           <div className="ck-toolbar"><input className="ck-search" type="search" placeholder="Buscar pergunta" value={query} onChange={e => setQuery(e.target.value)} aria-label="Buscar no catálogo"/>
             <button type="button" className="ck-btn" onClick={() => setDraft(d => ({...d, catalog: [...new Set([...d.catalog, ...catalogView.map(r => r.key)])]}))}>Marcar {q ? 'filtrados' : 'todos'}</button>
             <button type="button" className="ck-btn" onClick={() => setDraft(d => ({...d, catalog: d.catalog.filter(k => !catalogView.some(r => r.key === k))}))}>Desmarcar {q ? 'filtrados' : 'todos'}</button></div>
-          <div className="ck-list">{catalogView.map(r => <label className="ck-item ck-item-row" key={r.key} style={{cursor: 'pointer'}}><input className="ck-check" type="checkbox" checked={draft.catalog.includes(r.key)} onChange={e => toggleCatalog(r.key, e.target.checked)}/><div><h3 style={{fontWeight: 500}}>{r.question['pt-BR']}</h3><div className="ck-meta"><span>publicado {when(r.published_at)}</span></div></div></label>)}</div>
+          <div className="ck-list">{catalogPaged.rows.map(r => <label className="ck-item ck-item-row" key={r.key} style={{cursor: 'pointer'}}><input className="ck-check" type="checkbox" checked={draft.catalog.includes(r.key)} onChange={e => toggleCatalog(r.key, e.target.checked)}/><div><h3 style={{fontWeight: 500}}>{r.question['pt-BR']}</h3><div className="ck-meta"><span>publicado {when(r.published_at)}</span></div></div></label>)}</div>
         </div>}
-        {tab === 'tower' && <div className="ck-panel ck-list">{Object.keys(draft.tower).map(id => { const src = towerCands.find(c => c.id === id); const isOpen = open === `t:${id}`; return <div className="ck-item" key={id}><div className="ck-item-row"><span className="ck-state" data-tone={drift.get(id) ? 'warn' : 'live'}>{drift.get(id) === 'MISSING' ? 'sem fonte' : drift.get(id) ? 'alterado' : 'público'}</span><div><h3>{draft.tower[id].question['pt-BR'] || src?.source.titulo || id}</h3><button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `t:${id}`)}>{isOpen ? 'Fechar' : 'Editar'}</button></div><Switch checked onChange={() => toggleTower(id, false)} label="No público"/></div>{isOpen && towerEditor(id, src?.source)}</div>; })}{!Object.keys(draft.tower).length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>Nenhum resultado da Tower escolhido. Ligue um em “Resultados recentes”.</p>}</div>}
-        {tab === 'campaigns' && <div className="ck-panel ck-list">{Object.keys(draft.campaigns).map(id => { const src = campCands.find(c => c.id === id); const isOpen = open === `c:${id}`; return <div className="ck-item" key={id}><div className="ck-item-row"><span className="ck-state" data-tone={drift.get(id) ? 'warn' : 'live'}>{draft.campaigns[id].state === 'completed' ? 'concluída' : 'andamento'}</span><div><h3>{draft.campaigns[id].public.question['pt-BR'] || src?.source.titulo || id}</h3><button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `c:${id}`)}>{isOpen ? 'Fechar' : 'Editar'}</button></div><Switch checked onChange={() => toggleCampaign(id, false)} label="No público"/></div>{isOpen && campaignEditor(id, src?.source)}</div>; })}{!Object.keys(draft.campaigns).length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>Nenhuma frente escolhida. Ligue uma em “Frentes e campanhas”.</p>}</div>}
+        {tab === 'catalog' && <Pager {...catalogPaged} setPage={setCatalogPage} label="catálogo"/>}
+        {tab === 'tower' && <div className="ck-panel ck-list">{Object.keys(draft.tower).map(id => { const src = towerCands.find(c => c.id === id); const isOpen = open === `t:${id}`; return <div className="ck-item" key={id}><div className="ck-item-row"><span className="ck-state" data-tone={drift.get(id) ? 'warn' : 'live'}>{drift.get(id) === 'MISSING' ? 'sem fonte' : drift.get(id) ? 'alterado' : publicationState(true, approvedResults.has(id))}</span><div><h3>{draft.tower[id].question['pt-BR'] || src?.source.titulo || id}</h3><button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `t:${id}`)}>{isOpen ? 'Fechar' : 'Editar'}</button></div><Switch checked onChange={() => toggleTower(id, false)} label="Selecionar para publicar"/></div>{isOpen && towerEditor(id, src?.source)}</div>; })}{!Object.keys(draft.tower).length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>Nenhum resultado da Tower escolhido. Ligue um em “Resultados recentes”.</p>}</div>}
+        {tab === 'campaigns' && <div className="ck-panel ck-list">{Object.keys(draft.campaigns).map(id => { const src = campCands.find(c => c.id === id); const isOpen = open === `c:${id}`; return <div className="ck-item" key={id}><div className="ck-item-row"><span className="ck-state" data-tone={drift.get(id) ? 'warn' : 'live'}>{publicationState(true, approvedFronts.has(id))} · {draft.campaigns[id].state === 'completed' ? 'concluída' : 'andamento'}</span><div><h3>{draft.campaigns[id].public.question['pt-BR'] || src?.source.titulo || id}</h3><button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `c:${id}`)}>{isOpen ? 'Fechar' : 'Editar'}</button></div><Switch checked onChange={() => toggleCampaign(id, false)} label="Selecionar para publicar"/></div>{isOpen && campaignEditor(id, src?.source)}</div>; })}{!Object.keys(draft.campaigns).length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>Nenhuma frente escolhida. Ligue uma em “Frentes e campanhas”.</p>}</div>}
         {tab === 'audit' && <div className="ck-panel ck-scroll"><table className="ck-table"><thead><tr><th>Quando</th><th>Versão</th><th>Catálogo</th><th>Resultados</th><th>Frentes</th></tr></thead><tbody>{data.audit.map(a => <tr key={a.version}><td className="mono">{when(a.at)}</td><td className="mono">v{a.version}</td><td className="mono">{a.catalog.count} (+{a.catalog.added} −{a.catalog.removed})</td><td className="mono">{a.tower.count} (+{a.tower.added} −{a.tower.removed})</td><td className="mono">{a.campaigns.count} (+{a.campaigns.added} −{a.campaigns.removed})</td></tr>)}{!data.audit.length && <tr><td colSpan={5}>Nenhuma publicação ainda.</td></tr>}</tbody></table></div>}
       </Section>
     </main>
     <div className="ck-savebar" role="region" aria-label="Publicação">
       <div className="ck-savebar-inner">
-        <div aria-live="polite">{status ? <span style={{color: status.tone === 'bad' ? 'var(--bad)' : 'var(--ok)'}}>{status.text}</span> : dirty || unset ? <><strong>{unset && !dirty ? 'Seleção ainda não ativada' : `${changes} ${changes === 1 ? 'alteração' : 'alterações'} não publicadas`}</strong> <span className="mono">· público: {draft.catalog.length} do catálogo, {Object.keys(draft.tower).length} da Tower, {Object.keys(draft.campaigns).length} frentes</span></> : <span className="mono">Público em dia · versão {selection?.version ?? '—'} · {when(selection?.updatedAt)}</span>}</div>
+        <div aria-live="polite">{status ? <span style={{color: status.tone === 'bad' ? 'var(--bad)' : 'var(--ok)'}}>{status.text}</span> : dirty || unset ? <><strong>{unset && !dirty ? 'Seleção ainda não ativada' : `${changes} ${changes === 1 ? 'alteração não publicada' : 'alterações não publicadas'}`}</strong> <span className="mono">· público: {draft.catalog.length} do catálogo, {Object.keys(draft.tower).length} da Tower, {Object.keys(draft.campaigns).length} frentes</span></> : <span className="mono">Seleção salva · versão {selection?.version ?? '—'} · {when(selection?.updatedAt)}</span>}</div>
         <div style={{display: 'flex', gap: 8}}>
           <button type="button" className="ck-btn" disabled={!dirty || saving} onClick={() => { setDraft(base); setErrors([]); setStatus(null); }}>Descartar</button>
-          <button type="button" className="ck-btn primary" disabled={(!dirty && !unset) || saving || !data.selection.available || (unset && !data.catalog.available)} onClick={() => void publish()}>{saving ? 'Publicando…' : unset && !dirty ? 'Ativar seleção' : 'Publicar agora'}</button>
+          <button type="button" className="ck-btn primary" disabled={(!dirty && !unset) || saving || refreshing || versionConflict || !data.selection.available || (unset && !data.catalog.available)} onClick={() => void publish()}>{saving ? 'Publicando…' : unset && !dirty ? 'Ativar seleção' : 'Publicar agora'}</button>
         </div>
       </div>
     </div>
@@ -284,19 +347,49 @@ function Workspace({data, reload, onLogout, theme, setTheme}: {data: Cockpit; re
 
 export default function CockpitApp() {
   const [theme, setTheme] = useTheme();
-  const [phase, setPhase] = useState<'checking' | 'login' | 'ready' | 'error'>('checking');
+  const [phase, setPhase] = useState<'checking' | 'leaving' | 'login' | 'ready' | 'error'>('checking');
   const [data, setData] = useState<Cockpit | null>(null), [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const readGate = useRef(createReadGate());
+  const leaving = useRef(false);
   const load = useCallback(async () => {
-    try { setData(await loadCockpit()); setPhase('ready'); }
-    catch (e) { if (e instanceof HttpError && e.status === 401) { setData(null); setPhase('login'); } else { setError(e instanceof HttpError ? e.code : 'ERRO'); setPhase('error'); } }
+    if (leaving.current) return;
+    const ticket = readGate.current.start(); if (!ticket) return;
+    setRefreshing(true);
+    try {
+      const next = await loadCockpit(ticket.controller.signal);
+      if (!readGate.current.valid(ticket)) return;
+      setData(next); setError(''); setPhase('ready');
+    } catch (e) {
+      if (!readGate.current.valid(ticket)) return;
+      if (e instanceof HttpError && e.status === 401) { setData(null); setPhase('login'); }
+      else {setError(e instanceof HttpError ? e.code : 'ERRO'); if (e instanceof HttpError && e.status === 503) {setData(null); setPhase('error');} else setPhase(p => p === 'ready' ? 'ready' : 'error');}
+    } finally {if (readGate.current.finish(ticket)) setRefreshing(false);}
   }, []);
-  useEffect(() => { session().then(s => (s.authenticated ? load() : setPhase('login')), () => setPhase('login')); }, [load]);
-  // Never leave private content on screen in the back/forward cache.
-  useEffect(() => { const hide = () => setData(null); window.addEventListener('pagehide', hide); return () => window.removeEventListener('pagehide', hide); }, []);
-  const out = async () => { try { await logout(); } finally { setData(null); setPhase('login'); } };
-  if (phase === 'ready' && data) return <Workspace data={data} reload={load} onLogout={() => void out()} theme={theme} setTheme={setTheme}/>;
+  const onAccessFailure = useCallback((status: number) => {
+    if (leaving.current) return;
+    readGate.current.invalidate(); setRefreshing(false); setData(null);
+    if (status === 401) setPhase('login'); else {setError('COCKPIT_UNAVAILABLE'); setPhase('error');}
+  }, []);
+  useEffect(() => {
+    let alive = true; const stamp = readGate.current.stamp();
+    session().then(s => {if (alive && stamp === readGate.current.stamp()) {if (s.authenticated) void load(); else setPhase('login');}}, () => {if (alive) setPhase('login');});
+    return () => {alive = false;};
+  }, [load]);
+  useEffect(() => {
+    const hide = () => {readGate.current.invalidate(); setData(null); setRefreshing(false);};
+    const show = (event: PageTransitionEvent) => {if (event.persisted && !leaving.current) {setPhase('checking'); void load();}};
+    window.addEventListener('pagehide', hide); window.addEventListener('pageshow', show);
+    return () => {window.removeEventListener('pagehide', hide); window.removeEventListener('pageshow', show); readGate.current.invalidate();};
+  }, [load]);
+  const out = async () => {
+    leaving.current = true; readGate.current.invalidate(); setData(null); setRefreshing(false); setPhase('leaving');
+    try {await logout(); setPhase('login');} catch {setError('LOGOUT_UNAVAILABLE'); setPhase('error');}
+    finally {readGate.current.invalidate(); leaving.current = false;}
+  };
+  if (phase === 'ready' && data) return <Workspace data={data} onAccessFailure={onAccessFailure} refreshing={refreshing} refreshError={error} reload={load} onLogout={() => void out()} theme={theme} setTheme={setTheme}/>;
   return <div className="ck-app"><Header theme={theme} setTheme={setTheme}/>
-    {phase === 'checking' && <main className="ck-login"><p role="status">Verificando a sessão…</p></main>}
+    {(phase === 'checking' || phase === 'leaving') && <main className="ck-login"><p role="status">{phase === 'leaving' ? 'Encerrando a sessão…' : 'Verificando a sessão…'}</p></main>}
     {phase === 'login' && <Login onDone={() => void load()}/>}
     {phase === 'error' && <main className="ck-login"><h1>Cockpit indisponível.</h1><p>Não foi possível ler o cockpit agora ({error}).</p><button type="button" className="ck-btn primary" onClick={() => void load()}>Tentar de novo</button></main>}
   </div>;
