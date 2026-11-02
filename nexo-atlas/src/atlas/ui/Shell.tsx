@@ -1,4 +1,5 @@
 import {useVisitorMotion} from './useVisitorMotion.ts';
+import {useCinematicMotion} from './useCinematicMotion.ts';
 import '../visitor-motion.css';
 import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {LocaleSwitch, useLocale, useMessages} from './LocaleProvider.tsx';
@@ -21,6 +22,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
   useEffect(() => { const mq = window.matchMedia('(prefers-reduced-motion: reduce)'); const sync = () => setReducedMotion(mq.matches); mq.addEventListener('change', sync); return () => mq.removeEventListener('change', sync); }, []);
   const surface=useRef<HTMLDivElement>(null);
   useVisitorMotion(surface,area==='public'&&!cinemaPaused&&!reducedMotion);
+  useCinematicMotion(area==='public'&&!reducedMotion);
   const menuButton = useRef<HTMLButtonElement>(null);
   const preferences = useRef<HTMLDetailsElement>(null);
   const header = useRef<HTMLElement>(null);
@@ -55,7 +57,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
     <div ref={surface} className="atlas-app" data-area={area} data-cinema-paused={cinemaPaused || reducedMotion}>
       <a className="nexo-skip-link" href={area==='public'?'#public-content':'#private-content'} onClick={event=>{const el=document.querySelector<HTMLElement>(area==='public'?'#public-content':'main');if(el){event.preventDefault();el.setAttribute('tabindex','-1');el.focus();el.scrollIntoView({block:'start'});}}}>{locale==='en'?'Skip to content':'Ir para o conteúdo'}</a>
       {area==='public'&&<div className="nexo-reading-progress" aria-hidden="true"/>}
-      <CosmologicalBackdrop paused={cinemaPaused}/>
+      <CosmologicalBackdrop paused={cinemaPaused} scene={area==='public'?(activeSection?SECTIONS.indexOf(activeSection as typeof SECTIONS[number])+1:0):-1}/>
       {menuOpen && <button type="button" className="atlas-menu-backdrop" tabIndex={-1} aria-label={t.nav.close} onClick={() => { setMenuOpen(false); menuButton.current?.focus(); }}/>}
       <header className="atlas-header" ref={header} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setMenuOpen(false); }}>
         <a className="atlas-brand" href="/#/" onClick={() => setMenuOpen(false)}><span className="atlas-mark" aria-hidden="true"/>{m.brand}<small>{m.tagline}</small></a>

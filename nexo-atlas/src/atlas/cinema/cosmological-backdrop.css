@@ -27,3 +27,30 @@
 .atlas-app[data-area="private"] .nexo-cosmic-backdrop[data-illustration="cmb"] .nexo-cosmic-image{transform:scale(1.12);animation:none}
 @media(prefers-reduced-motion:no-preference){.atlas-app[data-area="private"] .nexo-cosmic-backdrop[data-illustration="cosmic-expansion"] .nexo-cosmic-image{animation:nexo-private-image-stretch 18s ease-in-out infinite alternate}}
 @keyframes nexo-private-image-stretch{from{transform:scale(1.04,1.04)}to{transform:scale(1.28,1.18)}}
+
+/* Volumetric gas (WebGL): rendered at reduced resolution and upscaled — the gas is soft by nature. */
+.nexo-gas-field{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* With the gas running the backdrop becomes the "film": full height and full strength (overrides the 5% still). */
+.atlas-app[data-area="public"] .nexo-cosmic-backdrop[data-gl]{opacity:1;max-height:none}
+.atlas-app[data-area="public"] .nexo-cosmic-backdrop[data-gl] .nexo-cosmic-image{opacity:0;transition:opacity .8s}
+.atlas-app[data-area="public"] .nexo-cosmic-backdrop[data-illustration="cosmic-expansion"][data-gl] .nexo-cosmic-image{opacity:.22}
+@media(prefers-reduced-motion:reduce){.nexo-gas-field{display:none}.atlas-app[data-area="public"] .nexo-cosmic-backdrop[data-gl]{opacity:.05;max-height:520px}}
+
+/* GSAP title sequence: CSS transitions would fight the tweened transforms while it runs. */
+html.nexo-gsap-intro .atlas-hero *{transition:none!important}
+.atlas-hero-copy h1 span{will-change:auto}
+
+/* Shortcut icons: strokes draw in when the card arrives, and redraw on hover. */
+@media(prefers-reduced-motion:no-preference){
+  .atlas-app[data-cinema-paused=false] .nexo-research-shortcut[data-in-view=true] svg :is(path,circle){stroke-dasharray:1;animation:nexo-icon-draw 1.4s cubic-bezier(.16,1,.3,1) both}
+  .atlas-app[data-cinema-paused=false] .nexo-research-shortcut[data-in-view=true] svg circle{animation-delay:.35s}
+  .atlas-app[data-cinema-paused=false] .nexo-research-shortcut:hover svg :is(path,circle){animation:nexo-icon-draw .9s cubic-bezier(.16,1,.3,1) both}
+  .atlas-app[data-cinema-paused=false] .nexo-research-shortcut:hover svg circle{animation:nexo-icon-draw .9s cubic-bezier(.16,1,.3,1) both,nexo-icon-pulse 1.6s .5s ease-in-out infinite}
+}
+@keyframes nexo-icon-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes nexo-icon-pulse{50%{fill:var(--cyan)}}
+
+/* Over moving gas, the expansion artwork must not show its rectangular edge. */
+.atlas-app[data-area="public"] .nexo-art-scene:not(.is-cmb){
+  mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 38%,transparent 100%)!important;
+  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 38%,transparent 100%)!important}

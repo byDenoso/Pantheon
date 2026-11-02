@@ -3,6 +3,7 @@ import {useLocale} from './LocaleProvider.tsx';
 import '../cinema/cinema.css';
 import '../cinema/cosmological-backdrop.css';
 import OrbitalField from './OrbitalField.tsx';
+import GasField from './GasField.tsx';
 
 // Generated decorative illustrations; neither image represents observed data.
 const ART = {
@@ -29,10 +30,11 @@ function useArtwork() {
   }, []);
   return {theme, hidden, src:ART[theme]};
 }
-export default function CosmologicalBackdrop({paused}: {paused: boolean}) {
+export default function CosmologicalBackdrop({paused, scene = -1}: {paused: boolean; scene?: number}) {
   const {theme, hidden, src} = useArtwork();
   return <div className="nexo-cinema-backdrop nexo-cosmic-backdrop" aria-hidden="true" data-illustration={theme === 'light' ? 'cmb' : 'cosmic-expansion'} data-paused={paused || hidden}>
     <img className="nexo-cosmic-image" src={src} width="1536" height="1024" alt="" decoding="async"/>
+    {scene >= 0 && <GasField scene={scene} paused={paused || hidden} dark={theme === 'dark'}/>}
   </div>;
 }
 
