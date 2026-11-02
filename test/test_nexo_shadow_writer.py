@@ -198,6 +198,32 @@ class Recovery(unittest.TestCase):
         self.assertNotIn(colliding['stable_id'], session.records['MURAL'])
         self.assertEqual(w.result_status(counts, True), 'READBACK_VERIFIED')
 
+    def test_marked_schema_collision_is_historical_without_replay(self):
+        colliding = _recovery_data('historical-schema-collision')
+        malformed = _recovery_plain(colliding, 'INVALID:SCHEMA_ID_COLLISION')
+        malformed[12] = 'unexpected_trailing_payload'
+        twin = _recovery_plain(colliding, 'INVALID:UNRESOLVED_SOURCE_COLLISION')
+        clean = _recovery_data('independent-after-old-collision')
+        counts, session = self.invoke([malformed, twin, _recovery_plain(clean)])
+        self.assertEqual(counts['preexisting_invalid'], 1)
+        self.assertEqual(counts['preexisting_quarantined'], 1)
+        self.assertEqual(counts['conflict'], 0)
+        self.assertEqual(counts['new_failures'], 0)
+        self.assertEqual(counts['written'], 1)
+        self.assertNotIn(colliding['stable_id'], session.records['MURAL'])
+        self.assertEqual(w.result_status(counts, True), 'READBACK_VERIFIED')
+
+    def test_new_twin_of_quarantined_schema_collision_stays_blocked(self):
+        colliding = _recovery_data('historical-collision-with-new-twin')
+        malformed = _recovery_plain(colliding, 'INVALID:SCHEMA_ID_COLLISION')
+        malformed[12] = 'unexpected_trailing_payload'
+        old = _recovery_plain(colliding, 'INVALID:UNRESOLVED_SOURCE_COLLISION')
+        new = _recovery_plain(colliding)
+        counts, session = self.invoke([malformed, old, new])
+        self.assertEqual(counts['conflict'], 2)
+        self.assertEqual(session.posts, [])
+        self.assertEqual(session.marks, [])
+
     def test_malformed_collision_remains_blocked_in_read_only_preflight(self):
         colliding = _recovery_data('malformed-collision-preflight')
         malformed = _recovery_plain(colliding)

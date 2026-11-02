@@ -462,8 +462,19 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     readback_queue = []
     for key, items in groups.items():
         fingerprints = {tuple(item["data"]["values"]) for item in items}
-        if len(fingerprints) != 1 or key[1] in invalid_ids:
+        if len(fingerprints) != 1:
             counts["conflict"] += len(items)
+            continue
+        if key[1] in invalid_ids:
+            # The malformed source and its twin were already quarantined.
+            # Preserve both immutable records without reporting a new conflict.
+            # Unmarked/reintroduced twins remain active conflicts.
+            if all(item["state"] == "INVALID:UNRESOLVED_SOURCE_COLLISION"
+                   for item in items):
+                counts["quarantined"] += len(items)
+                counts["preexisting_quarantined"] += len(items)
+            else:
+                counts["conflict"] += len(items)
             continue
         if any(item["state"] not in ("", "CLAIMED:"+item["digest"],
                                       "APPLIED:"+item["digest"]) for item in items):
