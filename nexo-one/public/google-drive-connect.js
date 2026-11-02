@@ -2,7 +2,9 @@ const byId=id=>document.getElementById(id);
 const DRIVE_PROFILE='drive_readonly',SHEETS_PROFILE='sheets_spool_write';
 let driveCsrfToken='',sheetsCsrfToken='',canVerify=false,canVerifySheets=false,busy=false,startPending=false,expiryTimer;
 const messages={
-  AUTH_REQUIRED:'Entre novamente na sessão privada do NEXO.',
+  AUTH_REQUIRED:'Sua sessão do Cockpit expirou. Entre novamente com o código de acesso do Cockpit.',
+  RATE_LIMITED:'Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente.',
+  AUTH_NOT_CONFIGURED:'O acesso privado não está configurado neste servidor.',
   GOOGLE_CONSENT_CONFIGURATION_MISMATCH:'Esta conexão só está disponível no servidor de produção e no vínculo de proprietário configurado.',
   GOOGLE_RUNTIME_IDENTITY_REQUIRED:'O servidor ainda não recebeu sua identidade Vercel. A conexão não foi iniciada.',
   GOOGLE_CONSENT_START_UNCERTAIN:'A resposta da Vercel Connect ficou incerta. A solicitação pode ter sido iniciada; aguarde a preparação expirar antes de tentar novamente.',
@@ -32,8 +34,17 @@ async function request(url,options={}){
   const response=await fetch(url,{...options,credentials:'same-origin',cache:'no-store',redirect:'error'});
   const data=await response.json();
   if(!response.ok){
+    if(response.status===401&&data?.error==='AUTH_REQUIRED'){
+      driveCsrfToken='';sheetsCsrfToken='';canVerify=false;canVerifySheets=false;
+      startPending=false;clearTimeout(expiryTimer);
+      for(const id of ['authorization','sheets-authorization']){byId(id).hidden=true;byId(id).removeAttribute('href');}
+      for(const id of ['expiry','sheets-expiry']){byId(id).hidden=true;byId(id).textContent='';}
+      for(const id of ['approve','sheets-approve'])byId(id).checked=false;
+      byId('login-section').hidden=false;byId('consent-section').hidden=true;byId('sheets-section').hidden=true;
+      byId('status').textContent='Entre com o mesmo código de acesso do Cockpit para preparar a conexão.';
+    }
     if(data?.error==='GOOGLE_CONSENT_START_UNCERTAIN'||data?.error==='CONSENT_ALREADY_PENDING')startPending=true;
-    throw new Error(messages[data?.error]||'Não foi possível concluir esta etapa.');
+    throw Object.assign(new Error(messages[data?.error]||'Não foi possível concluir esta etapa.'),{code:data?.error});
   }
   return data;
 }
@@ -53,7 +64,7 @@ async function prepare(){
 }
 async function initialize(){
   try{
-    const state=await request('/api/session');
+    const state=await request('/api/atlas-session');
     if(state.authenticated){await prepare();return;}
     byId('status').textContent='Entre na sessão privada para preparar a conexão.';
     byId('login-section').hidden=false;
@@ -62,8 +73,8 @@ async function initialize(){
 byId('login-form').addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;setBusy(true);error();
   const password=byId('password').value;byId('password').value='';
-  try{await request('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});await prepare();}
-  catch(e){error(e.message);}
+  try{await request('/api/atlas-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:password})});await prepare();}
+  catch(e){error(e.code==='AUTH_REQUIRED'?'Código de acesso incorreto. Use o mesmo código do Cockpit.':e.message);}
   finally{setBusy(false);}
 });
 async function startConsent({formId,profile,checkboxId,approveKey,linkId,expiryId}){

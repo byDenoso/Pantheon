@@ -49,7 +49,7 @@ anonymous response. The legacy session endpoint retains its existing checks. Goo
 initiation and readback require Atlas authentication. The callback alone is
 exempt from the browser cookie gate: its existing signed, expiring flow nonce
 and fixed owner/profile checks still apply. It grants no session or data access;
-readback again requires both active Atlas and legacy owner sessions. Existing
+readback again requires the active Atlas session. Google consent uses the same Cockpit PIN and Redis-backed session; it does not require the legacy owner password. Existing
 MCP bearer keys and signed Writer OIDC retain their original MCP grants and equivalent spool ingress
 without needing a browser cookie. The inbox-drop gateway still applies its
 existing envelope restrictions. Legacy tasks that only open anonymous inbox-drop

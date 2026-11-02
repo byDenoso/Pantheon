@@ -18,7 +18,7 @@ the owner can start this optional flow and requires a separate explicit
 checkbox. It tells the owner to stop if Google requests additional scopes.
 
 The owner flow is isolated at `/google-drive-connect.html`. Both profiles log
-into the existing NEXO private session, disclose their exact scopes and intended
+into the existing Atlas/Cockpit private session (`/api/atlas-session`), disclose their exact scopes and intended
 use, and require a profile-specific checkbox and explicit preparation action.
 They call the supported `@vercel/connect` `startAuthorization` from the
 project's OIDC context. Neither profile creates a connector, changes project
@@ -37,7 +37,8 @@ provider credentials.
 - Profile-free signed cookies created by the earlier release remain valid only
   as Drive-readonly flows and callbacks. They cannot verify or start the Sheets
   profile
-- The existing owner-session cookie retains SameSite=Strict
+- The existing `__Host-atlas_session` cookie retains SameSite=Strict; the legacy `nexo_session` and `NEXO_PASSWORD_HASH` are not used by this flow
+- Preparation and readback verify the current opaque session against Redis, including expiry, revocation and PIN-hash rotation; a separate legacy login is not required
 - Connect owns provider OAuth state, PKCE, callback exchange, and refresh storage
 - The application callback validates its own nonce and transfers a short-lived
   signed return proof into a Strict cookie. It only redirects to the consent page
@@ -97,3 +98,7 @@ Official references:
 - https://vercel.com/docs/connect/concepts/authentication
 - https://github.com/vercel/vercel/blob/main/packages/connect/src/authorization.ts
 - https://github.com/vercel/vercel/blob/main/packages/connect/test/authorization.test.ts
+
+## Cockpit session recovery (2026-11-02)
+
+The connection page restores and creates the same Atlas session as `/cockpit`, submitting `{pin}` to `/api/atlas-session`. A 401 hides consent controls and returns to login. Expiration clears old authorization links, timers, CSRF state and checked approvals. OAuth nonce, profile and return proof are bound to the initiating Atlas cookie. The callback does not issue an application session; all reads still require a current Redis-backed Atlas session. An interrupted flow from the old legacy-session implementation must be started again.

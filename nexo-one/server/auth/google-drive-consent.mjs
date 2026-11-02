@@ -1,6 +1,6 @@
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {startAuthorization} from '@vercel/connect';
-import {authenticated,sameOrigin} from './session.mjs';
+import {atlasAuthenticated,atlasSameOrigin} from './atlas-session.mjs';
 import {googleConnectToken,googleRuntimeEnvironment,GOOGLE_SHEETS_SPOOL_SCOPES} from '../adapters/connect.mjs';
 import {readOperationalTower} from '../mcp/operational-state.mjs';
 import {SPOOL_ID} from '../mcp/operational-queue.mjs';
@@ -31,7 +31,11 @@ const fixedError=(error,status)=>({status,body:{error}});
 const equal=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const digest=value=>createHash('sha256').update(value).digest('hex');
 function cookieValue(req,name){return String(req.headers?.cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith(name+'='))?.slice(name.length+1)||'';}
-function sessionBinding(req){return digest(cookieValue(req,'nexo_session'));}
+function sessionBinding(req){
+  const entries=String(req.headers?.cookie||'').split(';').map(v=>v.trim()).filter(v=>v.startsWith('__Host-atlas_session='));
+  const token=entries.length===1?entries[0].slice('__Host-atlas_session='.length):'';
+  return digest(/^[a-f0-9]{64}$/.test(token)?token:'');
+}
 function sign(value,env){return createHmac('sha256',env.NEXO_SESSION_SECRET).update('nexo-drive-consent-v1:'+value).digest('base64url');}
 function seal(payload,env){const value=Buffer.from(JSON.stringify(payload)).toString('base64url');return value+'.'+sign(value,env);}
 function unseal(value,env,kind,now){
@@ -50,7 +54,7 @@ function unseal(value,env,kind,now){
   }catch{return null;}
 }
 function configuredOwner(env,req){
-  return env.GOOGLE_CONNECTOR===GOOGLE_DRIVE_CONSENT.connector&&
+  return (env.NEXO_SESSION_SECRET?.length||0)>=32&&env.GOOGLE_CONNECTOR===GOOGLE_DRIVE_CONSENT.connector&&
     (env.GOOGLE_CONNECT_SUBJECT_ID??'owner')==='owner'&&
     env.VERCEL_ENV==='production'&&req.headers?.host==='nexo-one-two.vercel.app'&&
     env.VERCEL_CONNECT_INTERACTIVE_AUTH_MODE!=='detached';
@@ -99,11 +103,11 @@ function providerError(error){
 
 export async function googleDriveConsentRoute(req,env,now=Date.now(),{
   body={},startAuthorizationImpl=startAuthorization,tokenImpl=googleConnectToken,readTowerImpl=readOperationalTower,
-  readSpoolHeaderImpl=readOperationalSpoolHeader,startTimeoutMs=12000
+  readSpoolHeaderImpl=readOperationalSpoolHeader,startTimeoutMs=12000,store
 }={}){
   const method=String(req.method||'GET').toUpperCase();
   if(!['GET','POST'].includes(method))return fixedError('METHOD_NOT_ALLOWED',405);
-  if(!authenticated(req,env,now))return fixedError('AUTH_REQUIRED',401);
+  if(!await atlasAuthenticated(req,env,now,store))return fixedError('AUTH_REQUIRED',401);
   if(!configuredOwner(env,req))return fixedError('GOOGLE_CONSENT_CONFIGURATION_MISMATCH',503);
   if(method==='GET'){
     const returned=returnProof(req,env,now),pending=pendingProof(req,env,now);
@@ -115,7 +119,7 @@ export async function googleDriveConsentRoute(req,env,now=Date.now(),{
       startUncertain:pending?.uncertain===true,csrfToken:csrfTokens[DEFAULT_PROFILE],csrfTokens,
       profiles:{[DEFAULT_PROFILE]:{scopes:GOOGLE_DRIVE_CONSENT.scopes},[SHEETS_PROFILE]:{scopes:GOOGLE_SHEETS_SPOOL_CONSENT.scopes,spoolId:SPOOL_ID}}}};
   }
-  if(!sameOrigin(req)||req.headers?.['sec-fetch-site']==='cross-site')return fixedError('ORIGIN_NOT_ALLOWED',403);
+  if(!atlasSameOrigin(req,env)||req.headers?.['sec-fetch-site']==='cross-site')return fixedError('ORIGIN_NOT_ALLOWED',403);
   if(body?.action!=='start'&&body?.action!=='verify')return fixedError('CONSENT_ACTION_INVALID',400);
   const profile=body?.profile===undefined?DEFAULT_PROFILE:body.profile;
   const selected=typeof profile==='string'&&Object.hasOwn(GOOGLE_CONSENT_PROFILES,profile)?GOOGLE_CONSENT_PROFILES[profile]:null;
@@ -190,8 +194,10 @@ export function googleDriveConsentReturn(req,env,now=Date.now()){
   // Strict owner cookies may be absent on the cross-site redirect. A present
   // owner cookie must match the initiating session. This callback only navigates;
   // verification always requires that session again and a fresh Drive readback.
-  const session=cookieValue(req,'nexo_session');
-  if(session&&(!authenticated(req,env,now)||!equal(p.session,sessionBinding(req))))return fixedError('CONSENT_SESSION_MISMATCH',403);
+  const session=cookieValue(req,'__Host-atlas_session');
+  // Callback grants no access. Redis revocation/expiry is checked on every
+  // preparation and verification; Strict cookies can be absent on this return.
+  if(session&&!equal(p.session,sessionBinding(req)))return fixedError('CONSENT_SESSION_MISMATCH',403);
   const proof={...p,kind:'return',iat:now,exp:now+TTL};
   return {status:303,setCookie:[flowCookie('',true),pendingCookie('',true),returnCookie(seal(proof,env))],
     location:p.profile===DEFAULT_PROFILE?'/google-drive-connect.html?returned=1':'/google-drive-connect.html?returned=1&profile='+encodeURIComponent(p.profile),
