@@ -1,0 +1,57 @@
+/* Public presentation only: keep scientific content and interaction semantics intact. */
+.atlas-app[data-area="public"] .nexo-themed-picture { isolation: isolate; }
+.atlas-app[data-area="public"] .nexo-orbital-field { position:absolute; inset:0; z-index:2; pointer-events:none; overflow:hidden; }
+.atlas-app[data-area="public"] .nexo-orbital-field canvas { display:block; width:100%; height:100%; }
+.atlas-app[data-area="public"] .nexo-art-scene { z-index:1; }
+.atlas-app[data-area="public"] .nexo-art-scene.is-cmb {
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--cyan) 16%,transparent),0 24px 65px color-mix(in srgb,var(--cyan) 18%,transparent);
+}
+.atlas-app[data-area="public"] .atlas-hero-copy h1 { font-size:clamp(44px,5.2vw,72px); line-height:1.02; }
+.atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow { display:flex; align-items:center; gap:10px; }
+.atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow::before { content:""; flex:none; width:28px; height:1px; background:var(--cyan); }
+.atlas-app[data-area="public"] .atlas-hero-lead { max-width:48ch; font-size:clamp(16px,1.25vw,19px); }
+.atlas-app[data-area="public"] .nexo-research-shortcut {
+  position:relative; border-radius:12px; background:color-mix(in srgb,var(--bg) 94%,var(--cyan));
+  border-color:color-mix(in srgb,var(--cyan) 18%,var(--line)); overflow:hidden;
+}
+.atlas-app[data-area="public"] .nexo-research-shortcut>svg { width:32px; height:32px; }
+.atlas-app[data-area="public"] .nexo-research-shortcut strong { font-size:15px; }
+.atlas-app[data-area="public"] .nexo-research-shortcut small { font-size:12px; }
+.atlas-app[data-area="public"] .nexo-research-shortcut::before {
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
+  background:linear-gradient(110deg,transparent,color-mix(in srgb,var(--cyan) 12%,transparent),transparent);
+}
+.atlas-app[data-area="public"] .nexo-research-hub { border-radius:14px; overflow:hidden; }
+.atlas-app[data-area="public"] .nexo-map-stage.nexo-map-v2 { border-radius:14px; }
+.atlas-app[data-area="public"] .atlas-research-lines>li { transition:border-color .2s ease,background-color .2s ease; }
+.atlas-app[data-area="public"] .atlas-research-lines>li:hover { border-color:var(--cyan); background:color-mix(in srgb,var(--cyan) 5%,transparent); }
+.atlas-app[data-area="public"] .nexo-evidence-guide { display:flex; align-items:center; justify-content:space-between; gap:24px; margin:0 0 24px; padding:20px 22px; border:1px solid color-mix(in srgb,var(--cyan) 25%,var(--line)); border-left:3px solid var(--cyan); border-radius:4px 12px 12px 4px; background:color-mix(in srgb,var(--bg) 94%,var(--cyan)); }
+.atlas-app[data-area="public"] .nexo-evidence-guide strong { font-size:16px; }
+.atlas-app[data-area="public"] .nexo-evidence-guide p { max-width:78ch; margin:7px 0 0; color:var(--fg-2); font-size:14px; line-height:1.6; }
+.atlas-app[data-area="public"] .nexo-evidence-guide a { flex:none; color:var(--cyan); font-size:14px; }
+.atlas-app[data-area="public"] :is(button,a,summary):focus-visible { outline:2px solid var(--cyan); outline-offset:4px; }
+@media (prefers-reduced-motion:no-preference) {
+  .atlas-app[data-area="public"][data-cinema-paused="false"] .nexo-research-shortcut { transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease; }
+  .atlas-app[data-area="public"][data-cinema-paused="false"] .nexo-research-shortcut:hover,
+  .atlas-app[data-area="public"][data-cinema-paused="false"] .nexo-research-shortcut:focus-visible {
+    transform:translateY(-4px); border-color:var(--cyan); box-shadow:0 12px 26px color-mix(in srgb,var(--cyan) 15%,transparent);
+  }
+  .atlas-app[data-area="public"][data-cinema-paused="false"] .nexo-research-shortcut:hover::before { opacity:1; animation:nexo-orbital-sweep .9s ease both; }
+  .atlas-app[data-area="public"][data-cinema-paused="false"] .nexo-orbit-link.is-selected { animation:nexo-orbital-trace 3s linear infinite; stroke-dasharray:2 2; }
+  @keyframes nexo-orbital-sweep { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+  @keyframes nexo-orbital-trace { to { stroke-dashoffset:-8; } }
+}
+@media (max-width:600px) {
+  .atlas-app[data-area="public"] .atlas-hero-copy h1 { font-size:clamp(34px,9vw,48px); }
+  .atlas-app[data-area="public"] .atlas-hero-art { height:250px; min-height:250px; margin:16px 0; }
+  .atlas-app[data-area="public"] .nexo-art-scene.is-cmb { width:min(78cqw,90cqh,250px); }
+  .atlas-app[data-area="public"] .nexo-research-shortcut { min-height:64px; }
+  .atlas-app[data-area="public"] .nexo-evidence-guide { align-items:flex-start; flex-direction:column; gap:12px; padding:18px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .atlas-app[data-area="public"] .nexo-orbital-field { display:none; }
+  .atlas-app[data-area="public"] .atlas-research-lines>li { transition:none; }
+}
+@media (prefers-contrast:more) {
+  .atlas-app[data-area="public"] .nexo-research-shortcut { background:var(--bg); border-color:var(--fg); }
+}

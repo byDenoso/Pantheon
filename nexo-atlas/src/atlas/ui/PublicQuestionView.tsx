@@ -68,6 +68,10 @@ export default function PublicQuestionView({group, overview = group, locale, sea
         {repeats > 0 && <p className="atlas-campaign-repeats">{en ? `${repeats} associated analyses repeat the same study design and are identified as repetitions.` : `${repeats} análises associadas repetem o mesmo desenho do estudo e estão identificadas como repetições.`}</p>}
       </details>
     </> : pick(group.scope, locale) && <p className="atlas-question-scope">{pick(group.scope, locale)}</p>}
+    {standalone&&<aside className="nexo-evidence-guide" aria-label={en?'How to assess this research':'Como avaliar esta pesquisa'}>
+      <div><strong>{en?'Read the evidence':'Como avaliar o resultado'}</strong><p>{en?'Check the data, assumptions, configurations and limitations in the analyses below. Analyses may share data or methods and are not necessarily independent.':'Confira os dados, hipóteses, configurações e limites nas análises abaixo. As análises podem compartilhar dados ou métodos e não são necessariamente independentes.'}</p><p>{en?'Code, data and external references are available only where linked by the individual record.':'Código, dados e referências externas estão disponíveis apenas quando indicados em cada registro.'}</p></div>
+      <a href="/metodo.html">{en?'Read the methodology':'Conheça a metodologia'}</a>
+    </aside>}
     {groupVisuals.visuals.length > 0 && <QuestionFigures visuals={groupVisuals.visuals} links={groupVisuals.links} locale={locale}/>}
     {count !== group.total && <p className="atlas-campaign-search-note">{en ? 'The summary covers the full investigation. The tests below match your search.' : 'A síntese abrange a investigação completa. A lista abaixo mostra os testes encontrados na busca.'}</p>}
     <details className="atlas-question-details" open={open} onToggle={event => {setOpen(event.currentTarget.open);if(event.currentTarget.open)setTestsMounted(true);}}>

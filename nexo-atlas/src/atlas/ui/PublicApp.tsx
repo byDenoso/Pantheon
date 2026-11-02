@@ -20,6 +20,7 @@ import '../public-presentation.css';
 import '../site-living.css';
 import '../game-motion.css';
 import '../public-refinement.css';
+import '../orbital-interface.css';
 
 const CosmicWebCanvas = lazy(() => import('./CosmicWebCanvas.tsx'));
 const art = new URL('../assets/cosmic-web.png', import.meta.url).href;

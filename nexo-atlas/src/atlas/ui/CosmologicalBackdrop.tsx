@@ -2,6 +2,7 @@ import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {useLocale} from './LocaleProvider.tsx';
 import '../cinema/cinema.css';
 import '../cinema/cosmological-backdrop.css';
+import OrbitalField from './OrbitalField.tsx';
 
 // Generated decorative illustrations; neither image represents observed data.
 const ART = {
@@ -47,6 +48,7 @@ export function CosmologicalHero({fallback}: {fallback:ReactNode}) {
     : locale === 'en' ? 'Illustration of cosmic expansion' : 'Ilustração da expansão cósmica';
   return <figure ref={figure} className="atlas-hero-art nexo-themed-art" data-illustration={theme === 'light' ? 'cmb' : 'cosmic-expansion'} data-paused={hidden||!visible}>
     <div className="atlas-hero-picture nexo-themed-picture">
+      <OrbitalField/>
       <div className={'nexo-art-scene' + (theme === 'light' ? ' is-cmb' : '')}>
         <img className="nexo-themed-image" src={src} width="1536" height="1024" alt="" fetchPriority="high" decoding="async" onError={() => setFailed(src)}/>
       </div>
