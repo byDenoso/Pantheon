@@ -7,7 +7,9 @@ import type {TowerNode} from '../tower-web/model.ts';
 import {WORKSPACE_COPY} from './copy.ts';
 import {researchHref, testHref, type WorkspaceRoute} from './model.ts';
 import {DomainView, OperationView, ResearchView, TestDetail} from './Views.tsx';
+import '@fontsource-variable/nunito';
 import './workspace.css';
+import LiveView from './LiveView.tsx';
 const TowerCosmos = lazy(() => import('../tower-web/TowerCosmos.tsx'));
 const TowerWeb = lazy(() => import('../tower-web/TowerWeb.tsx'));
 const KnowledgeGraph = lazy(() => import('../knowledge/KnowledgeGraph.tsx'));
@@ -49,9 +51,9 @@ export default function PrivateWorkspace({state, generatedAt, route, refresh}: {
   const isWeb = route.page === 'web' || route.page === 'organogram' || route.page === 'cosmos';
   return <div className="pw" data-theme={theme} data-view={route.page}>
     <header className="pw-header"><a className="pw-brand" href="#/teia">NEXO<small>{m.private}</small></a>
-      <nav aria-label={m.private}>{([['web','#/teia',m.web],['domains','#/teia/dominios',m.domains],['research','#/teia/testes',m.tests],['operations','#/teia/operacao',m.operations]] as const).map(([key, href, label]) => <a key={key} href={href} aria-current={active === key ? 'page' : undefined}>{label}</a>)}</nav>
+      <nav aria-label={m.private}>{([['live','#/teia/ao-vivo',m.live],['web','#/teia',m.web],['domains','#/teia/dominios',m.domains],['research','#/teia/testes',m.tests],['operations','#/teia/operacao',m.operations]] as const).map(([key, href, label]) => <a key={key} href={href} aria-current={active === key ? 'page' : undefined}>{label}</a>)}</nav>
       <a className="pw-legacy" href="#/agora">{m.legacy}</a>
-      {!isWeb && refresh && <button type="button" className="pw-button" disabled={refreshing} onClick={() => void requestRefresh()}>{refreshing ? m.refreshing : m.reload}</button>}
+      {!isWeb && route.page !== 'live' && refresh && <button type="button" className="pw-button" disabled={refreshing} onClick={() => void requestRefresh()}>{refreshing ? m.refreshing : m.reload}</button>}
     </header>
     <div className={isWeb ? 'pw-content pw-web-content' : 'pw-content'}>
       {!isWeb && coverageNote && <p className="pw-coverage" role="status">{coverageNote}</p>}
@@ -63,6 +65,7 @@ export default function PrivateWorkspace({state, generatedAt, route, refresh}: {
         {route.page === 'research' && <ResearchView key={`${route.domain}:${route.filter}`} tests={tests} state={state} domain={route.domain} filter={route.filter} lang={lang}/>}
         {route.page === 'test' && (lab.tests.has(route.id) ? <TestDetail key={route.id} test={lab.tests.get(route.id)!} state={state} lang={lang}/> : <main className="pw-page"><h1 data-private-heading tabIndex={-1}>{m.noTest}</h1><a href="#/teia/testes">{m.back}</a></main>)}
         {route.page === 'operations' && <OperationView state={state} lang={lang}/>}
+        {route.page === 'live' && <LiveView state={state} lang={lang} refresh={refresh}/>}
         {route.page === 'missing' && <main className="pw-page"><h1 data-private-heading tabIndex={-1}>{m.missing}</h1><a href="#/teia">{m.web}</a></main>}
       </Suspense>
       {!isWeb && <footer className="pw-source">{m.sourceAt} <time dateTime={generatedAt}>{generatedAt}</time>{notice && <p role="status">{notice}</p>}</footer>}
