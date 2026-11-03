@@ -63,7 +63,7 @@ def _row_data(tab, row):
     return key, tuple(normalized)
 
 
-def _merge(target, tab, row):
+def _merge(target, tab, number, row):
     key, normalized = _row_data(tab, row)
     if not key:
         return
@@ -71,25 +71,66 @@ def _merge(target, tab, row):
     previous = target["entries"].get(key)
     if key in target["conflicts"]:
         return
-    if previous is not None and previous != digest:
+    if previous is not None and previous[1] != digest:
         target["conflicts"].append(key)
         del target["entries"][key]
-    else:
-        target["entries"][key] = digest
+    elif previous is None:
+        target["entries"][key] = [number, digest]
 
 
 def _full_target(session, tab):
-    index = w.target_index(session, tab)
-    target = {"entries": {}, "conflicts": sorted(index.conflicts),
-              "last_row": index.last_row, "anchor": ""}
-    for key, row in index.items():
-        target["entries"][key] = _fingerprint(tab, row)
-    if index.last_row > 1:
-        tail = w.values(session, w.SHADOW,
-                        f"'{tab}'!A{index.last_row}:{w.TABS[tab][2] if tab == 'MURAL' else 'J'}{index.last_row}")
-        if tail:
-            target["anchor"] = _fingerprint(tab, (tail[0] + [""] * w.TABS[tab][1])[:w.TABS[tab][1]])
+    # Rebuild exact row positions, not just identities. Positions are only
+    # advisory until a fresh, matching readback from Sheets has succeeded.
+    target = {"entries": {}, "conflicts": [],
+              "last_row": 1, "anchor": ""}
+    col = "H" if tab == "MURAL" else "J"
+    for number, row in w.page_rows(session, w.SHADOW, tab, col, first=2):
+        target["last_row"] = max(target["last_row"], number)
+        _merge(target, tab, number, row)
+        target["anchor"] = _fingerprint(
+            tab, (row + [""] * w.TABS[tab][1])[:w.TABS[tab][1]])
     return target
+
+
+def verify_cached_rows(session, state, items):
+    """BatchGet exact cached row positions BEFORE acknowledging any receipt.
+
+    Any absent, shifted or changed row rebuilds both target indexes; the
+    caller then re-evaluates the identity and must verify the new location.
+    """
+    refs = {}
+    for item in items:
+        data = item["data"]
+        tab, key = data["tab"], data["stable_id"]
+        saved = state["targets"][tab]["entries"].get(key)
+        if saved is not None:
+            if (not isinstance(saved, list) or len(saved) != 2
+                    or not isinstance(saved[0], int) or saved[0] < 2
+                    or not isinstance(saved[1], str)):
+                raise RuntimeError("INVALID_TARGET_INDEX_ENTRY")
+            refs[(tab, key)] = saved
+    if not refs:
+        return set()
+    verified = set()
+    for start in range(0, len(refs), 100):
+        part = list(refs.items())[start:start + 100]
+        ranges = [f"'{tab}'!A{saved[0]}:{'H' if tab == 'MURAL' else 'J'}{saved[0]}"
+                  for (tab, _), saved in part]
+        response = w.safe_get(session, f"{w.API}/{w.SHADOW}/values:batchGet",
+                              params={"ranges": ranges}, timeout=60)
+        returned = response.json().get("valueRanges", [])
+        if len(returned) != len(ranges):
+            raise RuntimeError("TARGET_BATCH_READBACK_INVALID")
+        for ((tab, key), saved), result in zip(part, returned):
+            rows = result.get("values", [])
+            if (len(rows) != 1 or
+                    _row_data(tab, rows[0])[0] != key or
+                    _fingerprint(tab, (rows[0] + [""] * w.TABS[tab][1])[:w.TABS[tab][1]]) != saved[1]):
+                # A middle-row deletion, edit or sort invalidates all positions.
+                update_targets(session, state, force=True)
+                return verify_cached_rows(session, state, items)
+            verified.add((tab, key))
+    return verified
 
 
 def _tail(session, sheet, tab, column, first):
@@ -122,7 +163,7 @@ def update_targets(session, state, *, force=False):
                 targets[tab] = _full_target(session, tab)
                 continue
         for number, row in _tail(session, w.SHADOW, tab, col, last + 1):
-            _merge(old, tab, row)
+            _merge(old, tab, number, row)
             old["last_row"] = max(old["last_row"], number)
             old["anchor"] = _fingerprint(tab, (row + [""] * w.TABS[tab][1])[:w.TABS[tab][1]])
     return targets
