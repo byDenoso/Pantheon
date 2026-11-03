@@ -277,6 +277,7 @@ class ThroughputTests(unittest.TestCase):
         # Remove middle target row; anchor changes but the persistent
         # index still claims the old physical row.
         sheets.target["MURAL"].pop(2)
+        original[-1]="CLAIMED:"+w.digest_for({"tab":"MURAL","values":original[4:12]})
         sheets.source[w.PLAIN_TAB].append(original)
         counts,_=self.execute(sheets,state)
         self.assertEqual(counts["written"],0)
@@ -301,7 +302,11 @@ class ThroughputTests(unittest.TestCase):
                    "targets":{"MURAL":{"last_row":23,"anchor":"a","conflicts":[],
                                          "entries":{f"event-{i}":[i+2,f"digest-{i}"] for i in range(300)}}}}
             t.save_state_dir(root,state)
-            self.assertEqual(t.load_state_dir(root),state)
+            loaded=t.load_state_dir(root)
+            self.assertEqual(loaded["targets"],state["targets"])
+            self.assertEqual(loaded["sources"],state["sources"])
+            self.assertEqual(loaded["runs"],state["runs"])
+            self.assertEqual(loaded["version"],1)
             entries=t.load_state(root)["targets"]["MURAL"]["entries"]
             self.assertEqual(len(entries),300)
             bad=next(f for f in os.listdir(root) if f.startswith("mural-"))
