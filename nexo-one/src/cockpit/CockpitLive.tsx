@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
 import type {Row} from './api.ts';
-import {COMPLAINT, liveEvents, type Kind} from '../private-workspace/liveEvents.ts';
+import {COMPLAINT, agentName, liveEvents, type Kind} from '../private-workspace/liveEvents.ts';
 import type {MuralRow, ResultadoRow, ResumoRow} from '../private-workspace/shadow.ts';
 
 // "Ao vivo" in the cockpit: who is working, what was posted on the Mural and which
@@ -9,7 +9,7 @@ import type {MuralRow, ResultadoRow, ResumoRow} from '../private-workspace/shado
 const ACTIVE_MS = 90 * 60_000;
 const LABEL: Record<Kind, string> = {mural: 'Mural', resultado: 'Resultado', resumo: 'Mudança'};
 const hue = (name: string) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
-const initials = (name: string) => name.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase().slice(0, 3) || '?';
+const initials = (name: string) => /^(S\d{1,2}|P|GPT)$/.test(name) ? name : name === 'Mapa Vivo' ? 'MV' : name.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase().slice(0, 3) || '?';
 const ago = (t: number | null, now: number) => {
   if (t === null) return 'sem data';
   const min = Math.max(0, Math.round((now - t) / 60_000));
@@ -27,7 +27,7 @@ export default function CockpitLive({mural, resultados, resumo, equipe}: {mural:
 
   const agents = useMemo(() => {
     const map = new Map<string, {name: string; last: number | null; what: string}>();
-    for (const row of equipe) if (row.papel) map.set(row.papel, {name: row.papel, last: null, what: row.frentes ?? ''});
+    for (const row of equipe) if (row.papel) map.set(agentName(row.papel), {name: agentName(row.papel), last: null, what: row.frentes ?? ''});
     for (const e of [...events].reverse()) {
       if (!e.agent || e.agent === '—' || e.kind === 'resumo') continue;
       const prev = map.get(e.agent) ?? {name: e.agent, last: null, what: ''};

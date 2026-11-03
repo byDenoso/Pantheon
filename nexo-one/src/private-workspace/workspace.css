@@ -102,3 +102,5 @@
 .pw-feed-item p{overflow-wrap:anywhere}
 .pw-feed-extra{font-size:13px;color:var(--pw-muted)}
 @media(max-width:600px){.pw-feed-item{padding:14px}.pw-feed-head time{margin-left:0;width:100%}}
+.pw-agent>div{min-width:0}.pw-agent strong,.pw-agent small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pw-agent p,.pw-feed-item p,.pw-feed-item h3{overflow-wrap:anywhere;word-break:break-word}

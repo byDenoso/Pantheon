@@ -241,3 +241,6 @@ button,input,textarea,select{font:inherit;color:inherit}
 .ck-chip{padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--cyan) 12%,var(--bg-2));color:var(--fg);font-size:11px;font-weight:600}
 @media(max-width:600px){.ck-feed-item{padding:14px}.ck-feed-head time{margin-left:0;width:100%}}
 @media(prefers-reduced-motion:reduce){.ck-agent,.ck-feed-item,.ck-avatar::after{animation:none!important;transition:none!important}}
+.ck-agent>div,.ck-feed-head{min-width:0}
+.ck-agent strong,.ck-agent small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ck-agent p,.ck-feed-item p,.ck-feed-item h3{overflow-wrap:anywhere;word-break:break-word}

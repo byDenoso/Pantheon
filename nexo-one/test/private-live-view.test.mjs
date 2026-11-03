@@ -23,3 +23,13 @@ test('mural, results and summary merge newest first, undated last', () => {
   assert.deepEqual(events.map(e => e.kind), ['resultado', 'mural', 'resumo']);
   assert.equal(events[1].to, 'S6');
 });
+
+test('agent names are shortened from task ids and kept for plain names', async () => {
+  const {agentName} = await import('../src/private-workspace/liveEvents.ts');
+  assert.equal(agentName('S5|task_id=6ae3bfd9|run=20261102-V34|class=T0_PROJECTOR'), 'S5');
+  assert.equal(agentName('S4'), 'S4');
+  assert.equal(agentName('P'), 'P');
+  assert.equal(agentName('MAPA_VIVO'), 'Mapa Vivo');
+  assert.equal(agentName(''), '—');
+  assert.equal(agentName('Sam'), 'Sam');
+});
