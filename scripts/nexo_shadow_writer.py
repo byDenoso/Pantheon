@@ -624,9 +624,9 @@ def step_summary(counts, metrics, duration, status):
     ]
     try:
         with open(path, "a", encoding="utf-8") as output:
-            output.write("\\n### NEXO Writer baseline\\n\\n")
+            output.write("\n### NEXO Writer baseline\n\n")
             for label, value in fields:
-                output.write(f"- {label}: {value}\\n")
+                output.write(f"- {label}: {value}\n")
     except OSError:
         pass
 
