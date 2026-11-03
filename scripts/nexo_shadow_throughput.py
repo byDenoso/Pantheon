@@ -409,7 +409,70 @@ def run_fast(session, state, *, apply=True, deadline=None):
     return counts
 
 
+def _state_shard(tab, stable_id):
+    return hashlib.sha256(stable_id.encode("utf-8")).hexdigest()[:2]
+
+
+def load_state_dir(directory):
+    """Read a sharded, Git-versioned index without exposing it in logs."""
+    meta_file = os.path.join(directory, "meta.json")
+    if not os.path.isfile(meta_file):
+        return {}
+    with open(meta_file, encoding="utf-8") as handle:
+        meta = json.load(handle)
+    if meta.get("version") != 1:
+        raise ValueError("INVALID_STATE_VERSION")
+    for tab, index in meta.get("targets", {}).items():
+        if tab not in w.TABS:
+            raise ValueError("INVALID_STATE_TAB")
+        index["entries"] = {}
+        for prefix in (f"{i:02x}" for i in range(256)):
+            path = os.path.join(directory, f"{tab.lower()}-{prefix}.json")
+            if not os.path.isfile(path):
+                continue
+            with open(path, encoding="utf-8") as handle:
+                part = json.load(handle)
+            if any(_state_shard(tab, key) != prefix for key in part):
+                raise ValueError("INDEX_SHARD_MISMATCH")
+            index["entries"].update(part)
+        if len(index["entries"]) != index.get("entry_count"):
+            raise ValueError("INDEX_ENTRY_COUNT_MISMATCH")
+        del index["entry_count"]
+    return meta
+
+
+def save_state_dir(directory, state):
+    """Split the stable-id index across 256 shards per destination."""
+    os.makedirs(directory, exist_ok=True)
+    meta = {key: value for key, value in state.items() if key != "targets"}
+    meta["version"] = 1
+    meta["targets"] = {}
+    for tab, target in state.get("targets", {}).items():
+        entries = target["entries"]
+        meta["targets"][tab] = {k:v for k,v in target.items() if k != "entries"}
+        meta["targets"][tab]["entry_count"] = len(entries)
+        shards = {}
+        for key, digest in entries.items():
+            shards.setdefault(_state_shard(tab, key), {})[key] = digest
+        for number in range(256):
+            prefix = f"{number:02x}"
+            path = os.path.join(directory, f"{tab.lower()}-{prefix}.json")
+            part = shards.get(prefix)
+            if part:
+                with open(path + ".tmp", "w", encoding="utf-8") as handle:
+                    json.dump(part, handle, sort_keys=True, separators=(",", ":"))
+                os.replace(path + ".tmp", path)
+            elif os.path.exists(path):
+                os.unlink(path)
+    with open(os.path.join(directory, "meta.json.tmp"), "w", encoding="utf-8") as handle:
+        json.dump(meta, handle, sort_keys=True, separators=(",", ":"))
+    os.replace(os.path.join(directory, "meta.json.tmp"),
+               os.path.join(directory, "meta.json"))
+
+
 def load_state(path):
+    if path and os.path.isdir(path):
+        return load_state_dir(path)
     if not path or not os.path.isfile(path):
         return {}
     with open(path, encoding="utf-8") as handle:
@@ -420,6 +483,9 @@ def load_state(path):
 
 
 def save_state(path, state):
+    if path and os.path.isdir(path):
+        save_state_dir(path, state)
+        return
     if path:
         temp = path + ".tmp"
         with open(temp, "w", encoding="utf-8") as handle:
