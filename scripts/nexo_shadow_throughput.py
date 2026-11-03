@@ -297,9 +297,11 @@ def run_fast(session, state, *, apply=True, deadline=None):
     """One workflow invocation. No ambiguous append retry within this invocation."""
     state["runs"] = int(state.get("runs", 0)) + 1
     run_number = state["runs"]
+    state.setdefault("lease_quarantine_total", 0)
     counts = {"collected": 0, "eligible": 0, "written": 0, "reconciled": 0,
               "unresolved": 0, "quarantined": 0, "invalid": 0, "conflict": 0,
-              "batches": 0, "drain_cycles": 0, "pending": 0, "quota_rejected": 0}
+              "batches": 0, "drain_cycles": 0, "pending": 0, "quota_rejected": 0,
+              "lease_quarantine_new": 0, "lease_quarantine_total": state["lease_quarantine_total"]}
     update_targets(session, state, force=run_number % FULL_AUDIT_EVERY == 0)
     # Drain all available work in bounded batches, with one reconciliation
     # before every append. A second pass is permitted only for NEW arrivals.
@@ -371,6 +373,8 @@ def run_fast(session, state, *, apply=True, deadline=None):
                 if attempts >= MAX_ATTEMPTS:
                     quarantines.extend((one, "INVALID:LEASE_EXHAUSTED") for one in group)
                     counts["quarantined"] += len(group)
+                    counts["lease_quarantine_new"] += len(group)
+                    state["lease_quarantine_total"] += len(group)
                     continue
             try:
                 w.validate_new_event(item["data"])
@@ -458,6 +462,7 @@ def run_fast(session, state, *, apply=True, deadline=None):
                    for i in collect(session, state)[0]):
             break
     counts["pending"] = sum(len(v["pending"]) for v in state["sources"].values())
+    counts["lease_quarantine_total"] = state["lease_quarantine_total"]
     return counts
 
 
@@ -572,7 +577,7 @@ def main():
             meter = BudgetSession(authenticated, start + args.budget_seconds)
             try:
                 counts = run_fast(meter, state, apply=args.apply, deadline=meter.deadline)
-                status = "READBACK_VERIFIED" if not counts["conflict"] and not counts["invalid"] else "PARTIAL_RECONCILIATION"
+                status = "IDENTITY_CONTENT_CONFLICT" if counts["conflict"] else "READBACK_VERIFIED"
             except BudgetExhausted:
                 status = "BUDGET_EXHAUSTED_RESUMABLE"
             except Exception as exc:
@@ -589,7 +594,18 @@ def main():
                    "unresolved": counters.get("unresolved", 0),
                    "quarantined": counters.get("quarantined", 0),
                    "plain": counters.get("collected", 0)}
+        summary["lease_quarantine_total"] = state.get("lease_quarantine_total", 0)
+        summary["lease_quarantine_new"] = counters.get("lease_quarantine_new", 0)
         w.step_summary(summary, metrics, time.monotonic() - start, status)
+        outputs = os.environ.get("GITHUB_OUTPUT")
+        if outputs and args.apply:
+            try:
+                with open(outputs, "a", encoding="utf-8") as output:
+                    output.write(
+                        f"lease_quarantine_increased={'true' if counters.get('lease_quarantine_new', 0) else 'false'}\n"
+                        f"lease_quarantine_total={state.get('lease_quarantine_total', 0)}\n")
+            except OSError:
+                pass
         print(json.dumps({"status": status, "duration_seconds": round(time.monotonic()-start, 3),
                           **metrics, **counters}, sort_keys=True))
     return 0 if status in ("READBACK_VERIFIED", "BUDGET_EXHAUSTED_RESUMABLE") else 1
