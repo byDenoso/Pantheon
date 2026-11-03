@@ -294,6 +294,39 @@ class ThroughputTests(unittest.TestCase):
         self.assertEqual(counts["reconciled"],0)
         self.assertGreaterEqual(counts["conflict"],1)
 
+    def test_drain_budget_stops_clean_with_pending(self):
+        class Incoming(Sheets):
+            def post(self, url, *, json, timeout):
+                result=super().post(url, json=json, timeout=timeout)
+                if (url.endswith(":batchUpdate") and not url.endswith("/values:batchUpdate")
+                        and self.target_posts == 1 and len(self.source[w.PLAIN_TAB]) == 2):
+                    self.source[w.PLAIN_TAB].append(event(1))
+                return result
+        sheets=Incoming([event(0)])
+        budget=t.BudgetSession(sheets, time.monotonic()+60, per_minute=40, total=5)
+        state={}
+        with patch.object(w, "values",
+                          side_effect=lambda session, sheet, rng: sheets.values(sheet, rng)), \
+             patch.object(w, "page_rows", side_effect=sheets.page_rows):
+            with self.assertRaises(t.BudgetExhausted):
+                t.run_fast(budget, state, deadline=budget.deadline)
+        self.assertLessEqual(sum(budget.metrics[k] for k in ("get","post","put","patch")),5)
+        self.assertEqual(len(sheets.source[w.PLAIN_TAB]),3)
+        self.assertIn("sources",state)
+        self.assertTrue(state["sources"][w.PLAIN_TAB]["pending"])
+
+    def test_quarantine_counter_monotonic(self):
+        sheets=Sheets([event(0)],fail="before")
+        state={}
+        for _ in range(11):
+            try:
+                self.execute(sheets,state)
+            except TimeoutError:
+                pass
+        self.assertEqual(state["lease_quarantine_total"],1)
+        self.execute(sheets,state)
+        self.assertEqual(state["lease_quarantine_total"],1)
+
     def test_sharded_state_roundtrip_and_integrity(self):
         import tempfile
         import os
