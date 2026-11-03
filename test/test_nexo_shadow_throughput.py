@@ -327,6 +327,32 @@ class ThroughputTests(unittest.TestCase):
         self.execute(sheets,state)
         self.assertEqual(state["lease_quarantine_total"],1)
 
+    def test_summary_contains_only_aggregate_counters(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as folder:
+            summary=os.path.join(folder,"summary.md")
+            with patch.dict(os.environ,{"GITHUB_STEP_SUMMARY":summary}):
+                w.step_summary(
+                    {"written":3,"reconciled":1,"plain":7,
+                     "lease_quarantine_total":2,"lease_quarantine_new":1},
+                    {"get":4,"post":3,"put":0,"patch":0,"429":1},
+                    12.5,"READBACK_VERIFIED")
+            content=open(summary,encoding="utf-8").read()
+            self.assertIn("lease_quarantine_total: 2",content)
+            self.assertIn("lease_quarantine_new: 1",content)
+            self.assertIn("applied_verified: 4",content)
+            self.assertNotIn(w.SHADOW,content)
+            self.assertNotIn(w.SPOOL,content)
+
+    def test_production_pipeline_remains_legacy_only(self):
+        from pathlib import Path
+        workflow=Path(".github/workflows/nexo-writer-robot.yml").read_text(encoding="utf-8")
+        self.assertNotIn("python -m unittest discover -s test -p 'test_nexo_shadow_throughput.py'",workflow)
+        self.assertIn('if [ "${NEXO_WRITER_10X_APPROVED:-false}" = "true" ]; then',workflow)
+        self.assertIn("python scripts/nexo_shadow_writer.py --apply --operations",workflow)
+        self.assertNotIn("python scripts/nexo_shadow_throughput.py --apply",workflow)
+
     def test_sharded_state_roundtrip_and_integrity(self):
         import tempfile
         import os
