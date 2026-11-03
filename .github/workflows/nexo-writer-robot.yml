@@ -49,6 +49,13 @@ jobs:
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" || { echo "::error::Existing Writer credential absent"; exit 1; }
           pip install --quiet google-auth requests
           python -m unittest discover -s test -p 'test_nexo_shadow_writer.py' -v
+          python -m unittest discover -s test -p 'test_nexo_shadow_throughput.py' -v
+          # Deliberately OFF. Requires explicit separate approval after
+          # curation/operations parity and checkpoint security review.
+          if [ "${NEXO_WRITER_10X_APPROVED:-false}" = "true" ]; then
+            echo "::error::10x path is staged but intentionally blocked pending parity approval"
+            exit 1
+          fi
           python scripts/nexo_shadow_writer.py --apply --operations
       # Read-only public-battery inspection is intentionally not run here:
       # it never dispatched jobs and caused extra Sheets quota reads/false failures.
