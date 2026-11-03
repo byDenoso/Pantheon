@@ -567,6 +567,70 @@ def safe_error_code(exc):
     value = str(exc)
     return value if value in _SAFE_ERRORS else "UNCLASSIFIED"
 
+class MeteredSession:
+    """Count Sheets calls and quota responses without logging requests or payloads."""
+    def __init__(self, session):
+        self.session = session
+        self.metrics = {"get": 0, "post": 0, "put": 0, "patch": 0, "429": 0}
+
+    def __getattr__(self, name):
+        return getattr(self.session, name)
+
+    def _call(self, method, *args, **kwargs):
+        self.metrics[method] += 1
+        try:
+            response = getattr(self.session, method)(*args, **kwargs)
+        except Exception as exc:
+            if getattr(getattr(exc, "response", None), "status_code", None) == 429:
+                self.metrics["429"] += 1
+            raise
+        if getattr(response, "status_code", None) == 429:
+            self.metrics["429"] += 1
+        return response
+
+    def get(self, *args, **kwargs):
+        return self._call("get", *args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return self._call("post", *args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self._call("put", *args, **kwargs)
+
+    def patch(self, *args, **kwargs):
+        return self._call("patch", *args, **kwargs)
+
+
+def step_summary(counts, metrics, duration, status):
+    """Only aggregate counters reach GitHub's run summary."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    safe_counts = counts or {}
+    applied = safe_counts.get("written", 0) + safe_counts.get("reconciled", 0)
+    collected = safe_counts.get("plain", 0) + safe_counts.get("legacy", 0)
+    fields = [
+        ("status", status),
+        ("collected", collected),
+        ("applied_verified", applied),
+        ("claimed_pending", safe_counts.get("unresolved", 0)),
+        ("quarantined", safe_counts.get("quarantined", 0)),
+        ("sheets_get", metrics.get("get", 0)),
+        ("sheets_post", metrics.get("post", 0)),
+        ("sheets_put", metrics.get("put", 0)),
+        ("sheets_patch", metrics.get("patch", 0)),
+        ("http_429", metrics.get("429", 0)),
+        ("duration_seconds", round(duration, 2)),
+    ]
+    try:
+        with open(path, "a", encoding="utf-8") as output:
+            output.write("\\n### NEXO Writer baseline\\n\\n")
+            for label, value in fields:
+                output.write(f"- {label}: {value}\\n")
+    except OSError:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true")
@@ -583,8 +647,12 @@ def main():
     started = time.monotonic()
     snapshot = {}
     operations = 'NOT_REQUESTED'
+    result = None
+    meter = None
     try:
-        with AuthorizedSession(creds) as session:
+        with AuthorizedSession(creds) as authenticated:
+            session = MeteredSession(authenticated)
+            meter = session
             result = run(session, apply=flag, snapshot=snapshot, batch_applied=flag)
             if args.operations and flag:
                 try:
@@ -602,10 +670,13 @@ def main():
                     # projection failure never causes replay of scientific rows.
                     operations = 'FAILED_'+safe_error_code(exc)
     except Exception as exc:
+        code = safe_error_code(exc)
+        step_summary(result, meter.metrics if meter else {}, time.monotonic()-started, "STOP_"+code)
         print(json.dumps({"status": "STOP_NO_RETRY", "error_class": type(exc).__name__,
-                          "error_code": safe_error_code(exc)}), file=sys.stderr)
+                          "error_code": code}), file=sys.stderr)
         return 1
     status = result_status(result, flag)
+    step_summary(result, meter.metrics if meter else {}, time.monotonic()-started, status)
     print(json.dumps({"status": status, "operations":operations, **result}))
     return 1 if status == 'PARTIAL_RECONCILIATION' or operations.startswith('FAILED_') else 0
 
