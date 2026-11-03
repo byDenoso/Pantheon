@@ -8,9 +8,9 @@ import type {MuralRow, ResultadoRow, ResumoRow} from '../private-workspace/shado
 // own one-minute refresh brings new items, which arrive animated.
 const ACTIVE_MS = 90 * 60_000;
 const LABEL: Record<Kind, string> = {mural: 'Mural', resultado: 'Resultado', resumo: 'Mudança'};
-const hue = (name: string) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
-const initials = (name: string) => /^(S\d{1,2}|P|GPT)$/.test(name) ? name : name === 'Mapa Vivo' ? 'MV' : name === 'Lumia' ? 'LU' : name === 'Claude' ? 'CL' : name.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase().slice(0, 3) || '?';
-const ago = (t: number | null, now: number) => {
+export const hue = (name: string) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+export const initials = (name: string) => /^(S\d{1,2}|P|GPT)$/.test(name) ? name : name === 'Mapa Vivo' ? 'MV' : name === 'Lumia' ? 'LU' : name === 'Claude' ? 'CL' : name.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase().slice(0, 3) || '?';
+export const ago = (t: number | null, now: number) => {
   if (t === null) return 'sem data';
   const min = Math.max(0, Math.round((now - t) / 60_000));
   if (min < 60) return `há ${min} min`;

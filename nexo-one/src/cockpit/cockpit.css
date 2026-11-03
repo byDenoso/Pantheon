@@ -293,3 +293,47 @@ button,input,textarea,select{font:inherit;color:inherit}
 .live-tech{margin-top:6px;font-size:12px;color:var(--fg-2)}
 .live-tech summary{cursor:pointer;min-height:28px;display:list-item}
 .live-tech pre{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font:400 11.5px/1.5 var(--mono);max-height:180px;overflow:auto}
+/* Automações: one instrument card per automation. The dial shows the declared cadence and the
+   time left to the next run; the 24-hour strip shows what the automation actually registered. */
+.ck-crew{display:grid;gap:18px;--crew:var(--cyan);--crew-deep:color-mix(in srgb,var(--cyan) 62%,#0a1f66)}
+.ck-crew-summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 26px;margin:0;font-size:14px;color:var(--fg-2)}
+.ck-crew-summary b{font:800 22px/1 var(--sans);color:var(--fg);margin-right:6px;letter-spacing:-.02em}
+.ck-crew-summary [data-tone="warn"] b{color:var(--warn)}
+.ck-crew-summary [data-tone="bad"] b{color:var(--bad)}
+.ck-crew-summary .ck-crew-soon{margin-left:auto}
+.ck-crew-summary .ck-crew-soon b{font-size:inherit;margin:0}
+.ck-crew-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.ck-crew-card{position:relative;display:grid;align-content:start;gap:14px;min-width:0;padding:18px 18px 16px 21px;border:1px solid color-mix(in srgb,var(--line) 75%,transparent);border-radius:16px;background:color-mix(in srgb,var(--bg-2) 84%,transparent);backdrop-filter:blur(6px);overflow:hidden;transition:border-color .2s ease,transform .2s ease}
+.ck-crew-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--crew)}
+.ck-crew-card[data-tone="warn"]::before{background:var(--warn)}
+.ck-crew-card[data-tone="bad"]{border-color:color-mix(in srgb,var(--bad) 55%,var(--line))}
+.ck-crew-card[data-tone="bad"]::before{background:var(--bad)}
+.ck-crew-card:hover{border-color:color-mix(in srgb,var(--crew) 65%,transparent);transform:translateY(-2px)}
+.ck-crew-card .ck-avatar{background:linear-gradient(135deg,var(--crew),var(--crew-deep))}
+.ck-crew-card[data-tone="warn"] .ck-avatar{background:linear-gradient(135deg,var(--warn),color-mix(in srgb,var(--warn) 60%,#000))}
+.ck-crew-card[data-tone="bad"] .ck-avatar{background:linear-gradient(135deg,var(--bad),color-mix(in srgb,var(--bad) 60%,#000))}
+.ck-crew-top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.ck-crew-id{min-width:0}
+.ck-crew-id strong{display:block;font-weight:800;font-size:17px;line-height:1.2}
+.ck-crew-id small{display:block;color:var(--fg-2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ck-crew-card[data-active="true"] .ck-avatar::after{content:"";position:absolute;inset:-5px;border-radius:20px;border:2px solid var(--crew);animation:ck-orbit 2.4s ease-in-out infinite}
+.ck-crew-run{display:grid;grid-template-columns:72px minmax(0,1fr);gap:16px;align-items:center}
+.ck-dial{width:72px;height:72px}
+.ck-dial .track{fill:none;stroke:color-mix(in srgb,var(--line) 85%,transparent);stroke-width:5}
+.ck-dial .arc{fill:none;stroke:var(--crew);stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.ck-dial .mark{fill:var(--fg);stroke:var(--bg-2);stroke-width:1.5}
+.ck-dial text{font:800 18px/1 var(--sans);fill:var(--fg);text-anchor:middle}
+.ck-dial text.unit{font:500 8.5px/1 var(--mono);fill:var(--fg-2);letter-spacing:.12em}
+.ck-crew-run dl{margin:0;display:grid;gap:7px;min-width:0}
+.ck-crew-run dt{font:500 10.5px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fg-2)}
+.ck-crew-run dd{margin:2px 0 0;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.ck-crew-pulse{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:3px;align-items:end;height:30px}
+.ck-crew-pulse span{display:block;height:calc(4px + var(--h,0) * 26px);border-radius:2px;background:color-mix(in srgb,var(--line) 75%,transparent)}
+.ck-crew-pulse span[data-on]{background:var(--crew)}
+.ck-crew-legend{display:flex;justify-content:space-between;gap:8px;margin:6px 0 0;font:500 10.5px/1.2 var(--mono);letter-spacing:.06em;color:var(--fg-2)}
+.ck-crew-last{margin:0;font-size:13.5px;color:var(--fg-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.ck-crew-fronts{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.ck-crew-fronts li{max-width:100%;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:color-mix(in srgb,var(--crew) 15%,var(--bg-2));color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:620px){.ck-crew-grid{grid-template-columns:1fr}.ck-crew-top{grid-template-columns:auto minmax(0,1fr)}.ck-crew-top>.ck-state{grid-column:1/-1}.ck-crew-summary .ck-crew-soon{margin-left:0}}
+@media(prefers-reduced-motion:reduce){.ck-crew-card,.ck-dial .arc{transition:none!important}.ck-crew-card[data-active="true"] .ck-avatar::after{animation:none!important}}
+.ck-crew .ck-state[data-tone="ok"]{color:var(--crew)}
