@@ -77,6 +77,19 @@ export const towerRowId = row => `r-${sha([row.data, row.task, row.item, row.tit
 export const frontId = row => `front-${sha(String(row.item ?? row.titulo ?? '')).slice(0, 16)}`;
 export const sourceDigest = row => `sha256:${sha(JSON.stringify(stable(row)))}`;
 
+// Draft text for the public page. Machine cells (run IDs, pipe-separated codes, JSON) are
+// left out so the editor starts from reader-facing text; the source row stays untouched.
+const looksLikeId = v => { const s = String(v ?? '').trim(); return s.length > 0 && !/\s/.test(s) && (/^[0-9a-f]{16,}[-_]/i.test(s) || (s.length > 28 && /[-_|]/.test(s))); };
+const looksLikeCode = v => { const s = String(v ?? '').trim(); if (!s || /\s[a-zà-ú]{3,}\s/.test(s)) return false; const letters = s.replace(/[^A-Za-z]/g, ''); return /[|_]/.test(s) && letters.length > 0 && letters.replace(/[^A-Z]/g, '').length / letters.length > .7; };
+const looksLikeJson = v => String(v ?? '').trim().startsWith('{');
+export function towerDraft(row) {
+  const resultado = String(row.resultado ?? '').trim(), plain = resultado && !looksLikeCode(resultado) && !looksLikeJson(resultado);
+  const m = plain ? /^(.+?\?)(\s+|$)([\s\S]*)$/.exec(resultado) : null;
+  const question = m ? m[1] : (looksLikeId(row.titulo) || looksLikeCode(row.titulo) ? '' : String(row.titulo ?? ''));
+  const result = [plain ? (m ? m[3].trim() : resultado) : '', looksLikeJson(row.numeros) || looksLikeCode(row.numeros) ? '' : String(row.numeros ?? '')].filter(Boolean).join(' ');
+  return {question: {'pt-BR': question, en: ''}, answers: {'pt-BR': looksLikeCode(row.limites) ? '' : String(row.limites ?? ''), en: ''}, method: {'pt-BR': looksLikeCode(row.metodo) ? '' : String(row.metodo ?? ''), en: ''}, result: {'pt-BR': result, en: ''}};
+}
+
 export function towerCandidates(board) {
   const seen = new Set();
   return (board?.resultados ?? []).flatMap(row => {
@@ -84,7 +97,7 @@ export function towerCandidates(board) {
     if (seen.has(id)) return [];
     seen.add(id);
     return [{id, digest: sourceDigest(row), source: row,
-      draft: {question: {'pt-BR': row.titulo ?? '', en: ''}, answers: {'pt-BR': row.limites ?? '', en: ''}, method: {'pt-BR': '', en: ''}, result: {'pt-BR': [row.resultado, row.numeros].filter(Boolean).join(' '), en: ''}}}];
+      draft: towerDraft(row)}];
   });
 }
 export function campaignCandidates(board) {

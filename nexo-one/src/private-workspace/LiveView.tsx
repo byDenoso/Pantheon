@@ -79,7 +79,8 @@ export default function LiveView({state, lang, refresh}: {state: SystemState; la
           {e.title && <h3>{e.title}</h3>}
           {e.body && <p>{e.body}</p>}
           {e.extra && <p className="pw-feed-extra">{e.extra}</p>}
-          {e.link && /^https:\/\//.test(e.link) && <a href={e.link} target="_blank" rel="noreferrer noopener">{l === 'en' ? 'Open' : 'Abrir'}</a>}
+          {e.technical && <details className="live-tech"><summary>Detalhes técnicos</summary><pre>{e.technical}</pre></details>}
+        {e.link && /^https:\/\//.test(e.link) && <a href={e.link} target="_blank" rel="noreferrer noopener">{l === 'en' ? 'Open' : 'Abrir'}</a>}
         </div>
       </li>)}</ol>
       {!shown.length && <p className="pw-empty" role="status">{c.empty}</p>}
