@@ -69,7 +69,7 @@ class Sheets:
                 row[column] = entry["values"][0][0]
             return Response()
         self.target_posts += 1
-        if self.fail == "before" and self.target_posts == 1:
+        if self.fail == "before":
             raise TimeoutError("request not delivered")
         commands = json["requests"]
         if self.fail == "partial":
@@ -121,7 +121,7 @@ class ThroughputTests(unittest.TestCase):
         self.assertEqual(counts["written"],20)
         self.assertEqual(sheets.target_posts,1)
         self.assertEqual(len(state["targets"]["MURAL"]["entries"]),20)
-        self.assertEqual(counts["pending"],20)  # removed on next collection
+        self.assertEqual(counts["pending"],0)  # verified markers are no longer pending
         counts,_=self.execute(sheets,state)
         self.assertEqual(sheets.target_posts,1)
         self.assertEqual(counts["pending"],0)
