@@ -2,6 +2,7 @@
 import copy
 import re
 import unittest
+import time
 from unittest.mock import patch
 from scripts import nexo_shadow_writer as w
 from scripts import nexo_shadow_throughput as t
@@ -194,6 +195,70 @@ class ThroughputTests(unittest.TestCase):
         self.assertEqual(counts["written"],100)
         self.assertEqual(sheets.target_posts,1)
         self.assertLess(len(sheets.calls),20)
+
+
+    def test_drain_consumes_arrivals_between_batches(self):
+        class Incoming(Sheets):
+            def post(self, url, *, json, timeout):
+                response = super().post(url, json=json, timeout=timeout)
+                if (url.endswith(":batchUpdate") and not url.endswith("/values:batchUpdate")
+                        and self.target_posts == 1 and len(self.source[w.PLAIN_TAB]) == 2):
+                    self.source[w.PLAIN_TAB].append(event(1))
+                return response
+        sheets = Incoming([event(0)])
+        counts,_ = self.execute(sheets)
+        self.assertEqual(counts["written"],2)
+        self.assertEqual(sheets.target_posts,2)
+        self.assertGreaterEqual(counts["drain_cycles"],2)
+
+    def test_source_identity_collision_skips_both(self):
+        left=event(0)
+        right=event(0)
+        right[7]="conflicting content"
+        good=event(1)
+        sheets=Sheets([left,right,good])
+        counts,_=self.execute(sheets)
+        self.assertEqual(counts["conflict"],2)
+        self.assertEqual(counts["written"],1)
+
+    def test_invalid_event_does_not_poison_neighbor(self):
+        bad=event(0)
+        bad[7]=""
+        sheets=Sheets([bad,event(1)])
+        counts,_=self.execute(sheets)
+        self.assertEqual(counts["written"],1)
+        self.assertGreaterEqual(counts["invalid"],1)
+
+    def test_legacy_claim_receives_lease_without_replay(self):
+        row=event(0)
+        key=row[0]
+        row[-1]="CLAIMED:"+t.w.digest_for({
+            "tab":"MURAL","stable_id":key,"values":row[4:12]})
+        sheets=Sheets([row])
+        counts,_=self.execute(sheets)
+        self.assertEqual(counts["written"],0)
+        self.assertEqual(sheets.target_posts,0)
+        self.assertIn("CLAIMED:",sheets.source[w.PLAIN_TAB][1][-1])
+        self.assertEqual(sheets.source[w.PLAIN_TAB][1][-1].count(":"),4)
+
+    def test_budget_caps_total_and_deadline(self):
+        budget=t.BudgetSession(Sheets([]), time.monotonic()+60, total=1)
+        with patch.object(budget.session,"get",return_value=Response()):
+            budget.get("https://example.invalid")
+            with self.assertRaises(t.BudgetExhausted):
+                budget.get("https://example.invalid")
+        expired=t.BudgetSession(Sheets([]), time.monotonic()-1)
+        with self.assertRaises(t.BudgetExhausted):
+            expired.get("https://example.invalid")
+
+    def test_checkpoint_roundtrip(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as directory:
+            path=os.path.join(directory,"state.json")
+            state={"runs":2,"targets":{"MURAL":{"entries":{"event":"deadbeef"}}}}
+            t.save_state(path,state)
+            self.assertEqual(t.load_state(path),state)
 
 
 if __name__ == "__main__":
