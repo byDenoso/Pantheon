@@ -92,7 +92,7 @@ def _full_target(session, tab):
     return target
 
 
-def verify_cached_rows(session, state, items):
+def verify_cached_rows(session, state, items, *, rebuild_allowed=True):
     """BatchGet exact cached row positions BEFORE acknowledging any receipt.
 
     Any absent, shifted or changed row rebuilds both target indexes; the
@@ -127,8 +127,10 @@ def verify_cached_rows(session, state, items):
                     _row_data(tab, rows[0])[0] != key or
                     _fingerprint(tab, (rows[0] + [""] * w.TABS[tab][1])[:w.TABS[tab][1]]) != saved[1]):
                 # A middle-row deletion, edit or sort invalidates all positions.
+                if not rebuild_allowed:
+                    raise RuntimeError("TARGET_READBACK_DRIFT")
                 update_targets(session, state, force=True)
-                return verify_cached_rows(session, state, items)
+                return verify_cached_rows(session, state, items, rebuild_allowed=False)
             verified.add((tab, key))
     return verified
 
@@ -568,6 +570,7 @@ def main():
     creds = service_account.Credentials.from_service_account_info(
         json.loads(raw), scopes=["https://www.googleapis.com/auth/spreadsheets"])
     state = load_state(args.state)
+    prior_quarantine_total = state.get("lease_quarantine_total", 0)
     start = time.monotonic()
     counts = None
     meter = None
@@ -595,14 +598,15 @@ def main():
                    "quarantined": counters.get("quarantined", 0),
                    "plain": counters.get("collected", 0)}
         summary["lease_quarantine_total"] = state.get("lease_quarantine_total", 0)
-        summary["lease_quarantine_new"] = counters.get("lease_quarantine_new", 0)
+        quarantine_delta = max(0, state.get("lease_quarantine_total", 0) - prior_quarantine_total)
+        summary["lease_quarantine_new"] = quarantine_delta
         w.step_summary(summary, metrics, time.monotonic() - start, status)
         outputs = os.environ.get("GITHUB_OUTPUT")
         if outputs and args.apply:
             try:
                 with open(outputs, "a", encoding="utf-8") as output:
                     output.write(
-                        f"lease_quarantine_increased={'true' if counters.get('lease_quarantine_new', 0) else 'false'}\n"
+                        f"lease_quarantine_increased={'true' if quarantine_delta else 'false'}\n"
                         f"lease_quarantine_total={state.get('lease_quarantine_total', 0)}\n")
             except OSError:
                 pass
