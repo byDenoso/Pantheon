@@ -52,10 +52,15 @@ class Sheets:
         result = w.TargetIndex()
         for number, row in enumerate(self.target[tab][1:], start=2):
             result.last_row = number
-            t._merge({"entries": result, "conflicts": []}, tab, row)
             key, cells = t._row_data(tab, row)
             result[key] = cells
         return result
+
+    def page_rows(self, session, sheet, tab, column, first=2):
+        table = (self.source if sheet == w.SPOOL else self.target)[tab]
+        return iter((number, copy.deepcopy(row))
+                    for number, row in enumerate(table, start=1)
+                    if number >= first and row)
 
     def post(self, url, *, json, timeout):
         self.calls.append(("post", url))
@@ -96,7 +101,7 @@ class Sheets:
                 m = re.match(r"'([^']+)'!A(\d+):([A-Z]+)(\d+)", a1)
                 if m:
                     tab,start,_,end=m.groups()
-                    values=self.values(w.SPOOL,a1)
+                    values=self.values(w.SHADOW if f"/{w.SHADOW}/" in url else w.SPOOL,a1)
                 else:
                     m=re.match(r"'([^']+)'!([A-Z]+)(\d+)",a1)
                     tab,col,number=m.groups()
@@ -112,7 +117,8 @@ class ThroughputTests(unittest.TestCase):
     def execute(self, sheets, state=None):
         state = state if state is not None else {}
         with patch.object(w, "values", side_effect=lambda session, sheet, rng: sheets.values(sheet, rng)), \
-             patch.object(w, "target_index", side_effect=sheets.full_index):
+             patch.object(w, "target_index", side_effect=sheets.full_index), \
+             patch.object(w, "page_rows", side_effect=sheets.page_rows):
             result = t.run_fast(sheets, state, apply=True)
         return result, state
 
@@ -258,10 +264,34 @@ class ThroughputTests(unittest.TestCase):
         import os
         with tempfile.TemporaryDirectory() as directory:
             path=os.path.join(directory,"state.json")
-            state={"runs":2,"targets":{"MURAL":{"entries":{"event":"deadbeef"}}}}
+            state={"runs":2,"targets":{"MURAL":{"entries":{"event":[2,"deadbeef"]}}}}
             t.save_state(path,state)
             self.assertEqual(t.load_state(path),state)
 
+
+    def test_cached_middle_row_deletion_never_applies(self):
+        sheets=Sheets([event(0),event(1),event(2)])
+        _,state=self.execute(sheets)
+        original=event(1)
+        # Reintroduce the same proposed identity as a fresh spool row.
+        # Remove middle target row; anchor changes but the persistent
+        # index still claims the old physical row.
+        sheets.target["MURAL"].pop(2)
+        sheets.source[w.PLAIN_TAB].append(original)
+        counts,_=self.execute(sheets,state)
+        self.assertEqual(counts["written"],0)
+        self.assertEqual(counts["reconciled"],0)
+        self.assertNotEqual(sheets.source[w.PLAIN_TAB][-1][14][:8],"APPLIED:")
+        self.assertEqual(sheets.target_posts,1)
+
+    def test_cached_middle_row_edit_forces_reconciliation(self):
+        sheets=Sheets([event(0),event(1),event(2)])
+        _,state=self.execute(sheets)
+        sheets.target["MURAL"][2][3]="edited"
+        sheets.source[w.PLAIN_TAB].append(event(1))
+        counts,_=self.execute(sheets,state)
+        self.assertEqual(counts["reconciled"],0)
+        self.assertGreaterEqual(counts["conflict"],1)
 
     def test_sharded_state_roundtrip_and_integrity(self):
         import tempfile
@@ -269,7 +299,7 @@ class ThroughputTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             state={"runs":12,"sources":{"SHADOW_V2":{"last_row":77,"pending":[12]}},
                    "targets":{"MURAL":{"last_row":23,"anchor":"a","conflicts":[],
-                                         "entries":{f"event-{i}":f"digest-{i}" for i in range(300)}}}}
+                                         "entries":{f"event-{i}":[i+2,f"digest-{i}"] for i in range(300)}}}}
             t.save_state_dir(root,state)
             self.assertEqual(t.load_state_dir(root),state)
             entries=t.load_state(root)["targets"]["MURAL"]["entries"]
