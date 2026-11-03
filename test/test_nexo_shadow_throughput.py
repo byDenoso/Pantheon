@@ -1,5 +1,6 @@
 """Offline Sheets simulation for the opt-in throughput engine."""
 import copy
+import os
 import re
 import unittest
 import time
@@ -114,6 +115,13 @@ class Sheets:
 
 
 class ThroughputTests(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        guard = patch.dict(os.environ)
+        guard.start()
+        self.addCleanup(guard.stop)
+        os.environ.pop("GITHUB_STEP_SUMMARY", None)
+
     def execute(self, sheets, state=None):
         state = state if state is not None else {}
         with patch.object(w, "values", side_effect=lambda session, sheet, rng: sheets.values(sheet, rng)), \
