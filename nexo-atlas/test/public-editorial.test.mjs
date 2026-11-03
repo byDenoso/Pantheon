@@ -21,7 +21,7 @@ test('editorial map refuses drift and leaves canonical campaign approvals untouc
  const c={...old,campaigns:[],campaignsContract:'ATLAS_PUBLIC_CAMPAIGNS_V1'};assert.equal(publicEditorialProjection(c).campaigns,c.campaigns);
 });
 test('empty campaign controls are absent and software validations are visibly distinguished',()=>{
- const app=readFileSync('src/atlas/ui/PublicApp.tsx','utf8');assert.match(app,/pub\.campaigns !== undefined && pub\.campaigns\.length > 0 && <PublicCampaignsView/);
+ const hub=readFileSync('src/atlas/ui/PublicResearchHub.tsx','utf8');assert.match(hub,/pub\.campaigns!==undefined&&pub\.campaigns\.length>0&&<PublicCampaignsView/);
  const group=readFileSync('src/atlas/ui/PublicQuestionView.tsx','utf8');assert.match(group,/Validação de software/);assert.doesNotMatch(group,/Atualização da campanha/);
  const card=readFileSync('src/atlas/ui/PublicTestView.tsx','utf8');assert.match(card,/Alcance e limites/);assert.match(card,/Method overview/);
 });

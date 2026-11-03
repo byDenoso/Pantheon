@@ -2,7 +2,8 @@ import {studyHref,testAnchors,testHref} from './publicStudyRoutes.ts';
 import {pick, type Bilingual, type PublicState} from './publicItems.ts';
 import type {Locale} from './api.ts';
 import {groupPublicQuestions, publicRecency} from './publicQuestionGroups.ts';
-import {campaignBrief} from './publicCampaigns.ts';
+import {campaignBrief,type Activity} from './publicCampaigns.ts';
+import {plainSummary} from './publicPlain.ts';
 import {visualsForTest,type PublicVisual} from './publicVisuals.ts';
 
 export const SOFTWARE_QUESTIONS = new Set(['objetivos','temas-testes','calibracao-previsoes','regras-antigas','temas-registros','simulacao','tarefas-antigas','presenca-explicacoes','qualidade-explicacoes','motivos-interrupcao','pergunta-187','pergunta-194','tempo-hipoteses','prontidao','pergunta-201','pergunta-213','pergunta-214']);
@@ -21,17 +22,19 @@ export const RESEARCH_LINE_TOPICS = {
 } as const satisfies Record<string, readonly Topic[]>;
 export const researchLineTopics = (line: string | null | undefined): readonly Topic[] | null => line && Object.hasOwn(RESEARCH_LINE_TOPICS, line) ? RESEARCH_LINE_TOPICS[line as keyof typeof RESEARCH_LINE_TOPICS] : null;
 export type Topic = typeof TOPICS[number]['id'];
-export type ResearchEntry = {id:string; question:Bilingual; method:Bilingual|null; summary:Bilingual|null; limits:Bilingual[]; nextStep:Bilingual|null; href:string; state:'ongoing'|'completed'|'published'; stage:string|null; tests:number; complete:boolean; reviewed:number|null; topics:Topic[]; updatedAt:string|null};
+export type ResearchEntry = {id:string; question:Bilingual; method:Bilingual|null; summary:Bilingual|null; plain:Bilingual|null; activity:Activity|null; limits:Bilingual[]; nextStep:Bilingual|null; href:string; state:'ongoing'|'completed'|'published'; stage:string|null; tests:number; complete:boolean; reviewed:number|null; topics:Topic[]; updatedAt:string|null};
+export const ACTIVITY_LABELS:Record<Activity,Bilingual>={investigation:{'pt-BR':'Investigação',en:'Investigation'},robustness:{'pt-BR':'Teste de robustez',en:'Robustness test'},comparison:{'pt-BR':'Comparação de modelos',en:'Model comparison'},validation:{'pt-BR':'Validação',en:'Validation'}};
+export const STATE_LABELS:Record<ResearchEntry['state'],Bilingual>={ongoing:{'pt-BR':'Em andamento',en:'Ongoing'},completed:{'pt-BR':'Concluída',en:'Completed'},published:{'pt-BR':'Publicada',en:'Published'}};
 export const questionHref = studyHref;
 export const mentionedTopics = (text:string, software=false):Topic[] => software ? ['software'] : TOPICS.filter(t=>t.id!=='software'&&t.match.test(text)).map(t=>t.id);
 export const normalized = (text:string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase();
 export function researchEntries(pub:PublicState):ResearchEntry[] {
-  const fronts:ResearchEntry[]=pub.campaigns===undefined?[]:pub.campaigns.map(c=>{const reviewed=c.tests.filter(t=>t.stage==='REVIEWED'&&t.result).sort((a,b)=>Date.parse(b.updatedAt)-Date.parse(a.updatedAt)),t=reviewed[0];return {id:c.id,question:c.question,method:c.method,summary:t?.result?{'pt-BR':`Teste: ${t.question['pt-BR']}\n${t.result.summary['pt-BR']}`,en:`Test: ${t.question.en}\n${t.result.summary.en}`}:null,limits:[...(c.limitations??[]),...(t?.result?.limitations??[])],nextStep:c.nextStep,href:`/?campanha=${encodeURIComponent(c.id)}#/`,state:c.state,stage:c.currentStage?.['pt-BR']??null,tests:c.tests.length,complete:c.testsCoverage==='COMPLETE',reviewed:reviewed.length,topics:mentionedTopics([c.question['pt-BR'],c.method?.['pt-BR']??''].join(' ')),updatedAt:c.updatedAt};});
+  const fronts:ResearchEntry[]=pub.campaigns===undefined?[]:pub.campaigns.map(c=>{const reviewed=c.tests.filter(t=>t.stage==='REVIEWED'&&t.result).sort((a,b)=>Date.parse(b.updatedAt)-Date.parse(a.updatedAt)),t=reviewed[0];return {id:c.id,question:c.question,method:c.method,summary:t?.result?{'pt-BR':`Teste: ${t.question['pt-BR']}\n${t.result.summary['pt-BR']}`,en:`Test: ${t.question.en}\n${t.result.summary.en}`}:null,plain:null,activity:null,limits:[...(c.limitations??[]),...(t?.result?.limitations??[])],nextStep:c.nextStep,href:`/?campanha=${encodeURIComponent(c.id)}#/`,state:c.state,stage:c.currentStage?.['pt-BR']??null,tests:c.tests.length,complete:c.testsCoverage==='COMPLETE',reviewed:reviewed.length,topics:mentionedTopics([c.question['pt-BR'],c.method?.['pt-BR']??''].join(' ')),updatedAt:c.updatedAt};});
   // With the owner's live selection, chosen fronts and the chosen studies are shown together.
   if(pub.campaigns!==undefined&&pub.selection!=='LIVE')return fronts;
   return [...fronts,...groupPublicQuestions(pub.tests).map((g):ResearchEntry=>{
     const brief=campaignBrief(g), latest=Math.max(...g.members.map(m=>publicRecency(m.test)));
-    return {id:g.id,question:g.title,method:brief?.basis??null,summary:brief?.summary??null,limits:brief?[brief.limits]:[],nextStep:null,href:questionHref(g.id),state:'published',stage:null,tests:g.total,complete:true,reviewed:null,topics:mentionedTopics([g.title['pt-BR'],...g.members.map(m=>m.test.method['pt-BR'])].join(' '),SOFTWARE_QUESTIONS.has(g.id.replace(/^question-/,''))),updatedAt:Number.isFinite(latest)?new Date(latest).toISOString():null};
+    return {id:g.id,question:g.title,method:brief?.basis??null,summary:brief?.summary??null,plain:plainSummary(g.id),activity:brief?.activity??null,limits:brief?[brief.limits]:[],nextStep:null,href:questionHref(g.id),state:'published',stage:null,tests:g.total,complete:true,reviewed:null,topics:mentionedTopics([g.title['pt-BR'],...g.members.map(m=>m.test.method['pt-BR'])].join(' '),SOFTWARE_QUESTIONS.has(g.id.replace(/^question-/,''))),updatedAt:Number.isFinite(latest)?new Date(latest).toISOString():null};
   })];
 }
 export function visualLinks(visuals:PublicVisual[],pub:PublicState){const groups=groupPublicQuestions(pub.tests),anchors=new Map(groups.map(g=>[g.id,testAnchors(g.members.map(m=>m.test))]));return Object.fromEntries(visuals.flatMap(v=>{const s=v.subject;if(s.kind==='campaign-test'){const c=pub.campaigns?.find(c=>c.id===s.campaignId),t=c?.tests.find(t=>t.id===s.testId);return t?[[v.id,{question:t.question,href:`/?campanha=${encodeURIComponent(s.campaignId)}#/`}]]:[];}const test=pub.tests.find(t=>visualsForTest([v],t).length),group=groups.find(g=>g.members.some(m=>m.test.id===test?.id));return test&&group?[[v.id,{question:test.question,href:group.total>1?testHref(group.id,anchors.get(group.id)?.get(test.id)):questionHref(group.id)}]]:[];}));}

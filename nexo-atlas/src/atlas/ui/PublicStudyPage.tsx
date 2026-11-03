@@ -9,6 +9,7 @@ import {groupPublicQuestions} from '../publicQuestionGroups.ts';
 import PublicQuestionView from './PublicQuestionView.tsx';
 import PublicCampaignsView from './PublicCampaignsView.tsx';
 import Shell from './Shell.tsx';
+import ReadingSwitch from './ReadingSwitch.tsx';
 
 export default function PublicStudyPage({pub,locale,refresh}:{pub:PublicState;locale:Locale;refresh:()=>void}){
  const en=locale==='en',params=new URLSearchParams(location.search),question=requestedQuestion(location.pathname,location.search),campaign=params.get('campanha');
@@ -29,7 +30,7 @@ export default function PublicStudyPage({pub,locale,refresh}:{pub:PublicState;lo
  },[title,pub.status,locale]);
  return <Shell area="public"><main className="atlas-main atlas-public-main nexo-study-page" id="public-content" tabIndex={-1}>
    <nav className="nexo-study-breadcrumb" aria-label={en?'Breadcrumb':'Caminho de navegação'}><a href="/?retorno=1#/">{en?'Back to research':'Voltar à pesquisa'}</a><span aria-hidden="true">/</span><span aria-current="page">{en?'Investigation':'Investigação'}</span></nav>
-   <header className="nexo-study-heading"><p className="atlas-eyebrow">NEXO · {en?'Public research':'Pesquisa pública'}</p><h1 ref={heading} id="study-title" tabIndex={-1}>{title}</h1>{group&&<p>{group.total} {en?(group.total===1?'associated analysis':'associated analyses'):(group.total===1?'análise associada':'análises associadas')}</p>}</header>
+   <header className="nexo-study-heading"><p className="atlas-eyebrow">NEXO · {en?'Public research':'Pesquisa pública'}</p><h1 ref={heading} id="study-title" tabIndex={-1}>{title}</h1>{group&&<p>{group.total} {en?(group.total===1?'associated analysis':'associated analyses'):(group.total===1?'análise associada':'análises associadas')}</p>}{(group||record)&&<ReadingSwitch locale={locale}/>}</header>
    {pub.status==='loading'&&<p role="status">{en?'Loading published evidence…':'Carregando as evidências publicadas…'}</p>}
    {pub.status==='unavailable'&&<div role="alert"><p>{en?'The catalog could not be loaded. Try again.':'Não foi possível carregar o catálogo. Tente novamente.'}</p><button type="button" className="atlas-btn" onClick={refresh}>{en?'Try again':'Tentar novamente'}</button></div>}
    {pub.status==='ready'&&group&&<PublicQuestionView group={group} locale={locale} searching={false} visuals={pub.visuals} standalone openAnchor={anchor}/>}

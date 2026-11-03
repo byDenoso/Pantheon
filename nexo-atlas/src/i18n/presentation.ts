@@ -16,7 +16,7 @@ export type Presentation = {
 
 export const PRESENTATION: Record<Locale, Presentation> = {
   'pt-BR': {
-    hero: {eyebrow: 'Instituto de Pesquisa Nexo', title: ['Cosmologia', 'computacional.'], research: 'Ver pesquisas', methods: 'Ver métodos'},
+    hero: {eyebrow: 'Dener Pereira · Pesquisa em cosmologia', title: ['Cosmologia', 'computacional.'], research: 'Ver pesquisas', methods: 'Ver métodos'},
     lines: {
       label: 'Pesquisa', title: 'Linhas de pesquisa',
       items: [
@@ -42,7 +42,7 @@ export const PRESENTATION: Record<Locale, Presentation> = {
     nav: {lines: 'Pesquisa', works: 'Trabalhos', methods: 'Métodos', contact: 'Contato', menu: 'Menu', close: 'Fechar menu'},
   },
   en: {
-    hero: {eyebrow: 'Nexo Cosmology Institute', title: ['Computational', 'cosmology.'], research: 'View research', methods: 'View methods'},
+    hero: {eyebrow: 'Dener Pereira · Cosmology research', title: ['Computational', 'cosmology.'], research: 'View research', methods: 'View methods'},
     lines: {
       label: 'Research', title: 'Research areas',
       items: [

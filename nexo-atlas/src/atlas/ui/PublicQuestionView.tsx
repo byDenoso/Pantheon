@@ -10,6 +10,9 @@ import {visualsForTest,type PublicVisual} from '../publicVisuals.ts';
 import {presentLabel,duplicateOrdinals} from '../presentNumbers.ts';
 import {testAnchors,testHref} from '../publicStudyRoutes.ts';
 import QuestionFigures from './LazyQuestionFigures.tsx';
+import Explained from './Explained.tsx';
+import {plainSummary} from '../publicPlain.ts';
+import {useReadingMode} from './useReadingMode.ts';
 
 /** From this many tests on, the list of one investigation gets its own search field. */
 const SEARCHABLE_FROM = 8;
@@ -35,6 +38,7 @@ export default function PublicQuestionView({group, overview = group, locale, sea
   useEffect(()=>{if(previousAnchor.current===openAnchor)return;previousAnchor.current=openAnchor;if(requestedMember){setOpen(true);setTestsMounted(true);setTestQuery('');}else setOpen(false);},[openAnchor,requestedMember]);
   const count = group.members.length;
   const brief = campaignBrief(overview);
+  const plain = useReadingMode() === 'plain' ? plainSummary(overview.id) : null;
   const conditions = campaignConditions(overview);
   const repeats = overview.members.filter(member => member.repeat).length;
   // Identity of each test is its own record. Rows that happen to show the same
@@ -56,10 +60,10 @@ export default function PublicQuestionView({group, overview = group, locale, sea
     <p className="atlas-campaign-kicker">{operational ? (en ? 'Software validation' : 'Validação de software') : (en ? 'Cosmology · Research summary' : 'Cosmologia · Síntese da investigação')}</p>
     {!standalone&&<h3 id={`${group.id}-title`}><a className="nexo-question-link" href={questionHref(group.id)}>{pick(group.title, locale)}<span className="nexo-share-arrow"><ArrowIcon/></span></a></h3>}
     {brief ? <>
+      {plain && <div className="nexo-plain-summary"><SectionHeading>{en ? 'In short' : 'Em resumo'}</SectionHeading><p>{pick(plain, locale)}</p></div>}
       <div className="atlas-campaign-reading">
-        <div><SectionHeading>{en ? 'What we learned' : 'O que aprendemos'}</SectionHeading><p>{pick(brief.summary, locale)}</p></div>
-        <div className="atlas-campaign-boundary"><SectionHeading>{en ? 'Limits of the conclusion' : 'Limites da conclusão'}</SectionHeading><p>{pick(brief.limits, locale)}</p></div>
-        
+        <div><SectionHeading>{en ? 'What we learned' : 'O que aprendemos'}</SectionHeading><Explained as="p" text={pick(brief.summary, locale)} locale={locale}/></div>
+        <div className="atlas-campaign-boundary"><SectionHeading>{en ? 'Limits of the conclusion' : 'Limites da conclusão'}</SectionHeading><Explained as="p" text={pick(brief.limits, locale)} locale={locale}/></div>
       </div>
       <details className="atlas-campaign-conditions">
         <summary>{en ? 'Common basis and variations' : 'Base comum e variações'}<span className="atlas-disclosure-icon" aria-hidden="true">+</span></summary>

@@ -4,6 +4,7 @@ import {pick, type PublicTest} from '../publicItems.ts';
 import {PRESENTATION} from '../../i18n/presentation.ts';
 import PublicVisualGallery from './LazyVisualGallery.tsx';
 import type {PublicVisual} from '../publicVisuals.ts';
+import Explained from './Explained.tsx';
 
 /** Four reviewed fields only. No operational status is interpreted as a scientific result. */
 export default function PublicTestView({test, locale,visuals=[],standalone=false,anchor,requested=false}: {test: PublicTest; locale: Locale;visuals?:PublicVisual[];standalone?:boolean;anchor?:string;requested?:boolean}) {
@@ -18,11 +19,11 @@ export default function PublicTestView({test, locale,visuals=[],standalone=false
         {test.published_at ? <span>{en ? 'Published on' : 'Publicado em'} <time dateTime={test.published_at}>{date(test.published_at)}</time></span> : <span>{en ? 'Publication date unavailable' : 'Data de publicação indisponível'}</span>}
         {test.updated_at && test.updated_at !== test.published_at && <span>{en ? 'Updated on' : 'Atualizado em'} <time dateTime={test.updated_at}>{date(test.updated_at)}</time></span>}
       </div>
-      <dl>
-        <div><dt>{labels.question}</dt><dd><p className="atlas-original-question">{pick(test.question, locale)}</p></dd></div>
-        <div><dt>{en ? 'Method overview' : 'Abordagem'}</dt><dd>{pick(test.method, locale)}</dd></div>
-        <div className="nexo-reviewed-result"><dt>{labels.result}</dt><dd>{pick(test.result, locale)}</dd></div>
-        <div><dt>{en ? 'Scope and limits' : 'Alcance e limites'}</dt><dd>{pick(test.answers, locale)}</dd></div>
+      <dl className="nexo-test-trail">
+        <div><dt>{labels.question}</dt><dd><Explained as="p" className="atlas-original-question" text={pick(test.question, locale)} locale={locale}/></dd></div>
+        <div><dt>{en ? 'Method overview' : 'Abordagem'}</dt><dd><Explained text={pick(test.method, locale)} locale={locale}/></dd></div>
+        <div className="nexo-reviewed-result"><dt>{labels.result}</dt><dd><Explained text={pick(test.result, locale)} locale={locale}/></dd></div>
+        <div><dt>{en ? 'Scope and limits' : 'Alcance e limites'}</dt><dd><Explained text={pick(test.answers, locale)} locale={locale}/></dd></div>
       </dl>
       {visuals.length>0&&<PublicVisualGallery visuals={visuals} locale={locale} compact headingLevel={standalone?3:4}/>}
     </article>

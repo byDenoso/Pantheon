@@ -54,18 +54,18 @@ try {
     const s = await open({width: 1280});
     const head = await s.page.evaluate(() => ({title: document.title, canonical: document.querySelector('link[rel=canonical]').href, og: document.querySelector('meta[property="og:url"]').content, description: document.querySelector('meta[name=description]').content, path: location.pathname}));
     assert.equal(head.path, STUDY_ROUTE);
-    assert.match(head.title, /^SINTÉTICO: a medida de exemplo depende da faixa retirada\? \| Instituto de Pesquisa Nexo$/);
+    assert.match(head.title, /^SINTÉTICO: a medida de exemplo depende da faixa retirada\? \| NEXO$/);
     assert.ok(head.canonical.endsWith(STUDY_ROUTE) && head.og.endsWith(STUDY_ROUTE), JSON.stringify(head));
     assert.match(head.description, /^SINTÉTICO: nos exemplos inventados/);
     assert.ok(head.description.length <= 201);
     await shot(s, '-top'); await s.context.close(); return head;
   });
 
-  await check('English uses the approved institute name', async () => {
+  await check('English uses the site name without an institute', async () => {
     const s = await open({width: 1280, locale: 'en'});
-    assert.match(await s.page.title(), /\| Nexo Cosmology Institute$/);
-    assert.equal((await s.page.locator('.atlas-brand small').innerText()).trim(), 'Nexo Cosmology Institute');
-    assert.equal(await s.page.getByText(/Research Institute|Cosmology Lab/).count(), 0);
+    assert.match(await s.page.title(), /\| NEXO$/);
+    assert.equal((await s.page.locator('.atlas-brand small').innerText()).trim(), 'Computational cosmology');
+    assert.equal(await s.page.getByText(/Research Institute|Cosmology Institute|Cosmology Lab/).count(), 0);
     await s.context.close();
   });
 
