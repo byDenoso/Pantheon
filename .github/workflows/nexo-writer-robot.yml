@@ -43,6 +43,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Write authorized SHADOW rows from private spool
+        id: shadow_writer
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
         run: |
@@ -62,6 +63,23 @@ jobs:
       # Read-only public-battery inspection is intentionally not run here:
       # it never dispatched jobs and caused extra Sheets quota reads/false failures.
       # scripts/nexo_shadow_intake.py remains available for explicit diagnostics.
+
+      # This alarm consumes the fast writer's GITHUB_OUTPUT when that
+      # exclusive path is approved. Legacy mode produces no lease output.
+      - name: Raise single lease-quarantine issue if cumulative count increased
+        if: ${{ always() && steps.shadow_writer.outputs.lease_quarantine_increased == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TOTAL: ${{ steps.shadow_writer.outputs.lease_quarantine_total }}
+          TITLE: "NEXO: Writer lease quarantine requires review"
+        run: |
+          number=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh issue create --title "$TITLE" --body "O contador acumulado de quarentena por lease aumentou. Total: $TOTAL. Consultar o resumo agregado desta execução. Não repetir append fora da reconciliação."
+          else
+            gh issue comment "$number" --body "O contador acumulado de quarentena por lease aumentou. Total: $TOTAL. Consultar o resumo agregado desta execução."
+          fi
 
   write:
     # Historical JSON LIVE writer is retained for rollback but disabled:
