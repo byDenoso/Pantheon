@@ -315,6 +315,8 @@ def run_fast(session, state, *, apply=True, deadline=None):
         for item in items:
             key = (item["data"]["tab"], item["data"]["stable_id"])
             groups.setdefault(key, []).append(item)
+        verified_rows = verify_cached_rows(session, state, [
+            group[0] for group in groups.values()])
         safe = []
         ack = []
         quarantines = []
@@ -334,10 +336,13 @@ def run_fast(session, state, *, apply=True, deadline=None):
                 counts["conflict"] += len(group)
                 continue
             existing = target["entries"].get(stable_id)
-            if existing is not None and existing != expected:
+            if existing is not None and existing[1] != expected:
                 counts["conflict"] += len(group)
                 continue
-            if existing == expected:
+            if existing is not None and key not in verified_rows:
+                counts["unresolved"] += len(group)
+                continue
+            if existing is not None and existing[1] == expected:
                 ack.extend((one, "APPLIED:" + one["digest"]) for one in group)
                 counts["reconciled"] += len(group)
                 continue
@@ -409,7 +414,10 @@ def run_fast(session, state, *, apply=True, deadline=None):
                         group, previous_attempts = members[id(item)]
                         target = state["targets"][item["data"]["tab"]]
                         sid = item["data"]["stable_id"]
-                        if target["entries"].get(sid) == w.digest_for(item["data"]):
+                        if (target["entries"].get(sid) is not None and
+                                target["entries"][sid][1] == w.digest_for(item["data"]) and
+                                (item["data"]["tab"], sid) in
+                                verify_cached_rows(session, state, [item])):
                             adjusted.extend((one, "APPLIED:" + one["digest"]) for one in group)
                             counts["reconciled"] += len(group)
                         elif sid not in target["conflicts"]:
@@ -428,11 +436,14 @@ def run_fast(session, state, *, apply=True, deadline=None):
             counts["batches"] += 1
             update_targets(session, state)
             applied = []
+            verified_batch = verify_cached_rows(session, state, [item for item, _ in batch])
             for item, _ in batch:
                 target = state["targets"][item["data"]["tab"]]
                 sid = item["data"]["stable_id"]
-                if sid in target["conflicts"] or (
-                        target["entries"].get(sid) != w.digest_for(item["data"])):
+                if (sid in target["conflicts"] or
+                        (item["data"]["tab"], sid) not in verified_batch or
+                        target["entries"].get(sid) is None or
+                        target["entries"][sid][1] != w.digest_for(item["data"])):
                     counts["unresolved"] += 1
                     continue
                 group, _ = members[id(item)]
