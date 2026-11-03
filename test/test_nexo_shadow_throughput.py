@@ -39,7 +39,7 @@ class Sheets:
         self.target_posts = 0
 
     def values(self, sheet, range_):
-        m = re.match(r"'([^']+)'!A(\\d+):([A-Z]+)(\\d+)", range_)
+        m = re.match(r"'([^']+)'!A(\d+):([A-Z]+)(\d+)", range_)
         if not m:
             raise AssertionError("unsupported range")
         tab, start, _, end = m.groups()
@@ -60,7 +60,7 @@ class Sheets:
         self.calls.append(("post", url))
         if url.endswith("/values:batchUpdate"):
             for entry in json["data"]:
-                m = re.match(r"'([^']+)'!([A-Z]+)(\\d+)", entry["range"])
+                m = re.match(r"'([^']+)'!([A-Z]+)(\d+)", entry["range"])
                 tab, col, number = m.groups()
                 index = int(number)-1
                 column = ord(col)-ord("A")
@@ -92,12 +92,12 @@ class Sheets:
             ranges = params["ranges"]
             parts = []
             for a1 in ranges:
-                m = re.match(r"'([^']+)'!A(\\d+):([A-Z]+)(\\d+)", a1)
+                m = re.match(r"'([^']+)'!A(\d+):([A-Z]+)(\d+)", a1)
                 if m:
                     tab,start,_,end=m.groups()
                     values=self.values(w.SPOOL,a1)
                 else:
-                    m=re.match(r"'([^']+)'!([A-Z]+)(\\d+)",a1)
+                    m=re.match(r"'([^']+)'!([A-Z]+)(\d+)",a1)
                     tab,col,number=m.groups()
                     row=self.source[tab][int(number)-1]
                     cell=ord(col)-ord("A")
