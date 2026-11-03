@@ -15,7 +15,7 @@ const COPY = {
 } as const;
 
 const hue = (name: string) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
-const initials = (name: string) => /^(S\d{1,2}|P|GPT)$/.test(name) ? name : name === 'Mapa Vivo' ? 'MV' : name.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase().slice(0, 3) || '?';
+const initials = (name: string) => /^(S\d{1,2}|P|GPT)$/.test(name) ? name : name === 'Mapa Vivo' ? 'MV' : name === 'Lumia' ? 'LU' : name === 'Claude' ? 'CL' : name.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase().slice(0, 3) || '?';
 const ago = (t: number | null, lang: 'pt' | 'en', now: number) => {
   if (t === null) return COPY[lang].unknown;
   const min = Math.max(0, Math.round((now - t) / 60_000));

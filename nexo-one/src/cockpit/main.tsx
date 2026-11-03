@@ -7,5 +7,6 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource-variable/nunito';
 import './cockpit.css';
 import CockpitApp from './CockpitApp.tsx';
+import CosmicWeb from './CosmicWeb.tsx';
 
-createRoot(document.getElementById('root')!).render(<CockpitApp/>);
+createRoot(document.getElementById('root')!).render(<><CosmicWeb/><CockpitApp/></>);

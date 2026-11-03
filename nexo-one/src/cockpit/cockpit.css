@@ -244,3 +244,49 @@ button,input,textarea,select{font:inherit;color:inherit}
 .ck-agent>div,.ck-feed-head{min-width:0}
 .ck-agent strong,.ck-agent small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ck-agent p,.ck-feed-item p,.ck-feed-item h3{overflow-wrap:anywhere;word-break:break-word}
+
+/* Infinite edge: no boxed column and no framed panels. Bands run edge to edge over a slow
+   cosmic-web background; hairlines, space and type do the separating. Panels keep a soft veil
+   that fades at the screen edges so long lists stay readable. */
+:root{--gut:max(20px,4vw);--veil:#f5f7fab8;--web-mode:plate;--web-star:#12348f;--web-far:#5b3fd6}
+:root[data-theme="dark"]{--veil:#090d14a8;--web-mode:space;--web-star:#cfe0ff;--web-far:#ffb88a}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){--veil:#090d14a8;--web-mode:space;--web-star:#cfe0ff;--web-far:#ffb88a}}
+.ck-web{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:0}
+.ck-app{position:relative;z-index:1}
+.ck-header{padding-inline:var(--gut);background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(12px)}
+.ck-main{max-width:none;padding-inline:var(--gut)}
+.ck-savebar{background:color-mix(in srgb,var(--bg) 78%,transparent)}
+.ck-savebar-inner{max-width:none;padding-inline:var(--gut)}
+.ck-subnav{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(10px)}
+/* hero */
+.ck-hero{border-bottom:0;padding-block:2vh 28px}
+.ck-hero h1{font:900 clamp(36px,5.4vw,72px)/1.02 var(--sans);letter-spacing:-.03em}
+.ck-hero p{font-size:17px}
+/* figures as one ruled row */
+.ck-kpis{border:0;border-radius:0;background:linear-gradient(90deg,transparent,var(--veil) 8%,var(--veil) 92%,transparent);margin-inline:calc(-1*var(--gut));padding:22px var(--gut);border-block:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.ck-kpi{padding:0 18px}
+.ck-kpi:first-child{padding-left:0}
+.ck-kpi dd{font:900 clamp(32px,3.6vw,50px)/1.05 var(--sans);letter-spacing:-.02em}
+/* panels lose their frame, keep a veil that fades at the edges */
+.ck-panel{border:0;border-radius:0;background:linear-gradient(90deg,transparent,var(--veil) 6%,var(--veil) 94%,transparent);margin-inline:calc(-1*var(--gut));padding-inline:calc(var(--gut) - 16px);border-block:1px solid color-mix(in srgb,var(--line) 70%,transparent);backdrop-filter:blur(3px)}
+.ck-overview .ck-panel{margin-inline:0;padding-inline:0;background:transparent;border:0;backdrop-filter:none}
+.ck-overview{gap:0 6vw}
+.ck-publication-summary,.ck-activity{padding:0}
+.ck-section{margin-top:64px}
+.ck-section h2{font:800 clamp(28px,3.2vw,40px)/1.15 var(--sans);letter-spacing:-.03em}
+.ck-eyebrow{display:flex;gap:14px;align-items:center}
+.ck-eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 45%,transparent),transparent)}
+/* Ao vivo: crew as a strip that runs past the right edge, Mural as an open list */
+.ck-agents{display:flex;gap:28px;overflow-x:auto;scroll-snap-type:x proximity;margin-right:calc(-1*var(--gut));padding:4px 12vw 8px 0;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 16vw),transparent);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 16vw),transparent)}
+.ck-agents::-webkit-scrollbar{display:none}
+.ck-agent{flex:0 0 auto;min-width:240px;max-width:300px;border:0;background:transparent;padding:6px 0;scroll-snap-align:start}
+.ck-agent:hover{transform:none;box-shadow:none}
+.ck-avatar{width:48px;height:48px;border-radius:16px}
+.ck-agent[data-active="true"] .ck-avatar::after{border-radius:20px;inset:-5px}
+.ck-feed{gap:0}
+.ck-feed-item{border:0;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-left:0;border-radius:0;background:transparent;padding:14px 0;box-shadow:inset 3px 0 0 hsl(var(--agent-hue) 65% 55%);padding-left:16px}
+.ck-feed-item:first-child{border-top:0}
+.ck-feed-item[data-kind="resultado"]{box-shadow:inset 3px 0 0 var(--cyan)}
+.ck-feed-item[data-kind="resumo"]{box-shadow:inset 3px 0 0 #a855f7}
+.ck-feed-item[data-alert]{box-shadow:inset 3px 0 0 var(--warn);background:linear-gradient(90deg,color-mix(in srgb,var(--warn) 9%,transparent),transparent 60%)}
+@media(max-width:980px){.ck-kpi:nth-child(n+3){border-top:0;padding-top:14px}.ck-kpi{padding-left:0}}

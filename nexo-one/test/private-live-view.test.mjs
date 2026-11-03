@@ -33,3 +33,9 @@ test('agent names are shortened from task ids and kept for plain names', async (
   assert.equal(agentName(''), '—');
   assert.equal(agentName('Sam'), 'Sam');
 });
+
+test('the dot and Claude keep readable names', async () => {
+  const {agentName} = await import('../src/private-workspace/liveEvents.ts');
+  assert.equal(agentName('LUMIA'), 'Lumia');
+  assert.equal(agentName('Claude'), 'Claude');
+});
