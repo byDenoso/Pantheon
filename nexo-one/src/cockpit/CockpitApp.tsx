@@ -1,3 +1,4 @@
+import CockpitLive from './CockpitLive.tsx';
 import {useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode} from 'react';
 import {HttpError, loadCockpit, loadPublicSelection, login, logout, saveSelection, session, type Bi, type CampaignPublic, type Cockpit, type Row, type SaveError, type Selection, type TowerPublic} from './api.ts';
 
@@ -27,9 +28,9 @@ function useTheme(): [Theme, (t: Theme) => void] {
 }
 
 function Header({theme, setTheme, onLogout, active}: {theme: Theme; setTheme: (t: Theme) => void; onLogout?: () => void; active?: string}) {
-  const links = [['agora', 'Agora'], ['equipe', 'Equipe'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
+  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Equipe'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
   return <header className="ck-header">
-    <a className="ck-brand" href="#agora"><strong>NEXO</strong><small>Nexo Cosmology Institute</small><span className="ck-tag">Cockpit</span></a>
+    <a className="ck-brand" href="#agora"><strong>NEXO</strong><small>Cosmologia computacional</small><span className="ck-tag">Cockpit</span></a>
     {onLogout && <nav className="ck-nav" aria-label="Seções do cockpit">{links.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={active === id}>{label}</a>)}</nav>}
     <div className="ck-tools">
       <div className="ck-seg" role="group" aria-label="Tema">{([['light', 'Claro'], ['dark', 'Escuro'], ['system', 'Auto']] as [Theme, string][]).map(([value, label]) => <button key={value} type="button" aria-pressed={theme === value} onClick={() => setTheme(value)}>{label}</button>)}</div>
@@ -39,7 +40,7 @@ function Header({theme, setTheme, onLogout, active}: {theme: Theme; setTheme: (t
   </header>;
 }
 function SubNav({active}: {active: string}) {
-  const links = [['agora', 'Agora'], ['equipe', 'Equipe'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
+  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Equipe'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
   return <nav className="ck-subnav" aria-label="Seções (celular)">{links.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={active === id}>{label}</a>)}</nav>;
 }
 
@@ -133,7 +134,7 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
   useEffect(() => setResultPage(1), [resultQuery, resultFilter]);
   useEffect(() => setCatalogPage(1), [query]);
   useEffect(() => {
-    const ids = ['agora', 'equipe', 'frentes', 'resultados', 'publico'];
+    const ids = ['agora', 'aovivo', 'equipe', 'frentes', 'resultados', 'publico'];
     const io = new IntersectionObserver(entries => { for (const e of entries) if (e.isIntersecting) setActive(e.target.id); }, {rootMargin: '-30% 0px -60% 0px'});
     ids.forEach(id => { const el = document.getElementById(id); if (el) io.observe(el); });
     return () => io.disconnect();
@@ -277,6 +278,10 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         <article className="ck-panel ck-publication-summary"><p className="ck-eyebrow">Publicação no site</p><h2>{selection ? `Versão ${selection.version} publicada` : 'Catálogo estático ativo'}</h2><p>{selection ? `Publicada em ${when(selection.updatedAt)}.` : 'A seleção do Cockpit ainda não foi ativada.'}</p><dl><div><dt>Catálogo</dt><dd>{selection?.catalog.length ?? catalogRows.length}</dd></div><div><dt>Resultados SHADOW</dt><dd>{selection?.tower.length ?? 0}</dd></div><div><dt>Frentes</dt><dd>{selection?.campaigns.length ?? 0}</dd></div></dl><p className="ck-public-check" role="status">{checkingPublic ? 'Conferindo a API pública…' : publicCheckError || (publicVersion === (selection?.version ?? 0) ? `API pública confirmou ${publicVersion ? `a versão ${publicVersion}` : 'o catálogo estático'}.` : publicVersion === null ? 'Aguardando conferência pública.' : `A API pública ainda retorna ${publicVersion ? `a versão ${publicVersion}` : 'o catálogo estático'}. Consulte novamente após a atualização.`)}</p><button type="button" className="ck-btn quiet" disabled={checkingPublic} onClick={() => void checkPublic()}>Conferir publicação</button><p>Novos dados da SHADOW ficam no privado até a revisão do texto e a publicação da seleção.</p><a className="ck-btn" href="#resultados">Revisar resultados</a> <a className="ck-btn quiet" href="#publico">Gerenciar publicação</a></article>
         <article className="ck-panel ck-activity"><p className="ck-eyebrow">Registro da SHADOW</p><h2>Últimos movimentos</h2><p className="ck-muted">Registros da aba RESUMO; as datas de cada evento são preservadas.</p>{shadow?.resumo.length ? <div className="ck-activity-list">{[...shadow.resumo].sort((a, b) => String(b.data_hora).localeCompare(String(a.data_hora))).slice(0, 4).map((r, i) => <details key={i}><summary><span className="ck-meta">{r.data_hora} · {r.nivel || 'Registro'}</span><span className="ck-line-clamp">{r.o_que_mudou}</span></summary><p>{r.o_que_mudou}</p>{r.impacto && <p><strong>Impacto:</strong> {r.impacto}</p>}</details>)}</div> : <p>Sem registros de resumo nesta leitura.</p>}</article>
       </div>
+
+      <Section id="aovivo" n="01" title="Ao vivo" lead="O que as automações estão fazendo: recados no Mural, resultados novos e mudanças de rumo. Itens novos chegam animados a cada atualização.">
+        {shadow ? <CockpitLive mural={shadow.mural} resultados={shadow.resultados} resumo={shadow.resumo} equipe={equipe}/> : <p className="ck-note" data-tone="warn">Sem leitura da SHADOW.</p>}
+      </Section>
 
       <Section id="equipe" n="02" title="Equipe científica" lead="Papéis, cadência e estado declarados na aba EQUIPE.">
         {shadow ? <div className="ck-panel ck-scroll"><table className="ck-table"><thead><tr><th>Papel</th><th>Estado</th><th>Cadência</th><th>Frentes</th></tr></thead><tbody>{equipe.map((r, i) => <tr key={i}><td><strong>{r.papel}</strong></td><td><span className="ck-state" data-tone={tone(r.estado)}>{r.estado || '—'}</span></td><td className="mono">{r.cadencia}</td><td>{r.frentes}</td></tr>)}{!equipe.length && <tr><td colSpan={4}>Aba EQUIPE vazia.</td></tr>}</tbody></table></div> : <p className="ck-note">Sem leitura da SHADOW.</p>}

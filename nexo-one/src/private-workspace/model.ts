@@ -5,7 +5,7 @@ import {hasPublishedValue, matchesSearch} from '../features/lab/presentation.ts'
 import {normDomain} from '../features/lab/domains.ts';
 
 export type ResearchFilter = 'all' | 'results' | 'pending';
-export type WorkspaceRoute = {page: 'web' | 'organogram' | 'cosmos'} | {page: 'domains'} | {page: 'research'; domain: string | null; filter: ResearchFilter} | {page: 'test'; id: string} | {page: 'operations'} | {page: 'missing'};
+export type WorkspaceRoute = {page: 'web' | 'organogram' | 'cosmos'} | {page: 'domains'} | {page: 'research'; domain: string | null; filter: ResearchFilter} | {page: 'test'; id: string} | {page: 'operations'} | {page: 'live'} | {page: 'missing'};
 export function workspaceRoute(hash: string): WorkspaceRoute | null {
   if (!hash || hash === '#' || hash === '#/' || hash === '#/teia' || hash === '#/teia/') return {page: 'web'};
   if (!/^#\/teia(?:\/|\?|$)/.test(hash)) return null;
@@ -22,6 +22,7 @@ export function workspaceRoute(hash: string): WorkspaceRoute | null {
     if (parts[1] === 'dominio' && parts.length === 3 && parts[2]) return {page: 'research', domain: decodeURIComponent(parts[2]), filter};
     if (parts[1] === 'teste' && parts.length === 3 && parts[2]) return {page: 'test', id: decodeURIComponent(parts[2])};
     if (parts[1] === 'operacao' && parts.length === 2) return {page: 'operations'};
+    if (parts[1] === 'ao-vivo' && parts.length === 2) return {page: 'live'};
   } catch { /* malformed route stays inside the private shell */ }
   return {page: 'missing'};
 }
