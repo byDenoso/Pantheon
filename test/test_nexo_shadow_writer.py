@@ -24,9 +24,10 @@ class IsolatedSummaryTestCase(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        guard = patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": ""})
+        guard = patch.dict(os.environ)
         guard.start()
         self.addCleanup(guard.stop)
+        os.environ.pop("GITHUB_STEP_SUMMARY", None)
 
 
 class TestWriter(IsolatedSummaryTestCase):
