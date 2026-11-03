@@ -1,0 +1,60 @@
+name: NEXO private B6 nested
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_id:
+        description: Reviewed private per-attempt launch manifest Drive ID
+        type: string
+        required: true
+      manifest_sha256:
+        description: Exact SHA256 of reviewed private launch manifest
+        type: string
+        required: true
+      campaign:
+        type: choice
+        options: [B6]
+        required: true
+      model:
+        type: choice
+        options: [peer, lcdm]
+        required: true
+      replica:
+        type: choice
+        options: ['1', '2']
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: private-matrix-${{ inputs.campaign }}-${{ inputs.model }}-${{ inputs.replica }}
+  cancel-in-progress: false
+jobs:
+  nested:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    steps:
+      - name: Account for complete job wall time
+        run: echo "NEXO_JOB_STARTED_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.14'
+      - name: Provision explicitly pinned official registry runtime
+        run: |
+          python -m venv "$RUNNER_TEMP/private-runtime"
+          "$RUNNER_TEMP/private-runtime/bin/python" -m pip --isolated install --index-url https://pypi.org/simple --disable-pip-version-check --no-input -r requirements-private-matrix.txt
+          "$RUNNER_TEMP/private-runtime/bin/python" -m pip check
+      - name: Execute reviewed private normal-nested attempt
+        env:
+          MANIFEST_ID: ${{ inputs.manifest_id }}
+          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+          CAMPAIGN: ${{ inputs.campaign }}
+          MODEL: ${{ inputs.model }}
+          REPLICA: ${{ inputs.replica }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          OMP_NUM_THREADS: '1'
+          MPLCONFIGDIR: ${{ runner.temp }}/private-mpl
+          XDG_CONFIG_HOME: ${{ runner.temp }}/private-config
+          XDG_CACHE_HOME: ${{ runner.temp }}/private-cache
+        run: '"$RUNNER_TEMP/private-runtime/bin/python" scripts/private_matrix_launch.py'
