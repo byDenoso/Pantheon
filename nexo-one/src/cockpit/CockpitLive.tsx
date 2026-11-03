@@ -53,6 +53,7 @@ export default function CockpitLive({mural, resultados, resumo, equipe}: {mural:
         {e.title && <h3>{e.title}</h3>}
         {e.body && <p>{e.body}</p>}
         {e.extra && <p className="ck-muted">{e.extra}</p>}
+        {e.technical && <details className="live-tech"><summary>Detalhes técnicos</summary><pre>{e.technical}</pre></details>}
         {e.link && /^https:\/\//.test(e.link) && <a href={e.link} target="_blank" rel="noreferrer noopener">Abrir</a>}
       </div>
     </li>)}</ol>

@@ -1,8 +1,9 @@
 // Pure helpers of the live view: date parsing and the merged, newest-first timeline.
 import type {MuralRow, ResultadoRow, ResumoRow} from './shadow.ts';
+import {humanizeResult, isCodeLine, isIdLike} from './humanize.ts';
 
 export type Kind = 'mural' | 'resultado' | 'resumo';
-export type LiveEvent = {key: string; kind: Kind; when: number | null; raw: string; agent: string; to: string; tag: string; title: string; body: string; extra: string; link: string};
+export type LiveEvent = {key: string; kind: Kind; when: number | null; raw: string; agent: string; to: string; tag: string; title: string; body: string; extra: string; link: string; technical?: string | null};
 
 /** Accepts ISO, "YYYY-MM-DD HH:MM" and "DD/MM/YYYY HH:MM"; anything else sorts last. */
 export function parseWhen(value: string): number | null {
@@ -25,9 +26,9 @@ export const COMPLAINT = /reclama|bloque|conflit|atrapalh|pedido|request|complai
 
 export function liveEvents(mural: MuralRow[], resultados: ResultadoRow[], resumo: ResumoRow[]): LiveEvent[] {
   const events: LiveEvent[] = [
-    ...mural.map((row, i): LiveEvent => ({key: `m:${row.id || i}:${row.data}`, kind: 'mural', when: parseWhen(row.data), raw: row.data, agent: agentName(row.de), to: row.para ? agentName(row.para) : '', tag: row.tipo || '', title: '', body: row.texto, extra: row.item || '', link: row.link})),
-    ...resultados.map((row, i): LiveEvent => ({key: `r:${i}:${row.data}:${row.item}`, kind: 'resultado', when: parseWhen(row.data), raw: row.data, agent: agentName(row.task || row.item), to: '', tag: '', title: row.titulo, body: row.resultado, extra: row.numeros, link: row.link_dados})),
-    ...resumo.map((row, i): LiveEvent => ({key: `s:${i}:${row.data_hora}:${row.item}`, kind: 'resumo', when: parseWhen(row.data_hora), raw: row.data_hora, agent: row.item || '—', to: '', tag: row.nivel, title: row.o_que_mudou, body: row.impacto, extra: '', link: row.link})),
+    ...mural.map((row, i): LiveEvent => ({key: `m:${row.id || i}:${row.data}`, kind: 'mural', when: parseWhen(row.data), raw: row.data, agent: agentName(row.de), to: row.para ? agentName(row.para) : '', tag: row.tipo || '', title: '', body: isCodeLine(row.texto) ? 'Mensagem técnica sem texto em linguagem corrente.' : row.texto, extra: row.item && !isIdLike(row.item) && !isCodeLine(row.item) ? row.item : '', link: row.link, technical: isCodeLine(row.texto) ? row.texto : null})),
+    ...resultados.map((row, i): LiveEvent => { const agent = agentName(row.task || row.item), h = humanizeResult(row, agent); return {key: `r:${i}:${row.data}:${row.item}`, kind: 'resultado', when: parseWhen(row.data), raw: row.data, agent, to: '', tag: '', title: h.title, body: h.body, extra: h.metrics.join(' · '), link: row.link_dados, technical: h.technical}; }),
+    ...resumo.map((row, i): LiveEvent => ({key: `s:${i}:${row.data_hora}:${row.item}`, kind: 'resumo', when: parseWhen(row.data_hora), raw: row.data_hora, agent: row.item || '—', to: '', tag: row.nivel, title: isCodeLine(row.o_que_mudou) ? 'Mudança técnica registrada' : row.o_que_mudou, body: isCodeLine(row.impacto) ? '' : row.impacto, extra: '', link: row.link, technical: isCodeLine(row.o_que_mudou) || isCodeLine(row.impacto) ? [row.o_que_mudou, row.impacto].join(' · ') : null})),
   ];
   return events.sort((a, b) => (b.when ?? -Infinity) - (a.when ?? -Infinity));
 }
