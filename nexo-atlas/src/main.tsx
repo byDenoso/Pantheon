@@ -15,5 +15,6 @@ import './atlas/mobile-shell.css';
 function App(){const [hash,setHash]=useState(location.hash);useEffect(()=>{const update=()=>setHash(location.hash);window.addEventListener('hashchange',update);return()=>window.removeEventListener('hashchange',update);},[]);if(/^#\/(?:privado|private|cockpit|galaxia|atlas3d|tower|teia)(?:\/|\?|$)/.test(hash)||/^\/(?:private|privado)(?:\/|$)/.test(location.pathname))return <IdentityGate><PrivateApp/></IdentityGate>;return <PublicApp/>;}
 class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?<main className="atlas-main"><h1>NEXO</h1><p>Recarregue a página / Reload the page.</p><button onClick={()=>location.reload()}>OK</button></main>:this.props.children;}}
 import './styles/interactive-motion.css';
+import './experience/experience.css';
 initializeTheme();
 createRoot(document.getElementById('root')!).render(<Boundary><LocaleProvider><App/></LocaleProvider></Boundary>);

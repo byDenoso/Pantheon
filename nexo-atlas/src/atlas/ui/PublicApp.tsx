@@ -19,7 +19,6 @@ import '../game-motion.css';
 import '../public-refinement.css';
 import '../orbital-interface.css';
 import '../reading-mode.css';
-import '../../experience/experience.css';
 
 export default function PublicApp() {
   const m = useMessages();

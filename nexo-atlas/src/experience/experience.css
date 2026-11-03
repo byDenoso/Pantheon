@@ -1,4 +1,4 @@
-.atlas-app[data-area="public"]{--action:#51d1ef;--cyan:#51d1ef;--orange:#b1eaff}
+.atlas-app[data-area="public"]{--action:#51d1ef;--cyan:#51d1ef;--orange:#b1eaff;--on-action:var(--on-cyan)}
 :root[data-theme="dark"]{--bg:#04101f;--bg-2:#091a2d;--fg:#eaf5ff;--fg-2:#a2bbd0;--line:#21394f;--cyan:#51d1ef;--orange:#b1eaff;--on-cyan:#031521;--focus:#a9efff;color-scheme:dark}
 :root[data-theme="light"] .atlas-app[data-area="public"]{--action:#066e9b;--cyan:#066e9b;--orange:#123b68}
 .atlas-app[data-area="public"] .atlas-header{background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}

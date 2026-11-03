@@ -11,5 +11,6 @@
 :root[data-motion=paused] .ck-section{transform:none!important;opacity:1!important}
 :root[data-motion=paused] :is(.ck-avatar,.pw-agent-avatar)::after{animation:none!important;transition:none!important}
 :root[data-motion=paused] .nx-activity-chart{transform:none!important;opacity:1!important}
+:root[data-motion=paused] :is(.ck-app,.pw) *,:root[data-motion=paused] :is(.ck-app,.pw) *::before,:root[data-motion=paused] :is(.ck-app,.pw) *::after{animation-play-state:paused!important;transition:none!important;scroll-behavior:auto!important}
 .nx-motion-toggle{font-size:12px!important;min-height:36px!important;padding:7px 10px!important}
 @media(max-width:1100px){.ck-tools{flex-wrap:wrap;justify-content:flex-end}.ck-header{gap:10px}.nx-motion-toggle{min-height:32px!important}}
