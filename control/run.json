@@ -1,0 +1,1 @@
+{"stack": "S1", "model": "all", "seedidx": "all", "skip_smoke": false, "smoke_s2": true, "ping": false, "only_smoke": true, "chunk": 0, "max_chunks": 90, "nonce": "smoke-1"}

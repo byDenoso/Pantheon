@@ -1,0 +1,16 @@
+# pinned to the versions used and verified on the local machine (03/11/2026)
+numpy==2.5.3
+scipy==1.18.1
+camb==1.6.6
+cobaya==3.6.2
+dynesty==3.1.0
+getdist==1.7.7
+astropy==8.0.2
+h5py==3.16.0
+PyYAML==6.0.3
+candl-like==2.0.3
+act_dr6_mflike==1.1.0
+mflike==1.0.2
+sacc==2.4
+fgspectra==1.4.1
+syslibrary==0.2

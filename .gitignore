@@ -1,0 +1,8 @@
+ckpt/
+results/
+data/packages/
+data/spt_candl_data/
+data/act_dr6_mflike/
+__pycache__/
+*.save
+*.copy
