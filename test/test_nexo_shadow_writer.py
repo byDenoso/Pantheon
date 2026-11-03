@@ -38,6 +38,31 @@ class TestWriter(unittest.TestCase):
         self.assertEqual(len(d["values"]),10)
         self.assertEqual(d["values"][3],ID)
 
+    def test_plain_human_question_resultados(self):
+        source=plain("RESULTADOS")
+        source[7]="Quanto da linha larga é espalhamento eletrônico?"
+        data, state=w.decode_plain(source)
+        self.assertEqual(state,"")
+        self.assertEqual(data["values"][3], source[7])
+        self.assertEqual(data["target_values"][3],source[7])
+        self.assertTrue(data["target_values"][2].endswith(
+            w.RESULT_ITEM_ID_SEPARATOR+ID))
+        target=w.append_request(data)["requests"][0]["appendCells"]["rows"][0]["values"]
+        row=[x["userEnteredValue"]["stringValue"] for x in target]
+        self.assertEqual(w.target_row_id("RESULTADOS", row),ID)
+        self.assertEqual(row[3],source[7])
+
+    def test_question_without_question_mark_rejected(self):
+        source=plain("RESULTADOS")
+        source[7]="Uma declaração não é um título válido"
+        with self.assertRaises(ValueError):
+            w.decode_plain(source)
+
+    def test_legacy_result_identity_still_works(self):
+        data, _=w.decode_plain(plain("RESULTADOS"))
+        self.assertEqual(w.target_row_id("RESULTADOS",data["values"]),ID)
+        self.assertEqual(data["target_values"],data["values"])
+
     def test_plain_state(self):
         d,state=w.decode_plain(plain(state="CLAIMED:abcd"))
         self.assertEqual(d["tab"],"MURAL")
@@ -107,7 +132,7 @@ class Session:
         request=json['requests'][0]['appendCells']
         tab=next(k for k,v in w.TABS.items() if v[0]==request['sheetId'])
         row=[v['userEnteredValue']['stringValue'] for v in request['rows'][0]['values']]
-        key=row[7 if tab=='MURAL' else 3]
+        key=w.target_row_id(tab,row)
         self.records[tab][key]=tuple(row)
         if self.fail_after_append:
             raise TimeoutError('simulated ambiguous transport')
@@ -124,6 +149,22 @@ class Recovery(unittest.TestCase):
              patch.object(w,'mark',side_effect=lambda s,tab,col,n,value:s.marks.append((n,value))):
             result=w.run(session,apply=apply)
         return result, session
+
+    def test_human_title_resultado_written_and_reconciled(self):
+        source=plain("RESULTADOS")
+        source[7]="Qual mecanismo alarga mais H alfa?"
+        counts, session=self.invoke([source])
+        self.assertEqual(counts["written"],1)
+        self.assertEqual(counts["new_failures"],0)
+        self.assertEqual(len(session.posts),1)
+        self.assertEqual(w.target_row_id("RESULTADOS",
+            list(session.records["RESULTADOS"][ID])), ID)
+        self.assertEqual(session.records["RESULTADOS"][ID][3],
+            "Qual mecanismo alarga mais H alfa?")
+        again, session2=self.invoke([source],records=session.records)
+        self.assertEqual(again["written"],0)
+        self.assertEqual(again["eligible"],0)
+        self.assertEqual(session2.posts,[])
 
     def test_fresh_event_written_and_marked(self):
         d=_recovery_data(); counts,s=self.invoke([_recovery_plain(d)])

@@ -25,6 +25,7 @@ PLAIN_TAB = "SHADOW_V2"
 API = "https://sheets.googleapis.com/v4/spreadsheets"
 TABS = {"MURAL": (1148777660, 8, "H"), "RESULTADOS": (247327396, 10, "D")}
 KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{5,127}$")
+RESULT_ITEM_ID_SEPARATOR = " | nexo_id="
 PAGE_SIZE = 1000
 MAX_GRID_ROWS = 1000000  # metadata safety bound; capacity review starts well before this
 READBACK_BATCH_SIZE = 8  # batch safe verification reads; independent appends
@@ -57,11 +58,22 @@ def _validate_data(stable_id, tab, values_):
     width = TABS[tab][1]
     if not isinstance(values_, list) or len(values_) != width or not all(isinstance(v, str) for v in values_):
         raise ValueError("INVALID_WIDTH_OR_TYPE")
-    if values_[7 if tab == "MURAL" else 3] != stable_id:
-        raise ValueError("MISMATCHED_ROW_ID")
-    if tab == "MURAL" and not values_[0]:
-        raise ValueError("MISSING_TIME")
-    return {"stable_id": stable_id, "tab": tab, "values": values_}
+    target_values = list(values_)
+    if tab == "MURAL":
+        if values_[7] != stable_id:
+            raise ValueError("MISMATCHED_ROW_ID")
+        if not values_[0]:
+            raise ValueError("MISSING_TIME")
+    elif values_[3] != stable_id:
+        # AGENTS 2026-11-03.2: human-readable question in titulo.
+        # The immutable stable_id lives in item on the canonical target.
+        if (not values_[3].strip().endswith("?") or len(values_[3]) > 140
+                or not values_[2].strip()
+                or RESULT_ITEM_ID_SEPARATOR in values_[2]):
+            raise ValueError("MISMATCHED_ROW_ID")
+        target_values[2] += RESULT_ITEM_ID_SEPARATOR + stable_id
+    return {"stable_id": stable_id, "tab": tab, "values": values_,
+            "target_values": target_values}
 
 def decode(stable_id, encoded):
     """Decode the historical base64url ingress. Non-SHADOW envelopes are ignored."""
@@ -99,7 +111,7 @@ def decode_plain(row):
     return data, padded[14]
 
 def append_request(data):
-    cells = [{"userEnteredValue": {"stringValue": value}} for value in data["values"]]
+    cells = [{"userEnteredValue": {"stringValue": value}} for value in data.get("target_values", data["values"])]
     args = {"spreadsheet_id": SHADOW, "requests": [{"appendCells": {
         "sheetId": TABS[data["tab"]][0], "rows": [{"values": cells}],
         "fields": "userEnteredValue"}}]}
@@ -151,16 +163,26 @@ def page_rows(session, sheet, tab, last_column, first=1):
             if row:
                 yield start + offset, row
 
+def target_row_id(tab, row):
+    """Read old title IDs or the new item-embedded immutable identifier."""
+    if tab == "MURAL":
+        return row[7] if len(row) > 7 else ""
+    if len(row) > 2 and RESULT_ITEM_ID_SEPARATOR in row[2]:
+        label, stable_id = row[2].rsplit(RESULT_ITEM_ID_SEPARATOR, 1)
+        if label and KEY.fullmatch(stable_id):
+            return stable_id
+    return row[3] if len(row) > 3 else ""
+
+
 def target_index(session, tab):
     width = TABS[tab][1]
-    key_column = 7 if tab == "MURAL" else 3
     result = TargetIndex()
     for number, row in page_rows(session, SHADOW, tab, "H" if tab == "MURAL" else "J", first=2):
         if row:
             result.last_row = max(result.last_row, number)
-        if len(row) <= key_column or not row[key_column]:
+        unique_id = target_row_id(tab, row)
+        if not unique_id:
             continue
-        unique_id = row[key_column]
         normalized = tuple((row + [""] * width)[:width])
         if unique_id in result.conflicts:
             continue
@@ -214,7 +236,7 @@ def match_target(index, data):
     existing = index.get(data["stable_id"])
     if existing is None:
         return False
-    if existing != tuple(data["values"]):
+    if existing != tuple(data.get("target_values", data["values"])):
         raise IdentityConflict("IDENTITY_CONTENT_CONFLICT")
     return True
 
@@ -229,7 +251,7 @@ def validate_new_event(data):
     required = (0, 1, 2, 3, 5, 7) if data['tab'] == 'MURAL' else (0, 1, 2, 3, 4, 5, 6, 7)
     if any(not row[i].strip() for i in required):
         raise ValueError('MISSING_EVENT_METADATA')
-    for cell in row:
+    for cell in data.get("target_values", row):
         if len(cell.encode('utf-16-le')) // 2 > 50000:
             raise ValueError('CELL_PLATFORM_LIMIT')
     if len(json.dumps({'requests':append_request(data)['requests']}).encode()) > 2_000_000:
@@ -315,7 +337,8 @@ def flush_verified_appends(session, stored, counts, queued, *, batch_applied=Fal
             window = values(session, SHADOW, f"'{tab}'!A{first}:{col}{last}")
             width = TABS[tab][1]
             exact = len(window) == len(events) and all(
-                tuple((row + [""] * width)[:width]) == tuple(data["values"])
+                tuple((row + [""] * width)[:width]) ==
+                tuple(data.get("target_values", data["values"]))
                 for row, data in zip(window, events))
             if exact and not any(data["stable_id"] in prior for data in events):
                 candidate = TargetIndex()
@@ -323,7 +346,7 @@ def flush_verified_appends(session, stored, counts, queued, *, batch_applied=Fal
                 candidate.conflicts.update(prior.conflicts)
                 candidate.last_row = last
                 for data in events:
-                    candidate[data["stable_id"]] = tuple(data["values"])
+                    candidate[data["stable_id"]] = tuple(data.get("target_values", data["values"]))
                 refreshed[tab] = candidate
                 counts["tail_readback_tabs"] += 1
                 continue
