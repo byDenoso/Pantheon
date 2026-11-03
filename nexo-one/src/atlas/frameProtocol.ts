@@ -9,6 +9,7 @@ export type ToFrame =
   | {channel: typeof HOST; type: 'REFRESH_FAILED'; id: string; code: string}
   /** the shell's current language preference; presentation only, carries no data */
   | {channel: typeof HOST; type: 'LOCALE'; locale: FrameLocale}
+  | {channel: typeof HOST; type: 'MOTION'; paused: boolean}
   | {channel: typeof HOST; type: 'TEARDOWN'};
 export const FRAME_LOCALES = ['pt-BR', 'en'] as const;
 export type FrameLocale = typeof FRAME_LOCALES[number];
@@ -43,6 +44,7 @@ export function parseToFrame(data: unknown): ToFrame | null {
   if (data.type === 'RUNTIME_REFRESH' && typeof data.id === 'string' && ID.test(data.id)) return {channel: HOST, type: 'RUNTIME_REFRESH', id: data.id, data: data.data};
   if (data.type === 'REFRESH_FAILED' && typeof data.id === 'string' && ID.test(data.id) && typeof data.code === 'string') return {channel: HOST, type: 'REFRESH_FAILED', id: data.id, code: data.code.slice(0, 64)};
   if (data.type === 'LOCALE' && isFrameLocale(data.locale)) return {channel: HOST, type: 'LOCALE', locale: data.locale};
+  if (data.type === 'MOTION' && typeof data.paused === 'boolean') return {channel: HOST, type: 'MOTION', paused: data.paused};
   if (data.type === 'TEARDOWN') return {channel: HOST, type: 'TEARDOWN'};
   return null;
 }

@@ -4,10 +4,14 @@ import {readFileSync} from 'node:fs';
 const css=readFileSync(new URL('../src/atlas/cinema/cinema.css',import.meta.url),'utf8');
 const view=readFileSync(new URL('../src/atlas/ui/PublicApp.tsx',import.meta.url),'utf8');
 
-test('public layout keeps its cosmic-web image, animated canvas and semantic caption',()=>{
-  assert.match(view,/cosmic-web\.png/);
-  assert.match(view,/<CosmicWebCanvas label=\{m\.vizLabel\}/);
-  assert.match(view,/<figcaption className="atlas-note">\{m\.vizNote\}/);
+test('public hero exposes an interactive conceptual scene, an SVG fallback and a semantic caption',()=>{
+  assert.match(view,/<CosmicExplorer\/>/);
+  const explorer=readFileSync(new URL('../src/experience/CosmicExplorer.tsx',import.meta.url),'utf8');
+  assert.match(explorer,/<Illustration expansion=/);
+  assert.match(explorer,/<figcaption>/);
+  assert.match(explorer,/Ilustração conceitual, sem dados observacionais/);
+  assert.match(explorer,/prefers-reduced-motion/);
+  assert.match(explorer,/worker\?\.terminate\(\)/);
   assert.match(css,/\.atlas-hero-picture\{[\s\S]*?background:none;[\s\S]*?mix-blend-mode:multiply/);
   assert.match(css,/:root\[data-theme="dark"\][^\n]*\.atlas-hero-picture\{mix-blend-mode:screen\}/);
 });

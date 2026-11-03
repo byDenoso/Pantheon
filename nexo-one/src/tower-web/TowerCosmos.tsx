@@ -66,7 +66,8 @@ export default function TowerCosmos({tests, campaignLabel, normDomain, theme: th
   const [theme, setTheme] = useState<Theme>(readTheme);
   useEffect(() => { const mo = new MutationObserver(() => setTheme(readTheme())); mo.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']}); return () => mo.disconnect(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const lang = useDocumentLang();
-  const reduced = useMemo(() => media('(prefers-reduced-motion: reduce)'), []);
+  const [reduced,setReduced] = useState(() => media('(prefers-reduced-motion: reduce)') || document.documentElement.dataset.motion === 'paused');
+  useEffect(()=>{const motion=window.matchMedia('(prefers-reduced-motion: reduce)');const sync=()=>setReduced(motion.matches||document.documentElement.dataset.motion==='paused');const observer=new MutationObserver(sync);observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-motion']});motion.addEventListener('change',sync);return()=>{observer.disconnect();motion.removeEventListener('change',sync);};},[]);
   const coarse = useMemo(() => media('(pointer: coarse)'), []);
   const [narrow, setNarrow] = useState(() => media('(max-width: 720px)'));
   useEffect(() => { if (typeof window.matchMedia !== 'function') return; const m = window.matchMedia('(max-width: 720px)'); const f = () => setNarrow(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f); }, []);
@@ -242,11 +243,12 @@ export default function TowerCosmos({tests, campaignLabel, normDomain, theme: th
   };
 
   // replay autoplay: real creation dates only; never under reduced motion; stops at today
+  useEffect(()=>{if(reduced)setPlaying(false);},[reduced]);
   useEffect(() => {
-    if (!playing || !replay) return; const step = (tMax - tMin) / 80;
+    if (!playing || !replay || reduced) return; const step = (tMax - tMin) / 80;
     const id = window.setInterval(() => setCut(c => { const next = (c ?? tMin) + step; if (next >= tMax) { setPlaying(false); return null; } return next; }), 100);
     return () => window.clearInterval(id);
-  }, [playing, replay, tMin, tMax]);
+  }, [playing, replay, tMin, tMax, reduced]);
 
   // follow the backend: ask for a NEW generation (existing private refresh path); a new fingerprint remounts this view and the web grows in place
   const refreshing = useRef(false);

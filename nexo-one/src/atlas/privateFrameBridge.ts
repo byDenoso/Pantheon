@@ -13,6 +13,8 @@ export type BridgeDeps = {
   getData: () => unknown;
   /** the shell's current language; sent to the frame before the runtime and again whenever setLocale is called */
   getLocale?: () => string;
+  /** Presentation preference only; delivered before the first runtime paint. */
+  getMotion?: () => boolean;
   onReady?: () => void;
   /** the frame validated and mounted the runtime */
   onAccepted?: () => void;
@@ -43,6 +45,7 @@ export function createFrameBridge(d: BridgeDeps) {
   let ready = false;
   /** only a supported locale is ever sent; anything else is dropped here (the frame validates again) */
   const sendLocale = (locale: unknown) => (isFrameLocale(locale) ? send({channel: HOST, type: 'LOCALE', locale}) : false);
+  const sendMotion = (paused: unknown) => typeof paused === 'boolean' ? send({channel:HOST,type:'MOTION',paused}) : false;
   const onMessage = (ev: {origin: string; source: unknown; data: unknown}) => {
     if (disposed) return;
     const fw = d.getFrameWindow();
@@ -53,6 +56,7 @@ export function createFrameBridge(d: BridgeDeps) {
       const data = d.getData();
       if (data == null) return;
       sendLocale(d.getLocale?.()); // language first, so the frame's first paint is already in the shell's language
+      sendMotion(d.getMotion?.());
       if (send({channel: HOST, type: 'RUNTIME', data})) { ready = true; d.onReady?.(); }
     } else if (msg.type === 'ACCEPTED') d.onAccepted?.();
     else if (msg.type === 'SESSION_ACTION') d.onLogout();
@@ -94,6 +98,7 @@ export function createFrameBridge(d: BridgeDeps) {
   return {
     /** Tells the frame the shell's language changed. Nothing is sent before the frame said READY or after dispose. */
     setLocale(locale: string) { return !disposed && ready ? sendLocale(locale) : false; },
+    setMotion(paused: boolean) { return !disposed && ready ? sendMotion(paused) : false; },
     dispose() {
       if (disposed) return;
       send({channel: HOST, type: 'TEARDOWN'}); // best effort: the frame is usually removed right after

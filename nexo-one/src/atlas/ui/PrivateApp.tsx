@@ -35,6 +35,8 @@ function PrivateArea({onFrameError, onFrameReady}: {onFrameError: (code: string)
       {revText && <p role="status" className={state.revocation === 'unconfirmed' ? 'atlas-warn' : undefined}>{revText}{' '}
         {state.revocation === 'unconfirmed' && <button type="button" className="atlas-btn" onClick={() => void retryRevocation()}>{m.revRetry}</button>}</p>}
       {state.phase !== 'authenticated' && state.phase !== 'checking' && (
+        <>
+        <div className="atlas-private-intro"><p className="atlas-eyebrow">NEXO / {locale==='en'?'Private workspace':'Espaço privado'}</p><h2>{locale==='en'?'Inside the research.':'A pesquisa por dentro.'}</h2><p>{locale==='en'?'Explore the research web, follow the team’s records and inspect the evidence behind each result.':'Explore a teia de pesquisas, acompanhe os registros da equipe e consulte as evidências de cada resultado.'}</p></div>
         <form onSubmit={submit} className="atlas-form" autoComplete="off">
           <p>{m.privateLead}</p>
           <label htmlFor="atlas-pin">{m.pinLabel}</label>
@@ -43,6 +45,7 @@ function PrivateArea({onFrameError, onFrameReady}: {onFrameError: (code: string)
           <button className="atlas-btn" type="submit" disabled={busy || pin.length < 8}>{state.phase === 'authenticating' ? m.signingIn : m.signIn}</button>
           {noticeText && <p role="alert" className="atlas-warn">{noticeText}</p>}
         </form>
+        </>
       )}
       {live && state.data && (
         <>

@@ -1,0 +1,13 @@
+import {useEffect,useMemo,useRef,useState} from 'react';
+import {TOPICS,type ResearchEntry} from '../atlas/researchExplorer.ts';
+import type {Locale} from '../atlas/api.ts';
+import {pick} from '../atlas/publicItems.ts';
+
+/** Catalog counts only. Questions with multiple subjects appear in each matching bar. */
+export default function TopicDistribution({entries,locale}:{entries:ResearchEntry[];locale:Locale}){
+  const [open,setOpen]=useState(false),[width,setWidth]=useState(600),host=useRef<HTMLDivElement>(null),en=locale==='en';
+  const rows=useMemo(()=>[...TOPICS.map(topic=>({label:pick(topic.label,locale),count:entries.filter(entry=>entry.topics.includes(topic.id)).length})),{label:en?'Other questions':'Outras perguntas',count:entries.filter(entry=>!entry.topics.length).length}].filter(row=>row.count>0),[entries,locale]);
+  useEffect(()=>{const node=host.current;if(!open||!node)return;const observer=new ResizeObserver(([entry])=>setWidth(Math.max(260,Math.round(entry.contentRect.width))));observer.observe(node);return()=>observer.disconnect();},[open]);
+  useEffect(()=>{const node=host.current;if(!open||!node)return;let cancelled=false;void import('@observablehq/plot').then(Plot=>{if(cancelled)return;node.replaceChildren(Plot.plot({width,height:Math.max(140,rows.length*35+44),marginLeft:width<450?125:190,marginRight:40,x:{label:en?'Questions':'Perguntas',grid:true,ticks:4,tickFormat:d=>Number.isInteger(Number(d))?String(d):''},y:{label:null},style:{background:'transparent',color:'inherit',fontFamily:'inherit'},marks:[Plot.barX(rows,{x:'count',y:'label',fill:'var(--cyan)',fillOpacity:.7,rx:4,title:d=>`${d.label}: ${d.count}`,tip:true}),Plot.text(rows,{x:'count',y:'label',text:'count',dx:8,textAnchor:'start',fill:'currentColor'})]}));}).catch(()=>{});return()=>{cancelled=true;node.replaceChildren();};},[open,width,rows,en]);
+  return <details className="nx-topic-distribution" open={open} onToggle={event=>setOpen(event.currentTarget.open)}><summary>{en?'See research by subject':'Ver a pesquisa por assunto'}</summary>{open&&<div><div ref={host} className="nx-topic-plot" role="img" aria-label={en?'Questions per subject':'Perguntas por assunto'}/><p className="nx-topic-note">{en?'A question can belong to more than one subject. Counts describe this public catalog.':'Uma pergunta pode pertencer a vários assuntos. As contagens descrevem este catálogo público.'}</p><details><summary>{en?'Data table':'Tabela de dados'}</summary><table><thead><tr><th>{en?'Subject':'Assunto'}</th><th>{en?'Questions':'Perguntas'}</th></tr></thead><tbody>{rows.map(row=><tr key={row.label}><th scope="row">{row.label}</th><td>{row.count}</td></tr>)}</tbody></table></details></div>}</details>;
+}

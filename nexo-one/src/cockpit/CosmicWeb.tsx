@@ -12,7 +12,8 @@ export default function CosmicWeb() {
       const canvas = ref.current;
       if (disposed || !canvas) return;
       const css = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const motion = matchMedia('(prefers-reduced-motion: reduce)');
+      let reduced = motion.matches;
       let renderer: InstanceType<typeof THREE.WebGLRenderer>;
       try { renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: true}); } catch { return; }
       renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
@@ -47,20 +48,24 @@ export default function CosmicWeb() {
         for (let i = 0; i < dist.length; i++) { const f = Math.min(1, dist[i]! / 90), c = star.clone().lerp(far, f * f * .8), b = dark ? bright[i]! * (1 - .5 * f) : 1; col[i * 3] = c.r * b; col[i * 3 + 1] = c.g * b; col[i * 3 + 2] = c.b * b; }
         geo.attributes.color!.needsUpdate = true;
       };
-      paint();
-      const observer = new MutationObserver(paint); observer.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
-      const mq = matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener('change', paint);
-      const resize = () => { renderer.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); };
-      addEventListener('resize', resize); resize();
       let last: number | null = null, ang = .7;
-      const frame = (ms: number) => {
+      const canRun = () => !disposed && !reduced && !document.hidden && document.documentElement.dataset.motion !== 'paused';
+      const draw = (ms: number) => {
         const dt = last === null ? 0 : Math.min(.1, (ms - last) / 1000); last = ms;
-        if (!reduced && !document.hidden) ang += dt * .025;
+        if (canRun()) ang += dt * .025;
         cam.position.set(Math.sin(ang) * 58, 14 + scrollY * .01, Math.cos(ang) * 58); cam.lookAt(0, 0, 0);
-        renderer.render(scene, cam); frameId = requestAnimationFrame(frame);
+        renderer.render(scene, cam);
       };
-      frameId = requestAnimationFrame(frame);
-      cleanup.push(() => { cancelAnimationFrame(frameId); observer.disconnect(); mq.removeEventListener('change', paint); removeEventListener('resize', resize); geo.dispose(); mat.dispose(); tex.dispose(); renderer.dispose(); });
+      const frame = (ms: number) => { frameId=0;if(!canRun())return;draw(ms);frameId=requestAnimationFrame(frame); };
+      const sync = () => { cancelAnimationFrame(frameId);frameId=0;last=null;if(document.hidden)return;draw(performance.now());if(canRun())frameId=requestAnimationFrame(frame); };
+      const repaint = () => { paint();sync(); };
+      const observer = new MutationObserver(repaint); observer.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme','data-motion']});
+      const mq = matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener('change', repaint);
+      const motionChanged = () => { reduced=motion.matches;sync(); };motion.addEventListener('change',motionChanged);
+      document.addEventListener('visibilitychange',sync);
+      const resize = () => { renderer.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();sync(); };
+      paint();addEventListener('resize', resize);resize();
+      cleanup.push(() => { cancelAnimationFrame(frameId); observer.disconnect(); mq.removeEventListener('change', repaint);motion.removeEventListener('change',motionChanged);document.removeEventListener('visibilitychange',sync); removeEventListener('resize', resize); geo.dispose(); mat.dispose(); tex.dispose(); renderer.dispose(); });
     }).catch(() => { /* background is optional */ });
     return () => { disposed = true; cleanup.forEach(fn => fn()); };
   }, []);

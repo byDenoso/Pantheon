@@ -22,7 +22,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
   useEffect(() => { const mq = window.matchMedia('(prefers-reduced-motion: reduce)'); const sync = () => setReducedMotion(mq.matches); mq.addEventListener('change', sync); return () => mq.removeEventListener('change', sync); }, []);
   const surface=useRef<HTMLDivElement>(null);
   useVisitorMotion(surface,area==='public'&&!cinemaPaused&&!reducedMotion);
-  useCinematicMotion(area==='public'&&!reducedMotion);
+  useCinematicMotion(area==='public'&&!cinemaPaused&&!reducedMotion);
   const menuButton = useRef<HTMLButtonElement>(null);
   const preferences = useRef<HTMLDetailsElement>(null);
   const header = useRef<HTMLElement>(null);

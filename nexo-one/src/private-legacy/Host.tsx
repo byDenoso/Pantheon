@@ -23,6 +23,7 @@ export default function Host() {
       if (msg.type === 'TEARDOWN') { close(); return; }
       // language of the shell: presentation only. It sets <html lang>; views that read it re-render in place (no remount, no data touched)
       if (msg.type === 'LOCALE') { document.documentElement.lang = msg.locale; return; }
+      if (msg.type === 'MOTION') { document.documentElement.dataset.motion = msg.paused ? 'paused' : 'auto'; return; }
       if (msg.type === 'REFRESH_FAILED') { broker.settle(msg.id, {ok: false, code: msg.code}); return; }
       if (msg.type === 'RUNTIME_REFRESH') {
         if (!broker.has(msg.id)) return; // only a generation this frame asked for

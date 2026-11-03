@@ -11,7 +11,7 @@ import ResearchLaunch from './ResearchLaunch.tsx';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import Shell from './Shell.tsx';
-import {CosmologicalHero} from './CosmologicalBackdrop.tsx';
+import CosmicExplorer from '../../experience/CosmicExplorer.tsx';
 import {goToPublicSection} from '../publicNavigation.ts';
 import '../public-presentation.css';
 import '../site-living.css';
@@ -19,9 +19,6 @@ import '../game-motion.css';
 import '../public-refinement.css';
 import '../orbital-interface.css';
 import '../reading-mode.css';
-
-const CosmicWebCanvas = lazy(() => import('./CosmicWebCanvas.tsx'));
-const art = new URL('../assets/cosmic-web.png', import.meta.url).href;
 
 export default function PublicApp() {
   const m = useMessages();
@@ -50,13 +47,7 @@ export default function PublicApp() {
               <button type="button" className="atlas-text-action" onClick={() => goToPublicSection('methods')}>{t.hero.methods}<ArrowIcon direction="right"/></button>
             </div>
           </div>
-          <CosmologicalHero fallback={<figure className="atlas-hero-art">
-            <div className="atlas-hero-picture">
-              <img className="atlas-web-art" src={art} width="1672" height="941" alt="" fetchPriority="high"/>
-              <div className="atlas-web-motion" aria-hidden="true"><Suspense fallback={null}><CosmicWebCanvas label={m.vizLabel}/></Suspense></div>
-            </div>
-            <figcaption className="atlas-note">{m.vizNote}</figcaption>
-          </figure>}/>
+          <CosmicExplorer/>
           <ResearchLaunch pub={pub} locale={locale} explore={explore}/>
         </section>
 

@@ -3,6 +3,7 @@ import type {SystemState} from '../contracts/system.ts';
 import type {Lang} from '../i18n/state-language.ts';
 import {shadowBoardOf} from './shadow.ts';
 import {COMPLAINT, agentName, liveEvents, type Kind} from './liveEvents.ts';
+import ActivityChart from '../cockpit/ActivityChart.tsx';
 
 // Live view over the SHADOW board the Host already reads: who is working, what they
 // posted on the Mural and which results just landed. Presentation only; refreshing
@@ -63,6 +64,7 @@ export default function LiveView({state, lang, refresh}: {state: SystemState; la
       <p className="pw-live-meta"><label><input type="checkbox" checked={auto} onChange={event => setAuto(event.target.checked)} disabled={!refresh}/> {c.auto}</label><span>{c.updated} <time dateTime={new Date(readAt).toISOString()}>{new Intl.DateTimeFormat(l === 'en' ? 'en-GB' : 'pt-BR', {timeStyle: 'short'}).format(readAt)}</time></span></p>
     </div>
     {board?.unavailable && <p className="pw-empty" role="status">{board.unavailable}</p>}
+    {board && !board.unavailable && <ActivityChart events={events} end={now} lang={l}/>}
     <section aria-label={c.agents}><h2>{c.agents}</h2>
       <ul className="pw-agents">{agents.map(agent => { const on = agent.last !== null && now - agent.last < ACTIVE_MS; return <li key={agent.name} className="pw-agent" data-active={on} style={{'--agent-hue': hue(agent.name)} as React.CSSProperties}>
         <span className="pw-agent-avatar" aria-hidden="true">{initials(agent.name)}</span>

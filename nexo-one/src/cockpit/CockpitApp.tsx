@@ -2,6 +2,9 @@ import {humanizeResult, humanTitle} from '../private-workspace/humanize.ts';
 import {agentName} from '../private-workspace/liveEvents.ts';
 import CockpitLive from './CockpitLive.tsx';
 import CockpitTeam from './CockpitTeam.tsx';
+import {motion,useReducedMotion} from 'motion/react';
+import './experience.css';
+import MotionToggle from '../atlas/ui/MotionToggle.tsx';
 import {tone} from './team.ts';
 import {useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode} from 'react';
 import {HttpError, loadCockpit, loadPublicSelection, login, logout, saveSelection, session, type Bi, type CampaignPublic, type Cockpit, type Row, type SaveError, type Selection, type TowerPublic} from './api.ts';
@@ -22,10 +25,10 @@ const when = (iso: string | null | undefined) => {
 const FIELD: Record<string, string> = {EMPTY: 'Obrigatório.', TOO_LONG: 'Texto longo demais.', RESTRICTED_FAMILY: 'Contém um termo restrito (PEER, Olympus, agentes internos, mural).', INTERNAL_REFERENCE: 'Contém link, e-mail, ID interno ou credencial.', SOURCE_ROW_NOT_FOUND: 'A linha não está mais na fonte; reaprove a partir de uma linha atual.', SOURCE_UNAVAILABLE: 'Fonte SHADOW indisponível agora; itens novos precisam dela.', NOT_IN_CATALOG: 'Não está no catálogo publicado.', CLOSURE_REQUIRED: 'Uma frente concluída precisa de um resumo de encerramento.', INVALID: 'Item inválido.'};
 
 function useTheme(): [Theme, (t: Theme) => void] {
-  const [theme, setTheme] = useState<Theme>(() => { try { const t = localStorage.getItem('nexo.cockpit.theme'); return t === 'light' || t === 'dark' ? t : 'system'; } catch { return 'system'; } });
+  const [theme, setTheme] = useState<Theme>(() => { try { const t = localStorage.getItem('nexo.cockpit.theme'); return t === 'light' || t === 'dark' || t === 'system' ? t : 'dark'; } catch { return 'dark'; } });
   useEffect(() => {
     if (theme === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
-    try { if (theme === 'system') localStorage.removeItem('nexo.cockpit.theme'); else localStorage.setItem('nexo.cockpit.theme', theme); } catch { /* storage unavailable */ }
+    try { localStorage.setItem('nexo.cockpit.theme', theme); } catch { /* storage unavailable */ }
   }, [theme]);
   return [theme, setTheme];
 }
@@ -36,6 +39,7 @@ function Header({theme, setTheme, onLogout, active}: {theme: Theme; setTheme: (t
     <a className="ck-brand" href="#agora"><strong>NEXO</strong><small>Cosmologia computacional</small><span className="ck-tag">Cockpit</span></a>
     {onLogout && <nav className="ck-nav" aria-label="Seções do cockpit">{links.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={active === id}>{label}</a>)}</nav>}
     <div className="ck-tools">
+      <MotionToggle/>
       <div className="ck-seg" role="group" aria-label="Tema">{([['light', 'Claro'], ['dark', 'Escuro'], ['system', 'Auto']] as [Theme, string][]).map(([value, label]) => <button key={value} type="button" aria-pressed={theme === value} onClick={() => setTheme(value)}>{label}</button>)}</div>
       <a className="ck-btn quiet" href={PUBLIC_SITE} target="_blank" rel="noreferrer" aria-label="Abrir o site público">Público ↗</a>
       {onLogout && <button type="button" className="ck-btn quiet" onClick={onLogout}>Sair</button>}
@@ -94,11 +98,12 @@ function Switch({checked, onChange, label}: {checked: boolean; onChange: (v: boo
   return <label className="ck-switch"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}/><span className="track" aria-hidden="true"/><span>{label}</span></label>;
 }
 function Section({id, n, title, lead, children, aside}: {id: string; n: string; title: string; lead?: ReactNode; children: ReactNode; aside?: ReactNode}) {
-  return <section className="ck-section" id={id} aria-labelledby={`${id}-h`}>
+  const reduced=useReducedMotion();
+  return <motion.section initial={reduced?false:{opacity:.6,y:16}} whileInView={{opacity:1,y:0}} viewport={{once:true,amount:.04}} transition={{duration:reduced?0:.35}} className="ck-section" id={id} aria-labelledby={`${id}-h`}>
     <p className="ck-eyebrow">{n} / {id === 'publico' ? 'público' : id === 'equipe' ? 'automações' : id}</p>
     <div className="ck-section-head"><h2 id={`${id}-h`}>{title}</h2>{lead && <p>{lead}</p>}{aside}</div>
     {children}
-  </section>;
+  </motion.section>;
 }
 
 function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refreshError, onAccessFailure}: {onAccessFailure: (status: number) => void; refreshing: boolean; refreshError: string; data: Cockpit; reload: () => Promise<void>; onLogout: () => void; theme: Theme; setTheme: (t: Theme) => void}) {

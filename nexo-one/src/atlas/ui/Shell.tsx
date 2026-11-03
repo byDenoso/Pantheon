@@ -3,12 +3,15 @@ import {LocaleSwitch, useLocale, useMessages} from './LocaleProvider.tsx';
 import {PRESENTATION} from '../../i18n/presentation.ts';
 import {goToPublicSection} from '../publicNavigation.ts';
 import {useTheme, type ThemePref} from './useTheme.ts';
+import MotionToggle from './MotionToggle.tsx';
+import '../private-experience.css';
 
 const SECTIONS = ['lines', 'methods', 'works', 'contact'] as const;
 const PRIVATE_URL = import.meta.env.VITE_STATIC_PUBLIC_SHELL === true ? 'https://nexo-one-two.vercel.app/#/privado' : '#/privado';
 export default function Shell({area, children}: {area: 'public' | 'private'; children: ReactNode}) {
   const m = useMessages();
-  const t = PRESENTATION[useLocale()];
+  const locale=useLocale();
+  const t = PRESENTATION[locale];
   const {pref, choose} = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -32,6 +35,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
           </nav>
           <div className="atlas-controls">
             <LocaleSwitch/>
+            {area==='private'&&<MotionToggle en={locale==='en'}/>}
             {area === 'private' && <div className="atlas-seg" role="group" aria-label={m.themeLabel}>
               {opts.map(([k, label]) => <button key={k} type="button" aria-pressed={pref === k} onClick={() => choose(k)}>{label}</button>)}
             </div>}
