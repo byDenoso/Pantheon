@@ -1,6 +1,8 @@
 import {humanizeResult, humanTitle} from '../private-workspace/humanize.ts';
 import {agentName} from '../private-workspace/liveEvents.ts';
 import CockpitLive from './CockpitLive.tsx';
+import CockpitTeam from './CockpitTeam.tsx';
+import {tone} from './team.ts';
 import {useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode} from 'react';
 import {HttpError, loadCockpit, loadPublicSelection, login, logout, saveSelection, session, type Bi, type CampaignPublic, type Cockpit, type Row, type SaveError, type Selection, type TowerPublic} from './api.ts';
 
@@ -17,7 +19,6 @@ const when = (iso: string | null | undefined) => {
   const d = new Date(iso);
   return Number.isFinite(d.getTime()) ? d.toLocaleString('pt-BR', {dateStyle: 'short', timeStyle: 'short'}) : iso;
 };
-const tone = (value = '') => /erro|falh|bloq|parad|block|fail|desativ|off|alert/i.test(value) ? 'bad' : /aguard|pend|paus|revis|wait/i.test(value) ? 'warn' : /ativ|rodando|andamento|ok|conclu|running|done/i.test(value) ? 'ok' : undefined;
 const FIELD: Record<string, string> = {EMPTY: 'Obrigatório.', TOO_LONG: 'Texto longo demais.', RESTRICTED_FAMILY: 'Contém um termo restrito (PEER, Olympus, agentes internos, mural).', INTERNAL_REFERENCE: 'Contém link, e-mail, ID interno ou credencial.', SOURCE_ROW_NOT_FOUND: 'A linha não está mais na fonte; reaprove a partir de uma linha atual.', SOURCE_UNAVAILABLE: 'Fonte SHADOW indisponível agora; itens novos precisam dela.', NOT_IN_CATALOG: 'Não está no catálogo publicado.', CLOSURE_REQUIRED: 'Uma frente concluída precisa de um resumo de encerramento.', INVALID: 'Item inválido.'};
 
 function useTheme(): [Theme, (t: Theme) => void] {
@@ -30,7 +31,7 @@ function useTheme(): [Theme, (t: Theme) => void] {
 }
 
 function Header({theme, setTheme, onLogout, active}: {theme: Theme; setTheme: (t: Theme) => void; onLogout?: () => void; active?: string}) {
-  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Equipe'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
+  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Automações'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
   return <header className="ck-header">
     <a className="ck-brand" href="#agora"><strong>NEXO</strong><small>Cosmologia computacional</small><span className="ck-tag">Cockpit</span></a>
     {onLogout && <nav className="ck-nav" aria-label="Seções do cockpit">{links.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={active === id}>{label}</a>)}</nav>}
@@ -42,7 +43,7 @@ function Header({theme, setTheme, onLogout, active}: {theme: Theme; setTheme: (t
   </header>;
 }
 function SubNav({active}: {active: string}) {
-  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Equipe'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
+  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Automações'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
   return <nav className="ck-subnav" aria-label="Seções (celular)">{links.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={active === id}>{label}</a>)}</nav>;
 }
 
@@ -94,7 +95,7 @@ function Switch({checked, onChange, label}: {checked: boolean; onChange: (v: boo
 }
 function Section({id, n, title, lead, children, aside}: {id: string; n: string; title: string; lead?: ReactNode; children: ReactNode; aside?: ReactNode}) {
   return <section className="ck-section" id={id} aria-labelledby={`${id}-h`}>
-    <p className="ck-eyebrow">{n} / {id === 'publico' ? 'público' : id}</p>
+    <p className="ck-eyebrow">{n} / {id === 'publico' ? 'público' : id === 'equipe' ? 'automações' : id}</p>
     <div className="ck-section-head"><h2 id={`${id}-h`}>{title}</h2>{lead && <p>{lead}</p>}{aside}</div>
     {children}
   </section>;
@@ -272,7 +273,7 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
       <dl className="ck-kpis">
         <div className="ck-kpi"><dt>Resultados na leitura</dt><dd>{shadow ? towerCands.length : '—'}</dd></div>
         <div className="ck-kpi"><dt>Frentes no roadmap</dt><dd>{shadow ? campCands.length : '—'}</dd></div>
-        <div className="ck-kpi"><dt>Equipe ativa</dt><dd>{shadow ? activeTeam : '—'}<small> / {shadow ? equipe.length : '—'}</small></dd></div>
+        <div className="ck-kpi"><dt>Automações ativas</dt><dd>{shadow ? activeTeam : '—'}<small> / {shadow ? equipe.length : '—'}</small></dd></div>
         <div className="ck-kpi"><dt>Análises no público</dt><dd>{publishedCount}<small>{unset ? ' estático' : ''}</small></dd></div>
         <div className="ck-kpi" data-tone={data.drift.length ? 'warn' : undefined}><dt>Publicados com fonte alterada</dt><dd>{data.drift.length}</dd></div>
       </dl>
@@ -285,8 +286,8 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         {shadow ? <CockpitLive mural={shadow.mural} resultados={shadow.resultados} resumo={shadow.resumo} equipe={equipe}/> : <p className="ck-note" data-tone="warn">Sem leitura da SHADOW.</p>}
       </Section>
 
-      <Section id="equipe" n="02" title="Equipe científica" lead="Papéis, cadência e estado declarados na aba EQUIPE.">
-        {shadow ? <div className="ck-panel ck-scroll"><table className="ck-table"><thead><tr><th>Papel</th><th>Estado</th><th>Cadência</th><th>Frentes</th></tr></thead><tbody>{equipe.map((r, i) => <tr key={i}><td><strong>{r.papel}</strong></td><td><span className="ck-state" data-tone={tone(r.estado)}>{r.estado || '—'}</span></td><td className="mono">{r.cadencia}</td><td>{r.frentes}</td></tr>)}{!equipe.length && <tr><td colSpan={4}>Aba EQUIPE vazia.</td></tr>}</tbody></table></div> : <p className="ck-note">Sem leitura da SHADOW.</p>}
+      <Section id="equipe" n="02" title="Automações" lead="Cada automação declarada na aba EQUIPE: cadência, próxima execução e o que ela de fato registrou no Mural e em Resultados nas últimas 24 horas.">
+        {shadow ? <CockpitTeam equipe={equipe} mural={shadow.mural} resultados={shadow.resultados} resumo={shadow.resumo}/> : <p className="ck-note" data-tone="warn">Sem leitura da SHADOW.</p>}
       </Section>
 
       <Section id="frentes" n="03" title="Frentes e campanhas" lead="Ligue uma frente para mostrá-la no público. Só o texto que você escrever aqui é publicado; o ID e as notas internas ficam no privado.">
