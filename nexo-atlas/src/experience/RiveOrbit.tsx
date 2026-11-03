@@ -10,7 +10,7 @@ export default function RiveOrbit({active}:{active:boolean}){
     let disposed=false;
     void import('@rive-app/canvas').then(({Rive,RuntimeLoader,Layout,Fit,Alignment})=>{
       if(disposed||!canvas.current)return;RuntimeLoader.setWasmUrl(wasmUrl);RuntimeLoader.setWasmFallbackUrl(null);
-      const rive=new Rive({canvas:canvas.current,src,stateMachines:'OrbitState',autoBind:true,autoplay:true,enableRiveAssetCDN:false,useOffscreenRenderer:false,layout:new Layout({fit:Fit.Contain,alignment:Alignment.Center}),onLoad:()=>{if(disposed)return;rive.resizeDrawingSurfaceToCanvas(1.5);const prop=rive.viewModelInstance?.boolean('isActive');if(prop)prop.value=current.current;if(!current.current)rive.pause();},onLoadError:()=>{canvas.current?.setAttribute('hidden','');}});runtime.current=rive;
+      const rive=new Rive({canvas:canvas.current,src,stateMachine:'OrbitState',autoBind:true,autoplay:true,enableRiveAssetCDN:false,useOffscreenRenderer:false,layout:new Layout({fit:Fit.Contain,alignment:Alignment.Center}),onLoad:()=>{if(disposed)return;rive.resizeDrawingSurfaceToCanvas(1.5);const prop=rive.viewModelInstance?.boolean('isActive');if(prop)prop.value=current.current;if(!current.current)rive.pause();},onLoadError:()=>{canvas.current?.setAttribute('hidden','');}});runtime.current=rive;
     }).catch(()=>canvas.current?.setAttribute('hidden',''));
     return()=>{disposed=true;runtime.current?.cleanup();runtime.current=null;};
   },[]);
