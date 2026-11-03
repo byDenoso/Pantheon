@@ -400,3 +400,57 @@ def save_state(path, state):
         with open(temp, "w", encoding="utf-8") as handle:
             json.dump(state, handle, sort_keys=True, separators=(",", ":"))
         os.replace(temp, path)
+
+def main():
+    """Opt-in CLI; branch CI needs no Google credentials."""
+    import argparse
+    import sys
+    from google.oauth2 import service_account
+    from google.auth.transport.requests import AuthorizedSession
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--state", required=True)
+    parser.add_argument("--state-out", required=True)
+    parser.add_argument("--budget-seconds", type=int, default=420)
+    args = parser.parse_args()
+    raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if not raw:
+        raise SystemExit("WRITER_CREDENTIAL_MISSING")
+    creds = service_account.Credentials.from_service_account_info(
+        json.loads(raw), scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    state = load_state(args.state)
+    start = time.monotonic()
+    counts = None
+    meter = None
+    status = "STOP_UNCLASSIFIED"
+    try:
+        with AuthorizedSession(creds) as authenticated:
+            meter = BudgetSession(authenticated, start + args.budget_seconds)
+            try:
+                counts = run_fast(meter, state, apply=args.apply, deadline=meter.deadline)
+                status = "READBACK_VERIFIED" if not counts["conflict"] and not counts["invalid"] else "PARTIAL_RECONCILIATION"
+            except BudgetExhausted:
+                status = "BUDGET_EXHAUSTED_RESUMABLE"
+            except Exception as exc:
+                status = "STOP_" + w.safe_error_code(exc)
+    finally:
+        # A lost index checkpoint never authorizes blind append: the next run
+        # scans any new tail rows before considering new source identities.
+        if args.apply:
+            save_state(args.state_out, state)
+        metrics = meter.metrics if meter else {}
+        counters = counts or {}
+        summary = {"written": counters.get("written", 0),
+                   "reconciled": counters.get("reconciled", 0),
+                   "unresolved": counters.get("unresolved", 0),
+                   "quarantined": counters.get("quarantined", 0),
+                   "plain": counters.get("collected", 0)}
+        w.step_summary(summary, metrics, time.monotonic() - start, status)
+        print(json.dumps({"status": status, "duration_seconds": round(time.monotonic()-start, 3),
+                          **metrics, **counters}, sort_keys=True))
+    return 0 if status in ("READBACK_VERIFIED", "BUDGET_EXHAUSTED_RESUMABLE") else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
