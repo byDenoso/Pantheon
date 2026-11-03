@@ -17,8 +17,8 @@ export function parseWhen(value: string): number | null {
 export function agentName(raw: string): string {
   const v = (raw || '').trim();
   if (!v) return '—';
-  const m = /^(S\d{1,2}|P|MAPA(?:[ _]VIVO)?|Mapa Vivo|CLAUDE|GPT)(?![A-Za-z0-9])/i.exec(v);
-  if (m) return /^mapa/i.test(m[1]) ? 'Mapa Vivo' : m[1].toUpperCase();
+  const m = /^(S\d{1,2}|P|MAPA(?:[ _]VIVO)?|Mapa Vivo|CLAUDE|GPT|LUMIA)(?![A-Za-z0-9])/i.exec(v);
+  if (m) return /^mapa/i.test(m[1]) ? 'Mapa Vivo' : /^lumia$/i.test(m[1]) ? 'Lumia' : /^claude$/i.test(m[1]) ? 'Claude' : m[1].toUpperCase();
   return v.split(/[|\s;,]/)[0]!.slice(0, 24) || '—';
 }
 export const COMPLAINT = /reclama|bloque|conflit|atrapalh|pedido|request|complain|handoff|repasse/i;
