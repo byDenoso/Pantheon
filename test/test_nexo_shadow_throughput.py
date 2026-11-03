@@ -110,7 +110,7 @@ class Sheets:
 class ThroughputTests(unittest.TestCase):
     def execute(self, sheets, state=None):
         state = state if state is not None else {}
-        with patch.object(w, "values", side_effect=sheets.values), \
+        with patch.object(w, "values", side_effect=lambda session, sheet, rng: sheets.values(sheet, rng)), \
              patch.object(w, "target_index", side_effect=sheets.full_index):
             result = t.run_fast(sheets, state, apply=True)
         return result, state
