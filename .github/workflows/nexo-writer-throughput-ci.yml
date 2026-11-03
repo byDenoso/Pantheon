@@ -1,0 +1,28 @@
+name: NEXO Writer throughput tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/nexo_shadow_writer.py"
+      - "scripts/nexo_shadow_throughput.py"
+      - "test/test_nexo_shadow_writer.py"
+      - "test/test_nexo_shadow_throughput.py"
+      - ".github/workflows/nexo-writer-throughput-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run isolated writer tests, no Sheets credential
+        run: |
+          python -m unittest discover -s test -p 'test_nexo_shadow_writer.py' -v
+          python -m unittest discover -s test -p 'test_nexo_shadow_throughput.py' -v
