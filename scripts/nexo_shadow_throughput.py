@@ -258,7 +258,7 @@ def run_fast(session, state, *, apply=True, deadline=None):
     run_number = state["runs"]
     counts = {"collected": 0, "eligible": 0, "written": 0, "reconciled": 0,
               "unresolved": 0, "quarantined": 0, "invalid": 0, "conflict": 0,
-              "batches": 0, "drain_cycles": 0, "pending": 0}
+              "batches": 0, "drain_cycles": 0, "pending": 0, "quota_rejected": 0}
     update_targets(session, state, force=run_number % FULL_AUDIT_EVERY == 0)
     # Drain all available work in bounded batches, with one reconciliation
     # before every append. A second pass is permitted only for NEW arrivals.
@@ -339,6 +339,7 @@ def run_fast(session, state, *, apply=True, deadline=None):
         if not safe:
             break
         counts["eligible"] += len(safe)
+        quota_rejected = False
         for batch in _batches([item for item, _, _ in safe]):
             if deadline is not None and time.monotonic() >= deadline:
                 break
@@ -357,9 +358,31 @@ def run_fast(session, state, *, apply=True, deadline=None):
             try:
                 response = session.post(f"{w.API}/{w.SHADOW}:batchUpdate",
                                         json={"requests": request}, timeout=60)
+                if getattr(response, "status_code", 200) == 429:
+                    # A definitive quota rejection is not a target append
+                    # attempt. Read the target first; then restore the
+                    # attempt counter only for entries proved absent.
+                    update_targets(session, state)
+                    adjusted = []
+                    for item, _ in batch:
+                        group, previous_attempts = members[id(item)]
+                        target = state["targets"][item["data"]["tab"]]
+                        sid = item["data"]["stable_id"]
+                        if target["entries"].get(sid) == w.digest_for(item["data"]):
+                            adjusted.extend((one, "APPLIED:" + one["digest"]) for one in group)
+                            counts["reconciled"] += len(group)
+                        elif sid not in target["conflicts"]:
+                            adjusted.extend((one, _claim(one["digest"], _stamp(),
+                                                         previous_attempts, run_number))
+                                            for one in group)
+                    _markers(session, adjusted)
+                    counts["quota_rejected"] += 1
+                    quota_rejected = True
+                    break
                 response.raise_for_status()
             except Exception:
-                # Reconcile the tail on next invocation. Never resend here.
+                # An ambiguous transport outcome remains CLAIMED. Never
+                # replay it during this invocation.
                 raise
             counts["batches"] += 1
             update_targets(session, state)
@@ -375,6 +398,8 @@ def run_fast(session, state, *, apply=True, deadline=None):
                 applied.extend((one, "APPLIED:" + one["digest"]) for one in group)
             _markers(session, applied)
             counts["written"] += len(applied)
+        if quota_rejected:
+            break
         # Each group from this invocation is visited at most once. Continue only
         # if the spool has unseen arrivals; otherwise stop without busy polling.
         if not any((i["data"]["tab"], i["data"]["stable_id"]) not in already_processed
