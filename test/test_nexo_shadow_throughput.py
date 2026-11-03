@@ -72,6 +72,8 @@ class Sheets:
         self.target_posts += 1
         if self.fail == "before":
             raise TimeoutError("request not delivered")
+        if self.fail == "429" and self.target_posts == 1:
+            return Response(status=429)
         commands = json["requests"]
         if self.fail == "partial":
             commands = commands[:1]
@@ -83,8 +85,6 @@ class Sheets:
                                          for c in row["values"]])
         if self.fail == "after" and self.target_posts == 1:
             raise TimeoutError("ambiguous transport")
-        if self.fail == "429" and self.target_posts == 1:
-            return Response(status=429)
         return Response()
 
     def get(self, url, *, params=None, timeout=60):
@@ -164,9 +164,11 @@ class ThroughputTests(unittest.TestCase):
 
     def test_429_never_same_invocation_replay(self):
         sheets=Sheets([event(0)],fail="429")
-        with self.assertRaises(RuntimeError):
-            self.execute(sheets)
+        counts,_=self.execute(sheets)
         self.assertEqual(sheets.target_posts,1)
+        self.assertEqual(counts["quota_rejected"],1)
+        self.assertEqual(counts["written"],0)
+        self.assertEqual(sheets.source[w.PLAIN_TAB][1][14].split(":")[3],"0")
 
     def test_three_attempts_quarantine(self):
         sheets=Sheets([event(0)],fail="before")
