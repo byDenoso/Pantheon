@@ -59,7 +59,7 @@ export async function cockpitView({env = process.env, store = atlasStore(env), f
   return {
     contract: 'NEXO_COCKPIT_V1', generatedAt: now.toISOString(),
     shadow: board ? {available: true, modifiedAt: board.modified_at ?? null, counts: board.counts ?? {},
-      equipe: board.equipe ?? [], roadmap: board.roadmap ?? [], resultados: tail(board.resultados, 60), resumo: tail(board.resumo, 20), mural: tail(board.mural, 12)}
+      equipe: board.equipe ?? [], roadmap: board.roadmap ?? [], resultados: tail(board.resultados, 60), resumo: tail(board.resumo, 20), mural: tail(board.mural, 60)}
       : {available: false, reason: src.shadowError},
     catalog: src.catalog ? {available: true, url: src.catalog.url, rows: src.catalog.rows} : {available: false, reason: src.catalogError},
     candidates: {tower: src.tower ?? [], campaigns: src.campaigns ?? []},
