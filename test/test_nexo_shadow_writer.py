@@ -1,8 +1,10 @@
 """Unit tests for legacy and plain-text SHADOW writer ingress."""
 import base64
 import json
+import os
 import unittest
 from scripts import nexo_shadow_writer as w
+from unittest.mock import patch
 
 ID = "S2-SHADOW-WRITER-TEST-20261020"
 
@@ -17,7 +19,17 @@ def plain(tab="MURAL", text="NO_OP", state=""):
       if tab == "MURAL" else ["2026-10-20T15:30:40-03:00","S2","R3-3.1",ID,text,"QA","0","BIND","ROADMAP!17","RESULTADOS!223"])
     return [ID,"2026-10-20T15:30:40-03:00","S2",tab,*values,*[""]*(10-len(values)),state]
 
-class TestWriter(unittest.TestCase):
+class IsolatedSummaryTestCase(unittest.TestCase):
+    """Never allow unit tests to write into the Actions job summary."""
+
+    def setUp(self):
+        super().setUp()
+        guard = patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": ""})
+        guard.start()
+        self.addCleanup(guard.stop)
+
+
+class TestWriter(IsolatedSummaryTestCase):
     def test_valid_legacy_mural(self):
         d=w.decode(ID,encode())
         self.assertEqual(w.append_request(d)["requests"][0]["appendCells"]["sheetId"],1148777660)
@@ -105,8 +117,6 @@ class TestWriter(unittest.TestCase):
         self.assertEqual(w.digest_for(a),w.digest_for(b))
 
 
-from unittest.mock import patch
-
 def _recovery_data(key='event-one', text='unchanged'):
     return {'stable_id':key, 'tab':'MURAL',
             'values':['2026-10-21T09:00:00Z','S1','P',text,'','TEST','',key]}
@@ -139,7 +149,7 @@ class Session:
         return Response()
 
 
-class Recovery(unittest.TestCase):
+class Recovery(IsolatedSummaryTestCase):
     def invoke(self, rows, *, records=None, apply=True, fail=False, legacy=None):
         session=Session(records,fail)
         sources={w.PLAIN_TAB:[(1,w.PLAIN_HEADER),*[(i+2,r) for i,r in enumerate(rows)]],
@@ -565,7 +575,7 @@ class Recovery(unittest.TestCase):
         self.assertEqual(len(summaries),1)
 
 
-class MainStatusTests(unittest.TestCase):
+class MainStatusTests(IsolatedSummaryTestCase):
     def invoke_main(self, counts):
         import io
         import types
@@ -607,6 +617,22 @@ class MainStatusTests(unittest.TestCase):
         code,result=self.invoke_main({'written':1,'new_failures':0})
         self.assertEqual(result['status'],'READBACK_VERIFIED')
         self.assertEqual(code,0)
+
+
+class StepSummaryIsolationRegression(unittest.TestCase):
+    def test_main_status_tests_never_write_parent_actions_summary(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "actions-summary.md"
+            summary.touch()
+            with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary)}):
+                suite = unittest.defaultTestLoader.loadTestsFromTestCase(MainStatusTests)
+                result = unittest.TestResult()
+                suite.run(result)
+                self.assertTrue(result.wasSuccessful(), result.errors + result.failures)
+                self.assertEqual(summary.read_text(encoding="utf-8"), "")
 
 
 if __name__ == "__main__":
