@@ -615,6 +615,8 @@ def step_summary(counts, metrics, duration, status):
         ("applied_verified", applied),
         ("claimed_pending", safe_counts.get("unresolved", 0)),
         ("quarantined", safe_counts.get("quarantined", 0)),
+        ("lease_quarantine_total", safe_counts.get("lease_quarantine_total", 0)),
+        ("lease_quarantine_new", safe_counts.get("lease_quarantine_new", 0)),
         ("sheets_get", metrics.get("get", 0)),
         ("sheets_post", metrics.get("post", 0)),
         ("sheets_put", metrics.get("put", 0)),
