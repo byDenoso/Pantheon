@@ -263,5 +263,23 @@ class ThroughputTests(unittest.TestCase):
             self.assertEqual(t.load_state(path),state)
 
 
+    def test_sharded_state_roundtrip_and_integrity(self):
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as root:
+            state={"runs":12,"sources":{"SHADOW_V2":{"last_row":77,"pending":[12]}},
+                   "targets":{"MURAL":{"last_row":23,"anchor":"a","conflicts":[],
+                                         "entries":{f"event-{i}":f"digest-{i}" for i in range(300)}}}}
+            t.save_state_dir(root,state)
+            self.assertEqual(t.load_state_dir(root),state)
+            entries=t.load_state(root)["targets"]["MURAL"]["entries"]
+            self.assertEqual(len(entries),300)
+            bad=next(f for f in os.listdir(root) if f.startswith("mural-"))
+            with open(os.path.join(root,bad),"w",encoding="utf-8") as output:
+                output.write('{"wrong-shard-key":"digest"}')
+            with self.assertRaises(ValueError):
+                t.load_state_dir(root)
+
+
 if __name__ == "__main__":
     unittest.main()
