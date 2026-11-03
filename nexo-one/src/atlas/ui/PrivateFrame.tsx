@@ -18,6 +18,7 @@ export default function PrivateFrame({data, title, locale, onLogout, onError, on
   const localeRef = useRef(locale); localeRef.current = locale;
   // Language changes reuse the guarded channel without resetting camera, data or selection.
   useEffect(() => { bridgeRef.current?.setLocale(locale); }, [locale]);
+  useEffect(()=>{const sync=()=>bridgeRef.current?.setMotion(document.documentElement.dataset.motion==='paused');const observer=new MutationObserver(sync);observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-motion']});return()=>observer.disconnect();},[]);
   const ref = useRef<HTMLIFrameElement>(null);
   const cb = useRef({onLogout, onError, onReady});
   cb.current = {onLogout, onError, onReady};
@@ -31,6 +32,7 @@ export default function PrivateFrame({data, title, locale, onLogout, onError, on
       getFrameWindow: () => ref.current?.contentWindow ?? null,
       getData: () => latest.current,
       getLocale: () => localeRef.current,
+      getMotion: () => document.documentElement.dataset.motion === 'paused',
       onRefresh: signal => refreshPrivateRuntime(undefined, latest.current, Date.now, signal),
       onRefreshed: fresh => { latest.current = fresh as Record<string, unknown>; },
       onReady: () => {

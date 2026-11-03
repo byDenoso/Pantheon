@@ -1,0 +1,26 @@
+<Rive version="1" kind="fragment">
+  <Artboard defaultStateMachineId="0:7" viewModelId="0:40" viewModelInstanceId="0:41" styleId="0:5" width="80" height="80" name="NexoOrbit" id="0:2">
+    <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+    <Node x="40" y="40" name="OrbitalSystem" id="0:14">
+      <Shape name="Core"><Ellipse width="9" height="9"/><Fill><SolidColor colorValue="FFE4FAFF"/></Fill></Shape>
+      <Shape x="25" name="Satellite"><Ellipse width="7" height="7"/><Fill><SolidColor colorValue="FF51D1EF"/></Fill></Shape>
+      <Shape rotation="0.6" name="OrbitOne"><Ellipse width="55" height="30"/><Stroke thickness="1.5"><SolidColor colorValue="D951D1EF"/></Stroke></Shape>
+      <Shape rotation="-0.6" name="OrbitTwo"><Ellipse width="55" height="30"/><Stroke thickness="1.5"><SolidColor colorValue="B389DDF5"/></Stroke></Shape>
+    </Node>
+    <StateMachine name="OrbitState" id="0:7">
+      <StateMachineLayer name="Motion" id="0:8">
+        <AnyState x="200" y="-120"/><ExitState x="400" y="-120"/>
+        <EntryState x="0" y="0"><StateTransition stateToId="0:12"/></EntryState>
+        <AnimationState x="180" y="0" animationId="0:20" id="0:12">
+          <StateTransition stateToId="0:13" duration="180"><TransitionViewModelCondition opValue="equal"><TransitionPropertyViewModelComparator><BindablePropertyBoolean><DataBindContext sourcePathIds="0:40-0:45" propertyKey="634"/></BindablePropertyBoolean></TransitionPropertyViewModelComparator><TransitionValueBooleanComparator value="true"/></TransitionViewModelCondition></StateTransition>
+        </AnimationState>
+        <AnimationState x="400" y="0" animationId="0:21" id="0:13">
+          <StateTransition stateToId="0:12" duration="180"><TransitionViewModelCondition opValue="equal"><TransitionPropertyViewModelComparator><BindablePropertyBoolean><DataBindContext sourcePathIds="0:40-0:45" propertyKey="634"/></BindablePropertyBoolean></TransitionPropertyViewModelComparator><TransitionValueBooleanComparator value="false"/></TransitionViewModelCondition></StateTransition>
+        </AnimationState>
+      </StateMachineLayer>
+    </StateMachine>
+    <LinearAnimation duration="1" name="Idle" id="0:20"><KeyedObject objectId="0:14"><KeyedProperty propertyKey="15"><KeyFrameDouble value="0" interpolationType="linear"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble value="0.55" interpolationType="linear"/></KeyedProperty></KeyedObject></LinearAnimation>
+    <LinearAnimation duration="360" loopValue="loop" name="Active" id="0:21"><KeyedObject objectId="0:14"><KeyedProperty propertyKey="15"><KeyFrameDouble value="0" interpolationType="linear"/><KeyFrameDouble value="6.2831853" frame="360" interpolationType="linear"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble value="1" interpolationType="linear"/></KeyedProperty></KeyedObject></LinearAnimation>
+  </Artboard>
+  <ViewModel defaultInstanceId="0:41" name="OrbitStatus" id="0:40"><ViewModelPropertyBoolean name="isActive" id="0:45"/><ViewModelInstance exports="true" name="Default" id="0:41"><ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:45"/></ViewModelInstance></ViewModel>
+</Rive>

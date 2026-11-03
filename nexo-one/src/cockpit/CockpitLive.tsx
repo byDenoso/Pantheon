@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
+import ActivityChart from './ActivityChart.tsx';
 import type {Row} from './api.ts';
 import {COMPLAINT, agentName, liveEvents, type Kind} from '../private-workspace/liveEvents.ts';
 import type {MuralRow, ResultadoRow, ResumoRow} from '../private-workspace/shadow.ts';
@@ -41,6 +42,7 @@ export default function CockpitLive({mural, resultados, resumo, equipe}: {mural:
   const shown = events.filter(e => filter === 'all' || (filter === 'complaints' ? isComplaint(e) : e.kind === filter));
   const filters: [typeof filter, string][] = [['all', 'Tudo'], ['mural', 'Mural'], ['resultado', 'Resultados'], ['resumo', 'Mudanças'], ['complaints', 'Reclamações e pedidos']];
   return <div className="ck-live">
+    <ActivityChart events={events} end={now}/>
     <ul className="ck-agents">{agents.map(a => { const on = a.last !== null && now - a.last < ACTIVE_MS; return <li key={a.name} className="ck-agent" data-active={on} style={{'--agent-hue': hue(a.name)} as CSSProperties}>
       <span className="ck-avatar" aria-hidden="true">{initials(a.name)}</span>
       <div><strong>{a.name}</strong><small>{on ? 'trabalhando' : 'parada'} · {ago(a.last, now)}</small>{a.what && <p>{a.what}</p>}</div>

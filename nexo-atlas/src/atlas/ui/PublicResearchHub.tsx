@@ -15,6 +15,7 @@ import Explained from './Explained.tsx';
 import {useMessages} from './LocaleProvider.tsx';
 import {useReadingMode} from './useReadingMode.ts';
 import {SEARCH_EVENT} from './ResearchLaunch.tsx';
+import TopicDistribution from '../../experience/TopicDistribution.tsx';
 
 function HubIcon({tab}:{tab:string}) {
   const paths:Record<string,string>={updates:'M5 5h14M5 12h14M5 19h9',figures:'M4 4v16h16M7 15l4-5 4 3 5-7',map:'M6 6l12 3-6 10L6 6m0 0 6 13m6-10L6 6',compare:'M5 20V10h5v10m4 0V4h5v16',catalog:'M4 5h16v14H4zM4 10h16M9 10v9'};
@@ -42,6 +43,7 @@ export function ResearchMap({entries,locale}:{entries:ResearchEntry[];locale:Loc
     <p className="nexo-map-intro">{en?'Search a term or choose a subject, then open a question to read what was tested and what came out.':'Busque um termo ou escolha um assunto; depois abra uma pergunta para ler o que foi testado e o que saiu.'}</p>
     <div className="nexo-filter-row"><label>{en?'Find a question':'Buscar pergunta'}<input type="search" placeholder={en?'Question, method or result…':'Pergunta, método ou resultado…'} value={query} onChange={e=>{setQuery(e.target.value);setPage(0);setSelected('');}}/></label>{query&&<button type="button" onClick={()=>{setQuery('');setPage(0);}}>{en?'Clear search':'Limpar busca'}</button>}</div>
     <div className="nexo-map-topics" role="group" aria-label={en?'Research subjects':'Assuntos da pesquisa'}>{categories.map(c=><button type="button" key={c.id} aria-pressed={category?.id===c.id} onClick={()=>{setTopic(c.id);setPage(0);setSelected('');}}><span>{c.id==='bao'?'BAO':c.id==='cmb'?'CMB':c.label}</span><strong>{c.entries.length}</strong></button>)}</div>
+    <TopicDistribution entries={searched} locale={locale}/>
     {chosen&&category?<>
       <div className="nexo-map-stage nexo-map-v2">
         <div className="nexo-constellation" aria-label={en?'Select a question in this subject':'Selecione uma pergunta neste assunto'}>

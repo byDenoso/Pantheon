@@ -15,6 +15,19 @@ function setup(over = {}) {
 }
 const msg = (type, extra = {}) => ({channel: FRAME, type, ...extra});
 
+test('motion preference follows the same trusted channel before runtime and never reappears after disposal',()=>{
+ const t=setup({getMotion:()=>true});
+ assert.equal(t.b.setMotion(false),false);
+ t.emit({origin:O,source:{},data:msg('READY')});assert.equal(t.posted.length,0);
+ t.emit({origin:O,source:t.frameWin,data:msg('READY')});
+ assert.deepEqual(t.posted[0],[{channel:HOST,type:'MOTION',paused:true},O]);
+ assert.equal(t.posted[1][0].type,'RUNTIME');
+ assert.equal(t.b.setMotion(false),true);assert.deepEqual(t.posted.at(-1)[0],{channel:HOST,type:'MOTION',paused:false});
+ t.b.dispose();assert.equal(t.b.setMotion(true),false);
+ assert.deepEqual(parseToFrame({channel:HOST,type:'MOTION',paused:true}),{channel:HOST,type:'MOTION',paused:true});
+ for(const paused of ['true',1,null,{}])assert.equal(parseToFrame({channel:HOST,type:'MOTION',paused}),null);
+});
+
 test('READY from the guarded frame (origin AND source) gets the runtime, targeted at the same origin only', () => {
   const t = setup();
   t.emit({origin: O, source: t.frameWin, data: msg('READY')});
