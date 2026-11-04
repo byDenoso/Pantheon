@@ -11,7 +11,8 @@ test('public hero exposes an interactive conceptual scene, an SVG fallback and a
   assert.match(explorer,/<figcaption>/);
   assert.match(explorer,/Ilustração conceitual, sem dados observacionais/);
   assert.match(explorer,/prefers-reduced-motion/);
-  assert.match(explorer,/worker\?\.terminate\(\)/);
+  assert.doesNotMatch(explorer,/new Worker|CosmicScene|Teia cósmica/);
+  assert.match(explorer,/cancelAnimationFrame/);
   assert.match(css,/\.atlas-hero-picture\{[\s\S]*?background:none;[\s\S]*?mix-blend-mode:multiply/);
   assert.match(css,/:root\[data-theme="dark"\][^\n]*\.atlas-hero-picture\{mix-blend-mode:screen\}/);
 });

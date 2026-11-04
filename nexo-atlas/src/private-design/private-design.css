@@ -5,9 +5,9 @@
 
 /* ------------------------------------------------------------------ tokens */
 .pw.pd{
-  --pd-blue:#1e5bff;            /* action, current, accents */
+  --pd-blue:#0063b1;            /* action, current, accents */
   --pd-on-blue:#ffffff;
-  --pd-bg:#000000; --pd-surface:#070c16; --pd-surface-2:#0d1526; --pd-ink:#f2f6fd; --pd-ink-2:#a9b5c9; --pd-line:#1b2a45; --pd-edge:#5d6f93; --pd-blue-ink:#8aabff;
+  --pd-bg:#313c4c; --pd-surface:#263345; --pd-surface-2:#3c4b5f; --pd-ink:#f4f7fb; --pd-ink-2:#bdcbdc; --pd-line:#7389a3; --pd-edge:#a1b5cf; --pd-blue-ink:#99cfff;
   --pd-shadow:none; --pd-shadow-hover:0 0 0 1px var(--pd-blue);
   --pd-gas:url('../atlas/assets/expansion-dark-v1.webp'); --pd-gas-blend:screen; --pd-gas-opacity:.85;
   --pd-radius:14px; --pd-radius-s:8px; --pd-max:1440px; --pd-gutter:clamp(16px,5.3vw,76px);
@@ -20,7 +20,7 @@
   font-family:var(--pd-body);
 }
 .pw.pd[data-theme=light]{
-  --pd-bg:#ffffff; --pd-surface:#ffffff; --pd-surface-2:#f3f6fd; --pd-ink:#0a1220; --pd-ink-2:#48566c; --pd-line:#d3ddf0; --pd-edge:#6b7a94; --pd-blue-ink:#1e5bff;
+  --pd-bg:#ffffff; --pd-surface:#ffffff; --pd-surface-2:#f3f6fd; --pd-ink:#0a1220; --pd-ink-2:#48566c; --pd-line:#d3ddf0; --pd-edge:#6b7a94; --pd-blue-ink:#0063b1;
   --pd-shadow:0 1px 2px rgba(10,18,32,.05),0 10px 28px rgba(10,18,32,.06); --pd-shadow-hover:0 1px 2px rgba(10,18,32,.06),0 16px 36px rgba(30,91,255,.16);
   --pd-gas:url('../atlas/assets/cmb-light-v1.webp'); --pd-gas-blend:multiply; --pd-gas-opacity:.38;
 }
