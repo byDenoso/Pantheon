@@ -42,7 +42,7 @@ def metadata(session, file_id):
     if not ID.fullmatch(file_id):
         raise PrivateDeliveryError("INVALID_FILE_ID")
     value = checked(session.get(API + "/" + file_id,
-        params={"fields": "id,mimeType,trashed,parents,size,driveId"}, timeout=60)).json()
+        params={"fields": "id,mimeType,trashed,parents,size,driveId,ownedByMe"}, timeout=60)).json()
     # My Drive only: inherited shared-drive policies need a separate review.
     if value.get("trashed") is not False or value.get("driveId"):
         raise PrivateDeliveryError("UNSUPPORTED_DESTINATION")
@@ -97,6 +97,7 @@ def prepare(root, session):
     permissions(session, folder, allowed)
     if cfg.get("recipe_sha256") != digest(RECIPE.read_bytes()):
         raise PrivateDeliveryError("RECIPE_BINDING_FAILED")
+    empty_output(session, cfg)
     (root / "config.json").write_bytes(raw)
     (root / "params.json").write_text(json.dumps(cfg["params"], allow_nan=False), encoding="utf-8")
 
@@ -124,6 +125,17 @@ def execute(root, invoke=subprocess.run):
         raise PrivateDeliveryError("RESULT_SCHEMA_INVALID")
 
 
+def empty_output(session, cfg):
+    file_id = cfg["output_file_id"]
+    value = metadata(session, file_id)
+    permissions(session, file_id, cfg["allowed_permission_ids"])
+    if (value.get("parents") != [cfg["output_folder_id"]] or value.get("ownedByMe") is not False
+            or int(value.get("size", -1)) != 0
+            or value.get("mimeType", "").startswith("application/vnd.google-apps.")):
+        raise PrivateDeliveryError("EMPTY_USER_OWNED_OUTPUT_REQUIRED")
+    return file_id
+
+
 def upload(root, session):
     cfg = json.loads((root / "config.json").read_text())
     folder, allowed = cfg["output_folder_id"], cfg["allowed_permission_ids"]
@@ -144,17 +156,13 @@ def upload(root, session):
         for path in files + [root / "manifest.json"]:
             archive.add(path, arcname=path.name, recursive=False)
     payload = buffer.getvalue()
-    # No automatic retries after an uncertain create. Reconcile manually by run identity.
-    name = "cf4-" + os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"] + ".tar.gz"
-    boundary = "nexo_cf4_" + os.urandom(16).hex()
-    body = (f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n".encode()
-            + json.dumps({"name": name, "parents": [folder]}).encode()
-            + f"\r\n--{boundary}\r\nContent-Type: application/gzip\r\n\r\n".encode()
-            + payload + f"\r\n--{boundary}--\r\n".encode())
-    reply = checked(session.post("https://www.googleapis.com/upload/drive/v3/files",
-        params={"uploadType": "multipart", "fields": "id"},
-        headers={"Content-Type": "multipart/related; boundary=" + boundary}, data=body, timeout=180)).json()
-    file_id = reply["id"]
+    # A user-owned, preallocated empty binary avoids service-account ownership/quota.
+    # Never create a file or overwrite an existing result, even on workflow rerun.
+    file_id = empty_output(session, cfg)
+    (root / "delivery.json").write_text(json.dumps({"id": file_id, "verified": False}), encoding="utf-8")
+    checked(session.patch("https://www.googleapis.com/upload/drive/v3/files/" + file_id,
+        params={"uploadType": "media"}, headers={"Content-Type": "application/gzip"},
+        data=payload, timeout=180))
     # Keep uncertain delivery identity local before readback; never print it.
     (root / "delivery.json").write_text(json.dumps({"id": file_id, "verified": False}), encoding="utf-8")
     meta = metadata(session, file_id)

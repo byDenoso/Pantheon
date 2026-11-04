@@ -35,10 +35,11 @@ jobs:
         id: compute
         run: python scripts/nexo_cf4_private.py execute
       - name: Persist private output and verify bytes and ACL
+        id: delivery
         if: always() && steps.prepare.outcome == 'success'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
         run: python scripts/nexo_cf4_private.py upload
-      - name: Remove ephemeral private workspace
-        if: always()
+      - name: Remove verified ephemeral private workspace
+        if: always() && steps.delivery.outcome == 'success'
         run: rm -rf -- "$RUNNER_TEMP/cf4-private" "$RUNNER_TEMP/cf4-install.log"

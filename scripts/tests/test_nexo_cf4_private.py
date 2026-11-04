@@ -44,13 +44,15 @@ class Drive:
             if self.extra_recipient:
                 ps.append({'id': 'stranger', 'type': 'user'})
             return Response({'permissions': ps})
+        if params.get('alt') == 'media' and url.endswith(CONFIG):
+            return Response(content=self.config)
         if params.get('alt') == 'media':
             return Response(content=self.payload + (b'changed' if self.corrupt else b''))
         return Response({'id': FILE, 'trashed': False, 'parents': [FOLDER], 'size': str(len(self.payload)),
-                         'mimeType': 'application/vnd.google-apps.folder' if url.endswith(FOLDER) else 'application/gzip'})
-    def post(self, url, params, headers, data, timeout):
+                         'ownedByMe': False, 'mimeType': 'application/vnd.google-apps.folder' if url.endswith(FOLDER) else 'application/gzip'})
+    def patch(self, url, params, headers, data, timeout):
         self.posts += 1
-        self.payload = data.split(b'Content-Type: application/gzip\r\n\r\n')[1].rsplit(b'\r\n--', 1)[0]
+        self.payload = data
         return Response({'id': FILE})
 
 
@@ -64,7 +66,7 @@ class PrivateOutputTests(unittest.TestCase):
         self.addCleanup(self.env.stop)
         self.addCleanup(self.tmp.cleanup)
         self.cfg = {'schema': 'NEXO_CF4_PRIVATE_V1', 'params': {}, 'output_folder_id': FOLDER,
-                    'allowed_permission_ids': ['owner'], 'recipe_sha256': 'b' * 64}
+                    'output_file_id': FILE, 'allowed_permission_ids': ['owner'], 'recipe_sha256': 'b' * 64}
         (self.root / 'config.json').write_text(json.dumps(self.cfg))
         (self.root / 'result.json').write_text(json.dumps({'summary': SECRET}))
         (self.root / 'run.log').write_text(SECRET)
@@ -74,22 +76,22 @@ class PrivateOutputTests(unittest.TestCase):
         self.cfg['recipe_sha256'] = private.digest(recipe.read_bytes())
         raw = json.dumps(self.cfg).encode()
         drive = Drive()
-        drive.payload = raw
+        drive.config = raw
         with patch.object(private, 'RECIPE', recipe), patch.dict(os.environ, {
             'CF4_PRIVATE_CONFIG_FILE_ID': CONFIG, 'CF4_PRIVATE_CONFIG_SHA256': private.digest(raw)}):
             private.prepare(self.root, drive)
             self.assertEqual(json.loads((self.root / 'params.json').read_text()), {})
-            drive.payload = raw + b'changed'
+            drive.config = raw + b'changed'
             with self.assertRaisesRegex(private.PrivateDeliveryError, 'CONFIG_BINDING_FAILED'):
                 private.prepare(self.root, drive)
     def test_post_upload_acl_change_remains_unverified(self):
         drive = Drive()
-        original = drive.post
+        original = drive.patch
         def changed(*args, **kwargs):
             response = original(*args, **kwargs)
             drive.public = True
             return response
-        drive.post = changed
+        drive.patch = changed
         with self.assertRaisesRegex(private.PrivateDeliveryError, 'PRIVATE_ACL_REQUIRED'):
             private.upload(self.root, drive)
         self.assertEqual(drive.posts, 1)
@@ -111,6 +113,25 @@ class PrivateOutputTests(unittest.TestCase):
             with self.assertRaises(private.PrivateDeliveryError):
                 private.upload(self.root, drive)
             self.assertEqual(drive.posts, 0)
+    def test_nonempty_target_is_never_overwritten(self):
+        drive = Drive()
+        drive.payload = b'existing user artifact'
+        with self.assertRaisesRegex(private.PrivateDeliveryError, 'EMPTY_USER_OWNED_OUTPUT_REQUIRED'):
+            private.upload(self.root, drive)
+        self.assertEqual(drive.posts, 0)
+        self.assertEqual(drive.payload, b'existing user artifact')
+    def test_service_account_owned_target_is_rejected(self):
+        drive = Drive()
+        original = drive.get
+        def owned(*args, **kwargs):
+            response = original(*args, **kwargs)
+            if isinstance(response.value, dict) and 'ownedByMe' in response.value:
+                response.value['ownedByMe'] = True
+            return response
+        drive.get = owned
+        with self.assertRaisesRegex(private.PrivateDeliveryError, 'EMPTY_USER_OWNED_OUTPUT_REQUIRED'):
+            private.upload(self.root, drive)
+        self.assertEqual(drive.posts, 0)
     def test_corruption_fails_without_retry_or_verified_receipt(self):
         drive = Drive()
         drive.corrupt = True
@@ -120,7 +141,7 @@ class PrivateOutputTests(unittest.TestCase):
         self.assertFalse(json.loads((self.root / 'delivery.json').read_text())['verified'])
     def test_upload_timeout_is_not_retried(self):
         drive = Drive()
-        with patch.object(drive, 'post', side_effect=TimeoutError(SECRET)) as post:
+        with patch.object(drive, 'patch', side_effect=TimeoutError(SECRET)) as post:
             with self.assertRaises(TimeoutError):
                 private.upload(self.root, drive)
             self.assertEqual(post.call_count, 1)

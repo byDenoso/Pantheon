@@ -122,6 +122,8 @@ The JSON schema is `NEXO_CF4_PRIVATE_V1`; it contains:
 - `params`: the approved scientific parameters, retaining the original contract;
 - `recipe_sha256`: hash of the reviewed recipe bytes in the merged revision;
 - `output_folder_id`: an existing authorized private My Drive folder;
+- `output_file_id`: an empty binary file preallocated by the user in that folder,
+  reserved exclusively for this one execution (not owned by the service account);
 - `allowed_permission_ids`: the approved existing user/group Drive permission IDs.
 
 No actual IDs, parameters or private configuration are committed to the repo.
@@ -130,15 +132,22 @@ recipients, shared-drive destinations or inaccessible permissions fail closed
 before scientific execution. Destination ACLs are checked again before upload
 and on the result afterward. Size and SHA-256 are compared against a downloaded
 readback. ACL checks are observations, not a guarantee against later ACL changes.
-The workflow never creates or changes permissions.
+The workflow never creates files or changes permissions. It PATCHes only the
+preallocated empty user-owned file; a nonempty target, service-account-owned file,
+wrong folder or native Google document is refused. This avoids relying on a
+service account owning new My Drive files (service accounts lack storage quota).
+The output must be reserved exclusively: the size check is not an atomic lock
+against an external writer. A new execution requires a new approved empty target.
 
 A green upload step means private bytes and ACL were verified, not that the
 scientific verdict was positive. Compute failure still leaves the job failed;
 its available diagnostics are delivered privately where possible. Upload timeout
 or readback failure remains unverified: no blind retry, no public fallback.
-After an uncertain create, reconcile the private folder using the run/attempt
-filename before considering another launch. On runner termination, local bytes
-may be lost; this transport does not claim checkpoint recovery.
+After an uncertain PATCH, reconcile the known private target against the expected
+bytes/hash before considering another launch. Cleanup occurs only after verified
+delivery, but GitHub-hosted runner termination still loses local-only bytes. No
+private backup destination has been authorized; this transport does not claim
+checkpoint recovery or durability when Drive is unavailable.
 
 Before merging or launching, review destination/recipient configuration, verify
 CI for the exact commit, and perform an explicitly authorized synthetic Drive
