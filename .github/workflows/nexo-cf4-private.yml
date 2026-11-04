@@ -1,0 +1,44 @@
+name: NEXO CF4 private result
+# Manual only. Draft preparation does not authorize launch or change Writer routing.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nexo-cf4-private
+  cancel-in-progress: false
+jobs:
+  private-cf4:
+    if: github.repository == 'byDenoso/Pantheon' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install reviewed runtime dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r nexo-one/executor-runtime/requirements.txt google-auth requests > "$RUNNER_TEMP/cf4-install.log" 2>&1 || { echo 'STATUS FAILED'; exit 1; }
+          echo 'STATUS RUNTIME_READY'
+      - name: Verify private configuration and destination
+        id: prepare
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          CF4_PRIVATE_CONFIG_FILE_ID: ${{ secrets.NEXO_CF4_PRIVATE_CONFIG_FILE_ID }}
+          CF4_PRIVATE_CONFIG_SHA256: ${{ secrets.NEXO_CF4_PRIVATE_CONFIG_SHA256 }}
+        run: python scripts/nexo_cf4_private.py prepare
+      - name: Compute in credential-free child
+        id: compute
+        run: python scripts/nexo_cf4_private.py execute
+      - name: Persist private output and verify bytes and ACL
+        if: always() && steps.prepare.outcome == 'success'
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: python scripts/nexo_cf4_private.py upload
+      - name: Remove ephemeral private workspace
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/cf4-private" "$RUNNER_TEMP/cf4-install.log"

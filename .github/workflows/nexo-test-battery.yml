@@ -222,6 +222,8 @@ jobs:
           recipe = str(test.get("recipe") or "")
           if not re.fullmatch(r"[a-z0-9_]{2,40}", recipe):
               raise SystemExit(f"invalid or missing recipe name {recipe!r}")
+          if recipe == "cf4_velocity":
+              raise SystemExit("PRIVATE_OUTPUT_ROUTE_REQUIRED")
           recipe_checkout = "runtime-base" if os.environ["NEXO_CI_FIXTURE"] == "true" else "frozen-recipe"
           script_path = f"{recipe_checkout}/nexo-one/executor-runtime/recipes/{recipe}.py"
           raw_script = open(script_path, "rb").read()
@@ -450,3 +452,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run nexo-writer-robot.yml --repo "$GITHUB_REPOSITORY" --ref main && echo "writer robot dispatched"
+

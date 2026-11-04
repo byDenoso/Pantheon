@@ -236,6 +236,10 @@ def run(params):
 
 
 def main():
+    # The public battery/smoke must reject this recipe even at frozen revisions.
+    # This guard is defense in depth; the workflow owns private delivery.
+    if os.environ.get("NEXO_CF4_PRIVATE_OUTPUT") != "1":
+        raise SystemExit("PRIVATE_OUTPUT_ROUTE_REQUIRED")
     with open(os.environ["PARAMS_PATH"], encoding="utf-8") as source:
         params = json.load(source)
     try:
@@ -245,8 +249,9 @@ def main():
                   "statistics": {}, "semantic": {"result_meaning": exc.reason}}
     with open(os.environ["RESULT_PATH"], "w", encoding="utf-8") as target:
         json.dump(result, target, ensure_ascii=False, allow_nan=False)
-    print(result["summary"])
+    print("STATUS COMPUTED")
 
 
 if __name__ == "__main__":
     main()
+
