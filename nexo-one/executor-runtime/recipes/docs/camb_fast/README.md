@@ -99,3 +99,24 @@ Sources: https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdat
 and https://camb.readthedocs.io/en/latest/initialpower.html . Consult the installed
 version source when API or nonlinear behavior differs. No observational data or
 scientific results from the private campaign are embedded in this change.
+
+### Review corrections
+
+Unsupported running/tensor initial-power inputs (`nrun`, `nrunrun`, `r`, `nt`,
+`ntrun`, `pivot_tensor`, model selectors) in background are rejected instead of
+being silently erased by spline installation. Profile parameters also cannot
+be overridden in background. For power laws the nonlinear effective spectral
+index is set to ns. Tabulated spectra under nonlinear lensing require an explicit
+`effective_ns_for_nonlinear` in the primordial dictionary; that approximation
+must be scientifically justified for the features being investigated.
+
+The controlling process sets inherited OMP/BLAS environment before spawn, and
+the initializer repeats it. This modifies the caller's environment; call this
+batch API from the controlling thread, not simultaneous application threads.
+Already-initialized numeric runtimes in the parent are not used for CAMB work.
+The acceptance benchmark covers As/ns power-law variations only. Construction
+of a feature spline is unit-tested; arbitrary-feature scientific accuracy is
+not implied. CAMB 1.6.6 `CAMBdata.__getstate__` explicitly raises
+`TypeError("Cannot save CAMB result objects")`; a real persistent transfer-state
+cache needs supported upstream serialization or a separately validated solver
+extension, not pickling pointers or restoring only partial transfer arrays.
