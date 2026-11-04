@@ -217,8 +217,8 @@ class Recovery(IsolatedSummaryTestCase):
         self.assertEqual(w.result_status(counts,True),"PARTIAL_RECONCILIATION")
 
     def test_structural_error_still_terminal_after_readback(self):
-        row=plain("RESULTADOS")
-        row[13]="unexpected trailing payload"
+        row=plain("MURAL")
+        row[12]="unexpected trailing payload"
         counts,session=self.invoke([row])
         self.assertEqual(counts["terminal_invalid_new"],1)
         self.assertEqual(counts["contract_pending"],0)
