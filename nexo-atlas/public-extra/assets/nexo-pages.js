@@ -18,7 +18,7 @@
 
   function applyTheme() {
     const saved = store.get(THEME);
-    const chosen = saved === 'light' || saved === 'dark' ? saved : 'system';
+    const chosen = saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'light';
     root.dataset.theme = chosen === 'system' ? (dark.matches ? 'dark' : 'light') : chosen;
     press('data-theme-set', chosen);
   }
@@ -50,7 +50,7 @@
     const theme = event.target.closest('[data-theme-set]');
     if (theme) {
       const value = theme.getAttribute('data-theme-set');
-      value === 'system' ? store.del(THEME) : store.set(THEME, value);
+      store.set(THEME, value);
       applyTheme();
       return;
     }

@@ -131,3 +131,8 @@ html:not([data-lang]) [lang="en"], html[data-lang="pt-BR"] [lang="en"], html[dat
   .atlas-app[data-area="public"] .atlas-footer-in>p{width:100%;order:1}
   .atlas-app[data-area="public"] .nexo-footer-nav{margin-left:auto}
 }
+
+/* Identidade compartilhada: branco e Pantone 2738 C no primeiro plano. */
+:root,:root[data-theme="light"]{--bg:#fff;--bg-2:#fff;--fg:#142236;--fg-2:#4c5e73;--line:#ccd5e0;--cyan:#06038d;--orange:#2420ae;--on-cyan:#fff;--focus:#06038d}
+:root[data-theme="light"] .atlas-app :is(h1,h2,h3,h4,h5,h6){color:#06038d}
+:root[data-theme="light"] .atlas-app .atlas-btn{background:#06038d;border-color:#06038d;color:#fff}
