@@ -57,14 +57,14 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
     <div ref={surface} className="atlas-app" data-area={area} data-cinema-paused={cinemaPaused || reducedMotion}>
       <a className="nexo-skip-link" href={area==='public'?'#public-content':'#private-content'} onClick={event=>{const el=document.querySelector<HTMLElement>(area==='public'?'#public-content':'main');if(el){event.preventDefault();el.setAttribute('tabindex','-1');el.focus();el.scrollIntoView({block:'start'});}}}>{locale==='en'?'Skip to content':'Ir para o conteúdo'}</a>
       {area==='public'&&<div className="nexo-reading-progress" aria-hidden="true"/>}
-      <CosmologicalBackdrop paused={cinemaPaused} scene={area==='public'?(activeSection?SECTIONS.indexOf(activeSection as typeof SECTIONS[number])+1:0):-1}/>
+      {area==='private' && <CosmologicalBackdrop paused={cinemaPaused} scene={-1}/>}
       {menuOpen && <button type="button" className="atlas-menu-backdrop" tabIndex={-1} aria-label={t.nav.close} onClick={() => { setMenuOpen(false); menuButton.current?.focus(); }}/>}
       <header className="atlas-header" ref={header} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setMenuOpen(false); }}>
-        <a className="atlas-brand" href="/#/" onClick={() => setMenuOpen(false)}><span className="atlas-mark" aria-hidden="true"/>{m.brand}<small>{m.tagline}</small></a>
+        <a className="atlas-brand" href="/#/" onClick={() => setMenuOpen(false)}><span className="atlas-mark" aria-hidden="true"/><span className="nexo-wordmark">{m.brand}<span>RESEARCH</span></span><small>{m.tagline}</small></a>
         <button ref={menuButton} type="button" className="atlas-menu-toggle" aria-expanded={menuOpen} aria-controls="atlas-header-menu" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? t.nav.close : area === 'private' ? (locale === 'en' ? 'Options' : 'Opções') : t.nav.menu}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d={menuOpen?'M6 6l12 12M6 18 18 6':'M4 8h16M4 16h16'}/></svg></button>
         <div id="atlas-header-menu" className={`atlas-header-menu${menuOpen ? ' is-open' : ''}`}>
           <nav aria-label={m.navLabel} className="atlas-nav">
-            {area === 'public' && <ul className="atlas-toc">{SECTIONS.map(id => <li key={id}><button type="button" aria-current={activeSection===id?'location':undefined} onClick={() => { setMenuOpen(false); goToPublicSection(id); }}>{t.nav[id]}</button></li>)}</ul>}
+            {area === 'public' && <ul className="atlas-toc">{SECTIONS.map(id => <li key={id}><button type="button" aria-current={activeSection===id?'location':undefined} onClick={() => { setMenuOpen(false); goToPublicSection(id); }}>{t.nav[id]}</button></li>)}<li><a href="/publicacoes.html">{locale==='en'?'Publications':'Publicações'}</a></li></ul>}
             {area === 'private' && <a href="/#/">{m.backPublic}</a>}
           </nav>
           <details className="atlas-preferences" ref={preferences} onKeyDown={event => {
