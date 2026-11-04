@@ -27,7 +27,14 @@ class Contracts(unittest.TestCase):
         self.assertIsNotNone(power)
         with self.assertRaises(ValueError): cf._power({'k': k[::-1].tolist(), 'pk': pk.tolist()})
         with self.assertRaises(ValueError): cf._power({'As': -1})
-        with self.assertRaises(ValueError): cf._params({'As': 2e-9}, cf.PROFILES['fast'], {})
+        for key in ('As', 'nrun', 'r', 'nt', 'initial_power_model', 'AccuracyBoost'):
+            with self.assertRaises(ValueError): cf._params({key: 0}, cf.PROFILES['fast'], {})
+
+    def test_nonlinear_index_contract(self):
+        pars = cf._params(BACKGROUND, cf.PROFILES['high'], {'ns': .97})
+        self.assertAlmostEqual(pars.InitPower.effective_ns_for_nonlinear, .97)
+        with self.assertRaises(ValueError):
+            cf._params(BACKGROUND, cf.PROFILES['high'], {'k': [1e-7, .01, 1, 100], 'pk': [2e-9]*4})
 
     def test_smoke_and_cache(self):
         import numpy as np
