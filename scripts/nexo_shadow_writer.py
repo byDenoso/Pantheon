@@ -381,7 +381,7 @@ _TERMINAL_CODES = frozenset({
 def _legacy_state_document_link(value):
     """Preserve historical misplaced document pointers; never erase evidence."""
     return isinstance(value, str) and bool(re.fullmatch(
-        r"https://docs\\.google\\.com/document/d/[A-Za-z0-9_-]+/edit(?:\\?.*)?",
+        r"https://docs\.google\.com/document/d/[A-Za-z0-9_-]+/edit(?:\?.*)?",
         value))
 
 
@@ -464,6 +464,7 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     # neither has been applied, quarantine BOTH sources without choosing one.
     # This changes only spool state cells; neither payload is rewritten and
     # no scientific append occurs. All other collisions stay fail-closed.
+    schema_marked = set()
     if apply:
         for number, stable_id, tab in malformed_plain:
             if sum(other_id == stable_id for _, other_id, _ in malformed_plain) != 1:
@@ -478,6 +479,7 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
             if twins[0]["mark_tab"] != PLAIN_TAB or twins[0]["mark_column"] != "O":
                 continue
             mark(session, PLAIN_TAB, "O", number, "INVALID:SCHEMA_ID_COLLISION")
+            schema_marked.add((PLAIN_TAB, number))
             mark(session, PLAIN_TAB, "O", twins[0]["number"],
                  "INVALID:UNRESOLVED_SOURCE_COLLISION")
             twins[0]["state"] = "INVALID:UNRESOLVED_SOURCE_COLLISION"
@@ -489,14 +491,9 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     # overwrite a nonempty state (it may hold the only source document URL).
     # Readback is mandatory; transport ambiguity stops the run.
     if apply and invalid_to_mark:
-        updates = []
-        for tab, col, number, reason in invalid_to_mark:
-            actual = values(session, SPOOL, f"'{tab}'!{col}{number}")
-            if actual and actual != [[""]]:
-                if actual[0][0].startswith("INVALID:"):
-                    counts["preexisting_invalid"] += 1
-                continue
-            updates.append((tab, col, number, reason))
+        updates = [(tab, col, number, reason)
+                   for tab, col, number, reason in invalid_to_mark
+                   if (tab, number) not in schema_marked]
         if updates:
             mark_applied_batch(session, updates)
             counts["preexisting_invalid"] += len(updates)
