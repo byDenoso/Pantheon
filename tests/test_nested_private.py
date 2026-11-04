@@ -61,6 +61,23 @@ class Privacy(unittest.TestCase):
         p.unpack(s.data['slot00000000'],dst,dict(p.binding(config()),chunk=0))
         self.assertEqual((dst/'ckpt/toy.save').read_bytes(),b'private checkpoint')
         self.assertEqual(s.patches,1)
+    def test_checkpoint_without_results_json_can_continue(self):
+        # Regression: a budget-limited chunk has no final JSON. The old workflow
+        # ran `R=$(ls results/*.json ...)` under bash -e and aborted before dispatch.
+        (self.root/'results/toy.json').unlink()
+        (self.root/'results').rmdir()
+        session=Session()
+        p.upload(self.root,session)
+        self.assertEqual((self.root/'output').read_text(),'continue=true\n')
+        restored=self.root/'restore'
+        manifest=p.unpack(session.data['slot00000000'],restored,dict(p.binding(config()),chunk=0))
+        self.assertEqual(manifest['status'],'CHECKPOINTED')
+        self.assertEqual((restored/'ckpt/toy.save').read_bytes(),b'private checkpoint')
+        self.assertFalse((restored/'results').exists())
+        workflow=(Path(__file__).resolve().parents[1]/'.github/workflows/nested.yml').read_text()
+        self.assertNotIn('ls results/',workflow)
+        self.assertNotIn('progress notice',workflow)
+
     def test_timeout_reconciles_without_replay(self):
         s=Session(); s.timeout=True
         p.upload(self.root,s)
