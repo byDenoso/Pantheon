@@ -60,16 +60,40 @@ jobs:
           else
             python scripts/nexo_shadow_writer.py --apply --operations
           fi
-      - name: Raise one issue for terminal-invalid spool sources
+      - name: Alert on new spool schema violations (aggregate counters only)
         if: ${{ always() && steps.shadow_writer.outputs.invalid_quarantine_alert == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TITLE: "NEXO: spool producer schema violations"
+          COUNTS: ${{ steps.shadow_writer.outputs.writer_alert_counts }}
         run: |
+          IFS=, read -r contract legacy future terminal <<< "$COUNTS"
+          for count in "$contract" "$legacy" "$future" "$terminal"; do
+            [[ "$count" =~ ^[0-9]+$ ]] || exit 1
+          done
           number=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
-          if [ -z "$number" ]; then
-            gh issue create --title "$TITLE" --body "Writer detected malformed spool records or legacy document URLs in the state column. Consult aggregate run counters and repair the producer. Original proposal content and document links must remain private. Terminal INVALID markers are never replayed."
+          previous="0,0,0,0"
+          if [ -n "$number" ]; then
+            previous=$(gh issue view "$number" --json body --jq '.body' |
+              sed -n 's/.*writer-alert-counts:\([0-9,]*\).*/\1/p' | tail -1)
+            previous=${previous:-0,0,0,0}
+          fi
+          IFS=, read -r pc pl pf pt <<< "$previous"
+          for count in "$pc" "$pl" "$pf" "$pt"; do
+            [[ "$count" =~ ^[0-9]+$ ]] || exit 1
+          done
+          if [ -z "$number" ] || (( contract > pc || legacy > pl || future > pf || terminal > 0 )); then
+            summary="contract_pending=$contract; historical_state_links=$legacy; new_state_links=$future; terminal_invalid_new=$terminal"
+            marker="<!-- writer-alert-counts:$(( contract > pc ? contract : pc )),$(( legacy > pl ? legacy : pl )),$(( future > pf ? future : pf )),$(( pt + terminal )) -->"
+            body="Writer spool schema violations (aggregate counters only). Preserve original rows and document links; review producer. $summary
+          $marker"
+            if [ -z "$number" ]; then
+              gh issue create --title "$TITLE" --body "$body"
+            else
+              gh issue comment "$number" --body "$summary"
+              gh issue edit "$number" --body "$body"
+            fi
           fi
       # Read-only public-battery inspection is intentionally not run here:
       # it never dispatched jobs and caused extra Sheets quota reads/false failures.
