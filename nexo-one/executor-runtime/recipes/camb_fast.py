@@ -9,6 +9,7 @@ import multiprocessing
 import os
 from pathlib import Path
 import tempfile
+from zipfile import BadZipFile
 from concurrent.futures import ProcessPoolExecutor
 
 PROFILES = {
@@ -110,7 +111,7 @@ def _group(job):
                         raise ValueError('Invalid cache record')
                 output.append((index, cl, 'disk'))
                 continue
-            except (OSError, ValueError, KeyError):
+            except (OSError, ValueError, KeyError, BadZipFile, EOFError):
                 # Corrupt cache is recomputed, never used as scientific evidence.
                 pass
         pars = _params(background, profile, spec)
