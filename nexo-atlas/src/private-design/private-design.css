@@ -9,7 +9,7 @@
   --pd-on-blue:#ffffff;
   --pd-bg:#313c4c; --pd-surface:#263345; --pd-surface-2:#3c4b5f; --pd-ink:#f4f7fb; --pd-ink-2:#bdcbdc; --pd-line:#7389a3; --pd-edge:#a1b5cf; --pd-blue-ink:#99cfff;
   --pd-shadow:none; --pd-shadow-hover:0 0 0 1px var(--pd-blue);
-  --pd-gas:url('../atlas/assets/expansion-dark-v1.webp'); --pd-gas-blend:screen; --pd-gas-opacity:.85;
+  --pd-gas:url('../atlas/assets/expansion-dark-v1.webp'); --pd-gas-blend:screen; --pd-gas-opacity:.22;
   --pd-radius:14px; --pd-radius-s:8px; --pd-max:1440px; --pd-gutter:clamp(16px,5.3vw,76px);
   --pd-title:'Atlas Rounded','Nunito',ui-rounded,system-ui,sans-serif; --pd-body:'Atlas Barlow','Barlow',system-ui,sans-serif; --pd-mono:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
   --pd-quick:.14s; --pd-base:.2s; --pd-ease:cubic-bezier(.2,.7,.2,1);
