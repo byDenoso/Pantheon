@@ -3,7 +3,7 @@ import {useCallback, useEffect, useState} from 'react';
 export type ThemePref = 'light' | 'dark' | 'system';
 const KEY = 'atlas.theme';
 const read = (): ThemePref => {
-  try { const v = localStorage.getItem(KEY); return v === 'light' || v === 'dark' || v === 'system' ? v : 'light'; } catch { return 'light'; }
+  try { const v = localStorage.getItem(KEY); return v === 'light' || v === 'dark' || v === 'system' ? v : 'dark'; } catch { return 'dark'; }
 };
 
 export function resolveTheme(pref: ThemePref, systemDark: boolean): 'light' | 'dark' {

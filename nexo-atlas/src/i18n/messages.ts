@@ -23,7 +23,7 @@ export type Messages = {
 export const MESSAGES: Record<Locale, Messages> = {
   'pt-BR': {
     brand: 'NEXO', tagline: 'Cosmologia computacional',
-    heroTitle: 'NEXO · Cosmologia computacional — Dener Pereira',
+    heroTitle: 'NEXO Research · Cosmologia computacional',
     heroLead: 'O NEXO estuda a expansão do Universo e a formação de suas estruturas, comparando modelos cosmológicos com dados de observações.',
     techOpen: 'Ver detalhe técnico', techClose: 'Ocultar detalhe técnico', techTitle: 'Detalhe técnico',
     techBody: [
@@ -64,7 +64,7 @@ export const MESSAGES: Record<Locale, Messages> = {
   },
   en: {
     brand: 'NEXO', tagline: 'Computational cosmology',
-    heroTitle: 'NEXO · Computational cosmology — Dener Pereira',
+    heroTitle: 'NEXO Research · Computational cosmology',
     heroLead: 'NEXO studies the expansion of the Universe and the formation of its structures by comparing cosmological models with observational data.',
     techOpen: 'Show technical detail', techClose: 'Hide technical detail', techTitle: 'Technical detail',
     techBody: [
