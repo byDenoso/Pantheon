@@ -229,7 +229,7 @@ jobs:
         shell: bash
         run: |
           L=$(python code/ckpt_status.py 2>/dev/null | tail -n 1 | tr -d '\r')
-          R=$(ls results/*.json 2>/dev/null | tr '\n' ' ')
+          R=$(ls results/*.json 2>/dev/null | tr '\n' ' ' || true)
           echo "::notice title=N2 ${{ matrix.name }} chunk ${{ needs.plan.outputs.chunk }}::rc=${{ steps.run.outputs.rc }} | $L | results: $R"
           echo "${{ matrix.name }}: rc=${{ steps.run.outputs.rc }} | $L | results: $R" >> "$GITHUB_STEP_SUMMARY"
       - name: save checkpoint
@@ -250,14 +250,14 @@ jobs:
           overwrite: true
           if-no-files-found: ignore
       - name: upload result (artifact, 90 days)
-        if: steps.run.outputs.rc == '0'
+        if: always() && steps.run.outputs.rc == '0'
         uses: actions/upload-artifact@v4
         with:
           name: result-${{ matrix.name }}
           path: results
           retention-days: 90
       - name: re-dispatch next chunk
-        if: steps.run.outputs.rc == '3'
+        if: always() && steps.run.outputs.rc == '3'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
