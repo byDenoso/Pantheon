@@ -491,9 +491,19 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     # overwrite a nonempty state (it may hold the only source document URL).
     # Readback is mandatory; transport ambiguity stops the run.
     if apply and invalid_to_mark:
+        # Keep identity collisions actionable: do not auto-ack a malformed
+        # source that shares an ID with a valid spool/target identity.
+        colliding_malformed = {
+            (PLAIN_TAB, number)
+            for number, stable_id, tab in malformed_plain
+            if stable_id in stored[tab] or any(
+                item["data"]["tab"] == tab and
+                item["data"]["stable_id"] == stable_id for item in pending)
+        }
         updates = [(tab, col, number, reason)
                    for tab, col, number, reason in invalid_to_mark
-                   if (tab, number) not in schema_marked]
+                   if (tab, number) not in schema_marked
+                   and (tab, number) not in colliding_malformed]
         if updates:
             mark_applied_batch(session, updates)
             counts["preexisting_invalid"] += len(updates)
