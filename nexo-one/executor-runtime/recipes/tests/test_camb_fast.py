@@ -49,7 +49,7 @@ class Contracts(unittest.TestCase):
             np.testing.assert_array_equal(quick, again)
             self.assertEqual(len(list(Path(cache).glob('*/*.npz'))), 2)
             damaged = next(Path(cache).glob('*/*.npz'))
-            damaged.write_bytes(b'broken')
+            damaged.write_bytes(b'PK\x03\x04corrupt')
             repaired = cf.evaluate(BACKGROUND, variations, profile='fast', cache_dir=cache)
             np.testing.assert_array_equal(quick, repaired)
             altered = cf.evaluate(BACKGROUND, [{'background': {'H0': 68}, 'primordial': {'As': 2.1e-9}}], profile='fast', cache_dir=cache)
