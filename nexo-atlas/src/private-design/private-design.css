@@ -219,3 +219,5 @@ html[data-motion=paused] .pw.pd .pw-content:not(.pw-web-content)::before{animati
 
 .pw.pd[data-theme=light] :is(h1,h2,h3,h4,h5,h6){color:#06038d}
 .pw.pd[data-theme=light] .pw-content::before{opacity:0}
+
+.pw.pd[data-theme=light] :is(h1,h2,h3,h4,h5,h6) a{color:#06038d}
