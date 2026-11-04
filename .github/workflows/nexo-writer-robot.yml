@@ -60,6 +60,17 @@ jobs:
           else
             python scripts/nexo_shadow_writer.py --apply --operations
           fi
+      - name: Raise one issue for terminal-invalid spool sources
+        if: ${{ always() && steps.shadow_writer.outputs.invalid_quarantine_alert == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "NEXO: spool producer schema violations"
+        run: |
+          number=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh issue create --title "$TITLE" --body "Writer detected malformed spool records or legacy document URLs in the state column. Consult aggregate run counters and repair the producer. Original proposal content and document links must remain private. Terminal INVALID markers are never replayed."
+          fi
       # Read-only public-battery inspection is intentionally not run here:
       # it never dispatched jobs and caused extra Sheets quota reads/false failures.
       # scripts/nexo_shadow_intake.py remains available for explicit diagnostics.
