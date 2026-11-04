@@ -29,6 +29,12 @@ class FrozenPackage(unittest.TestCase):
             path.write_text(json.dumps(body))
             return read_package(path, "bat-synthetic", **kwargs)
 
+    def test_cf4_refused_even_if_frozen_revision_precedes_privacy_guard(self):
+        body = self.package()
+        body["tests"][0]["recipe"] = "cf4_velocity"
+        with self.assertRaisesRegex(ValueError, "PRIVATE_OUTPUT_ROUTE_REQUIRED"):
+            self.read(body)
+
     def test_canonical_package_hash_binds_exact_bytes_and_frozen_workflow(self):
         body = self.package()
         value, digest = self.read(body, workflow_revision="a" * 40)
@@ -185,3 +191,4 @@ class FrozenPackage(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

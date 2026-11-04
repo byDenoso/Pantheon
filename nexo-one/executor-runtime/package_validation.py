@@ -113,6 +113,8 @@ def read_package(path, battery_id, *, fixture=False, transport="CANONICAL_DRIVE_
         recipe = test.get("recipe")
         if not isinstance(recipe, str) or not re.fullmatch(r"[a-z0-9_]{2,40}", recipe) or test.get("script"):
             raise ValueError("PUBLIC_RECIPE_ONLY")
+        if recipe == "cf4_velocity":
+            raise ValueError("PRIVATE_OUTPUT_ROUTE_REQUIRED")
         if test.get("private") or str(test.get("domain") or "").upper() in {"PEER", "OLYMPUS"}:
             raise ValueError("PRIVATE_SCIENCE_REFUSED")
         if not isinstance(test.get("params"), dict):
@@ -129,3 +131,4 @@ def read_package(path, battery_id, *, fixture=False, transport="CANONICAL_DRIVE_
             if not isinstance(inputs, list) or not inputs or not all(public_input(row, canonical=transport == "CANONICAL_DRIVE_PACKAGE") for row in inputs):
                 raise ValueError("FROZEN_PUBLIC_INPUTS_REQUIRED")
     return spec, digest
+

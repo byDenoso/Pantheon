@@ -96,3 +96,59 @@ na profundidade selecionada; 418 SNe distintas no primeiro corte e 259 no
 segundo; cobertura local mínima de 135,7 grupos efetivos. Os dois cortes e
 as 16 retiradas regionais produziram estatísticas finitas. O resultado foi
 `INCONCLUSIVE / SINGLE_DISTANCE_RECONSTRUCTION`, conforme o limite acima.
+
+
+## Private-output transport (draft; launch requires reviewed configuration)
+
+The calculation and frozen source hashes above are unchanged. The historical
+public smoke invocation above is no longer an execution route: the entry point
+requires the private runner, and the public battery rejects `cf4_velocity` before
+loading any frozen recipe revision. The public scheduled smoke reports SKIPPED,
+not PASS or scientific completion. Pure synthetic invariant tests remain enabled.
+
+`.github/workflows/nexo-cf4-private.yml` is a manual, main-only, single-job route.
+It reuses the existing `NEXO_DRIVE_WRITER_JSON` credential only in the transport
+steps. No secret is passed to the calculation child. No result artifacts, job
+summaries or scientific stdout are published. Both normal output and stderr stay
+in the ephemeral private directory and are included in a private Drive bundle.
+Public messages are fixed `STATUS` values. The workflow does not change the
+Writer's routing, schedules or frozen reservations.
+
+Before any launch, an authorized maintainer must review a private JSON config and
+bind its exact bytes using `NEXO_CF4_PRIVATE_CONFIG_FILE_ID` and
+`NEXO_CF4_PRIVATE_CONFIG_SHA256` (configuration secrets, not new credentials).
+This PR does not create them, a destination folder, or any access permission.
+The JSON schema is `NEXO_CF4_PRIVATE_V1`; it contains:
+- `params`: the approved scientific parameters, retaining the original contract;
+- `recipe_sha256`: hash of the reviewed recipe bytes in the merged revision;
+- `output_folder_id`: an existing authorized private My Drive folder;
+- `output_file_id`: an empty binary file preallocated by the user in that folder,
+  reserved exclusively for this one execution (not owned by the service account);
+- `allowed_permission_ids`: the approved existing user/group Drive permission IDs.
+
+No actual IDs, parameters or private configuration are committed to the repo.
+Missing config, changed recipe/config hashes, public/domain sharing, unknown
+recipients, shared-drive destinations or inaccessible permissions fail closed
+before scientific execution. Destination ACLs are checked again before upload
+and on the result afterward. Size and SHA-256 are compared against a downloaded
+readback. ACL checks are observations, not a guarantee against later ACL changes.
+The workflow never creates files or changes permissions. It PATCHes only the
+preallocated empty user-owned file; a nonempty target, service-account-owned file,
+wrong folder or native Google document is refused. This avoids relying on a
+service account owning new My Drive files (service accounts lack storage quota).
+The output must be reserved exclusively: the size check is not an atomic lock
+against an external writer. A new execution requires a new approved empty target.
+
+A green upload step means private bytes and ACL were verified, not that the
+scientific verdict was positive. Compute failure still leaves the job failed;
+its available diagnostics are delivered privately where possible. Upload timeout
+or readback failure remains unverified: no blind retry, no public fallback.
+After an uncertain PATCH, reconcile the known private target against the expected
+bytes/hash before considering another launch. Cleanup occurs only after verified
+delivery, but GitHub-hosted runner termination still loses local-only bytes. No
+private backup destination has been authorized; this transport does not claim
+checkpoint recovery or durability when Drive is unavailable.
+
+Before merging or launching, review destination/recipient configuration, verify
+CI for the exact commit, and perform an explicitly authorized synthetic Drive
+integration check. Unit tests mock Drive and do not prove a live delivery.

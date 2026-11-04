@@ -13,7 +13,8 @@ TITLE = 'NEXO: receita quebrou no teste de fumaça'
 START = '<!-- NEXO_RECIPE_SMOKE_V1 -->'
 END = '<!-- /NEXO_RECIPE_SMOKE_V1 -->'
 REQUIRED = {'verdict', 'decision', 'summary', 'statistics', 'semantic'}
-RETIRED_PROBES = {'tower_native': 'SKIPPED_PUBLIC_SOURCE_RETIRED'}
+RETIRED_PROBES = {'tower_native': 'SKIPPED_PUBLIC_SOURCE_RETIRED',
+                  'cf4_velocity': 'SKIPPED_PRIVATE_OUTPUT_REQUIRED'}
 
 
 def fingerprint(rows):
@@ -56,7 +57,7 @@ def run_smoke(recipes, output, execute=subprocess.run):
                     rows.append({'recipe': name, 'state': 'FAILED', 'reason': type(error).__name__})
             output.write_text(json.dumps({'rows': rows, 'fingerprint': fingerprint(rows)}, ensure_ascii=False), encoding='utf-8')
             print(name + ': ' + rows[-1]['state'] + ' ' + rows[-1]['reason'], flush=True)
-        if not params_files:
+        if not params_files or all(p.stem in RETIRED_PROBES for p in params_files):
             output.write_text(json.dumps({'rows': rows, 'fingerprint': fingerprint(rows)}), encoding='utf-8')
     return int(any(row['state'] == 'FAILED' for row in rows))
 
@@ -126,3 +127,4 @@ if __name__ == '__main__':
     if not report.get('rows') or report.get('fingerprint') != fingerprint(report['rows']):
         raise ValueError('SMOKE_REPORT_INVALID')
     notify(report, args.run_url)
+
