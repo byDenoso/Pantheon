@@ -1,274 +1,96 @@
 name: nested
-
-# Resumable nested sampling on GitHub-hosted runners (ubuntu-latest, 4 vCPU on public repos).
-# One matrix leg = one (stack, model, seed). A leg runs <= ~5.4 h, saves its dynesty checkpoint, and re-dispatches itself
-# (workflow_dispatch API with GITHUB_TOKEN, permissions: actions: write) until results/<tag>.json exists.
-# The `smoke` job runs first and the nested legs start only if the one-point likelihood matches the local reference to 1e-3.
-
+# No automatic push trigger. Review/merge/configure is separate from permission to launch.
 on:
-  # Primary trigger while the workflow exists only on this branch: push of control/run.json (uses the user's git credentials).
-  push:
-    branches: ["nested/peer-n2"]
-    paths: ["control/run.json"]
-  # Also works if the dispatch API accepts this ref; used for the automatic chunk re-dispatch (tested by the smoke job).
   workflow_dispatch:
     inputs:
-      stack:
-        description: "S1 (Planck PR3 + DESI + CC15 + TRGB). S2 nested is not offered (see GHA_PLAN.md)"
-        default: "S1"
-        type: choice
-        options: ["S1"]
       model:
-        description: "all | LCDM | P1 | P3"
-        default: "all"
         type: choice
-        options: ["all", "LCDM", "P1", "P3"]
+        options: [LCDM, P1, P3]
+        required: true
       seedidx:
-        description: "all | 0 | 1"
-        default: "all"
         type: choice
-        options: ["all", "0", "1"]
-      skip_smoke:
-        description: "skip the equivalence smoke (used by the automatic re-dispatch)"
-        default: false
-        type: boolean
-      smoke_s2:
-        description: "also run the best-effort ACT+SPT S2 smoke (non-blocking)"
-        default: false
-        type: boolean
-      ping:
-        description: "do nothing except prove that dispatch works (no jobs run)"
-        default: false
-        type: boolean
+        options: ['0', '1']
+        required: true
       chunk:
-        description: "chunk counter (set by the re-dispatch)"
-        default: "0"
         type: string
+        default: '0'
       max_chunks:
-        description: "hard stop for the re-dispatch loop"
-        default: "90"
         type: string
-
+        default: '90'
 permissions:
   contents: read
   actions: write
-
-env:
-  OMP_NUM_THREADS: "1"
-  PYTHONUNBUFFERED: "1"
-
+concurrency:
+  group: nested-S1-${{ inputs.model }}-s${{ inputs.seedidx }}
+  cancel-in-progress: false
 jobs:
-  plan:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      matrix: ${{ steps.m.outputs.matrix }}
-      skip_smoke: ${{ steps.m.outputs.skip_smoke }}
-      smoke_s2: ${{ steps.m.outputs.smoke_s2 }}
-      ping: ${{ steps.m.outputs.ping }}
-      only_smoke: ${{ steps.m.outputs.only_smoke }}
-      chunk: ${{ steps.m.outputs.chunk }}
-      max_chunks: ${{ steps.m.outputs.max_chunks }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: m
-        shell: python
-        env:
-          EVENT: ${{ github.event_name }}
-          INPUTS: ${{ toJson(inputs) }}
-        run: |
-          import json, os
-          if os.environ["EVENT"] == "workflow_dispatch":
-              c = json.loads(os.environ["INPUTS"])
-          else:
-              c = json.load(open("control/run.json"))
-          def b(x):
-              return str(x).lower() in ("true", "1", "yes")
-          stack = c.get("stack", "S1")
-          assert stack == "S1"
-          mm = c.get("model", "all")
-          ss = str(c.get("seedidx", "all"))
-          models = ["LCDM", "P1", "P3"] if mm == "all" else [mm]
-          seeds = [0, 1] if ss == "all" else [int(ss)]
-          ping = b(c.get("ping", False))
-          only = b(c.get("only_smoke", False))
-          include = [{"stack": stack, "model": m, "seedidx": s, "name": f"{stack}-{m}-s{s}"} for m in models for s in seeds]
-          if ping or only:
-              include = [{"stack": stack, "model": "none", "seedidx": 0, "name": "none"}]  # placeholder; the nested job is skipped by its `if`
-          out = {"matrix": json.dumps({"include": include}),
-                 "skip_smoke": str(b(c.get("skip_smoke", False)) or ping).lower(),
-                 "smoke_s2": str(b(c.get("smoke_s2", False)) and not ping).lower(),
-                 "ping": str(ping).lower(), "only_smoke": str(only).lower(),
-                 "chunk": str(c.get("chunk", 0)), "max_chunks": str(c.get("max_chunks", 90))}
-          print(out)
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              for k, v in out.items():
-                  f.write(k + "=" + v + "\n")
-
-  smoke:
-    needs: plan
-    if: ${{ needs.plan.outputs.skip_smoke != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: data cache (Planck packages)
-        uses: actions/cache@v4
-        with:
-          path: data/packages
-          key: data-s1-${{ hashFiles('scripts/install_linux.sh', 'requirements.txt') }}
-      - run: scripts/install_linux.sh s1
-      - name: one-point smoke vs local reference (tolerance 1e-3 in total lnL)
-        env:
-          OMP_NUM_THREADS: "4"
-        run: python code/smoke_point.py S1 --tol 1e-3
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: smoke-s1
-          path: results/smoke_S1.json
-      - name: dispatch capability test (workflow_dispatch API with GITHUB_TOKEN on this ref; non-blocking)
-        if: always()
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          code=$(curl -s -o /tmp/disp.out -w '%{http_code}' -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/nested.yml/dispatches" \
-            -d '{"ref":"${{ github.ref_name }}","inputs":{"ping":"true"}}')
-          echo "DISPATCH_HTTP=$code"; cat /tmp/disp.out
-          echo "dispatch API http $code" >> "$GITHUB_STEP_SUMMARY"
-
-  smoke_s2:
-    needs: plan
-    if: ${{ needs.plan.outputs.smoke_s2 == 'true' && needs.plan.outputs.skip_smoke != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: data cache (Planck + ACT DR6 + SPT D1, about 1 GB)
-        uses: actions/cache@v4
-        with:
-          path: |
-            data/packages
-            data/spt_candl_data
-            data/act_dr6_mflike
-          key: data-s2-${{ hashFiles('scripts/install_linux.sh', 'requirements.txt') }}
-      - run: scripts/install_linux.sh s2
-      - name: S2 one-point smoke (finite lnL and wall time per call; CAMB default recombination, CosmoRec not built here)
-        env:
-          OMP_NUM_THREADS: "4"
-        run: python code/smoke_point.py S2 --models LCDM
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: smoke-s2
-          path: results/smoke_S2.json
-
   nested:
-    needs: [plan, smoke]
-    # run when smoke passed, or was skipped (re-dispatch); never when smoke failed; never for a ping
-    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.ping != 'true' && needs.plan.outputs.only_smoke != 'true' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') }}
+    if: github.repository == 'byDenoso/Pantheon' && github.ref == 'refs/heads/nested/peer-n2'
     runs-on: ubuntu-latest
     timeout-minutes: 345
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
-    concurrency:
-      group: nested-${{ matrix.name }}
-      cancel-in-progress: false
     env:
-      JOB: ${{ matrix.name }}
+      JOB: S1-${{ inputs.model }}-s${{ inputs.seedidx }}
+      CHUNK: ${{ inputs.chunk }}
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
     steps:
-      - name: job clock
-        run: echo "JOB_T0=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: data cache (Planck packages)
-        uses: actions/cache@v4
-        with:
-          path: data/packages
-          key: data-s1-${{ hashFiles('scripts/install_linux.sh', 'requirements.txt') }}
-      - run: scripts/install_linux.sh s1
-      - name: restore checkpoint (latest of this job)
-        id: ck
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ckpt
-            results
-          key: ckpt-${{ matrix.name }}-${{ github.run_id }}-restore
-          restore-keys: |
-            ckpt-${{ matrix.name }}-
-      - name: nested chunk
-        id: run
-        shell: bash
+          python-version: '3.12'
+      - name: Prepare transport runtime
         run: |
-          set +e
-          # wall budget for the python process: 5.40 h counted from the start of this job (timeout is 5.75 h)
-          MAXH=$(python -c "import os,time; print(round(max(0.2, 5.40-(time.time()-float(os.environ['JOB_T0']))/3600), 3))")
-          echo "max-hours for this chunk: $MAXH"
-          python code/ckpt_status.py || true
-          python code/run_n2.py --stack "${{ matrix.stack }}" --model "${{ matrix.model }}" --seedidx "${{ matrix.seedidx }}" \
-            --njobs 4 --max-hours "$MAXH" --chunk-iter 8
-          RC=$?
-          echo "rc=$RC" >> "$GITHUB_OUTPUT"
-          python code/ckpt_status.py || true
-          exit 0
-      - name: progress notice (readable via the public annotations API)
-        if: always()
-        shell: bash
+          umask 077
+          echo "JOB_T0=$(date +%s)" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/nested-private/logs"
+          python -m pip install google-auth requests > "$RUNNER_TEMP/nested-private/logs/transport.log" 2>&1 || { echo 'STATUS FAILED'; exit 1; }
+          echo 'STATUS RUNTIME_READY'
+      - name: Verify private destination and restore previous immutable chunk
+        id: prepare
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+          NESTED_PRIVATE_CONFIG_FILE_ID: ${{ secrets.NEXO_NESTED_PRIVATE_CONFIG_FILE_ID }}
+          NESTED_PRIVATE_CONFIG_SHA256: ${{ secrets.NEXO_NESTED_PRIVATE_CONFIG_SHA256 }}
+        run: python code/nested_private.py prepare
+      - name: Install scientific runtime with private diagnostics
         run: |
-          L=$(python code/ckpt_status.py 2>/dev/null | tail -n 1 | tr -d '\r')
-          R=$(ls results/*.json 2>/dev/null | tr '\n' ' ')
-          echo "::notice title=N2 ${{ matrix.name }} chunk ${{ needs.plan.outputs.chunk }}::rc=${{ steps.run.outputs.rc }} | $L | results: $R"
-          echo "${{ matrix.name }}: rc=${{ steps.run.outputs.rc }} | $L | results: $R" >> "$GITHUB_STEP_SUMMARY"
-      - name: save checkpoint
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ckpt
-            results
-          key: ckpt-${{ matrix.name }}-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: upload checkpoint backup (artifact, 7 days)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ckpt-${{ matrix.name }}
-          path: ckpt
-          retention-days: 7
-          overwrite: true
-          if-no-files-found: ignore
-      - name: upload result (artifact, 90 days)
-        if: steps.run.outputs.rc == '0'
-        uses: actions/upload-artifact@v4
-        with:
-          name: result-${{ matrix.name }}
-          path: results
-          retention-days: 90
-      - name: re-dispatch next chunk
-        if: steps.run.outputs.rc == '3'
+          scripts/install_linux.sh s1 > "$RUNNER_TEMP/nested-private/logs/install.log" 2>&1 || { echo 'STATUS FAILED'; exit 1; }
+          echo 'STATUS SCIENTIFIC_RUNTIME_READY'
+      - name: Run private smoke and resumable chunk in credential-free child
+        id: compute
+        run: python code/nested_private.py execute
+      - name: Verify private delivery before any continuation
+        id: delivery
+        if: always() && steps.prepare.outcome == 'success'
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.NEXO_DRIVE_WRITER_JSON }}
+        run: python code/nested_private.py upload
+      - name: Continue only after verified private checkpoint
+        if: steps.delivery.outputs.continue == 'true' && steps.delivery.outcome == 'success' && steps.compute.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
+          MAX_CHUNKS: ${{ inputs.max_chunks }}
+          MODEL: ${{ inputs.model }}
+          SEEDIDX: ${{ inputs.seedidx }}
+        shell: python
         run: |
-          NEXT=$(( ${{ needs.plan.outputs.chunk }} + 1 ))
-          if [ "$NEXT" -gt "${{ needs.plan.outputs.max_chunks }}" ]; then echo "max_chunks reached, not re-dispatching"; exit 0; fi
-          code=$(curl -s -o /tmp/disp.out -w '%{http_code}' -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/nested.yml/dispatches" \
-            -d '{"ref":"${{ github.ref_name }}","inputs":{"stack":"${{ matrix.stack }}","model":"${{ matrix.model }}","seedidx":"${{ matrix.seedidx }}","skip_smoke":"true","chunk":"'"$NEXT"'","max_chunks":"${{ needs.plan.outputs.max_chunks }}"}}')
-          echo "re-dispatch HTTP $code"; cat /tmp/disp.out
-          echo "re-dispatch of ${{ matrix.name }} chunk $NEXT: HTTP $code" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$code" != "204" ]; then echo "::error::re-dispatch failed (HTTP $code); push a new control/run.json to continue this leg"; exit 1; fi
-      - name: fail on unexpected exit code
-        if: steps.run.outputs.rc != '0' && steps.run.outputs.rc != '3'
-        run: echo "run_n2.py exited with ${{ steps.run.outputs.rc }}" && exit 1
+          import json, os, urllib.request
+          try:
+              nxt = int(os.environ['CHUNK']) + 1
+              if nxt >= int(os.environ['MAX_CHUNKS']):
+                  print('STATUS CHUNK_LIMIT_REACHED')
+              else:
+                  payload = json.dumps({'ref': os.environ['GITHUB_REF_NAME'], 'inputs': {
+                      'model': os.environ['MODEL'], 'seedidx': os.environ['SEEDIDX'],
+                      'chunk': str(nxt), 'max_chunks': os.environ['MAX_CHUNKS']}}).encode()
+                  req = urllib.request.Request('https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/workflows/nested.yml/dispatches',
+                      data=payload, headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'], 'Accept':'application/vnd.github+json'}, method='POST')
+                  with urllib.request.urlopen(req, timeout=60) as response:
+                      assert response.status == 204
+                  print('STATUS CONTINUATION_REQUESTED')
+          except Exception:
+              print('STATUS CONTINUATION_UNCONFIRMED')
+              raise SystemExit(1)

@@ -123,52 +123,43 @@ def run(stack, model, seed, nlive, dlogz, njobs, max_hours, outroot, chunk_iter=
     ckpt.parent.mkdir(parents=True, exist_ok=True)
     resfile.parent.mkdir(parents=True, exist_ok=True)
     if resfile.exists():
-        print('SKIP existing', resfile, flush=True)
+        print('STATUS EXISTING_RESULT', flush=True)
         return 'done'
     t0 = time.monotonic()
     deadline = t0 + max_hours * 3600
     # never resume on a changed likelihood/contract: hash of the code and data that define the problem
     import hashlib
     h = hashlib.sha256()
-    for f in sorted([HERE / 'build.py', HERE / 'n2like.py', HERE / 'n2core.py'] + sorted((ROOT / 'data').glob('*.txt'))
+    for f in sorted([HERE / 'build.py', HERE / 'n2like.py', HERE / 'n2core.py', HERE / 'nested_state.py'] + sorted((ROOT / 'data').glob('*.txt'))
                     + sorted((ROOT / 'data' / 'cc15').glob('CC15_*'))):
         h.update(f.name.encode() + f.read_bytes())
     chash = ckpt.with_suffix('.contract')
-    if ckpt.exists() and chash.exists() and chash.read_text().strip() != h.hexdigest():
+    if ckpt.exists() and (not chash.exists() or chash.read_text().strip() != h.hexdigest()):
         print('ABORT: checkpoint was written under a different contract hash; refusing to resume', flush=True)
         sys.exit(4)
+    runtime = ckpt.with_suffix('.runtime.json')
+    binding = dict(stack=stack, model=model, seed=seed, nlive=nlive, dlogz=dlogz,
+                   njobs=njobs, dynesty=dynesty.__version__)
+    if ckpt.exists() and (not runtime.exists() or json.loads(runtime.read_text()) != binding):
+        raise RuntimeError('CHECKPOINT_RUNTIME_MISMATCH')
+    runtime.write_text(json.dumps(binding, sort_keys=True))
     chash.write_text(h.hexdigest() + chr(10))
     prob = Problem(stack, model)
     ll, pt = LL(prob), PT(prob)
-    print(f'START {tag} ndim={prob.ndim} nlive={nlive} dlogz={dlogz} njobs={njobs} max_hours={max_hours}', flush=True)
+    print('STATUS STARTED', flush=True)
     status = 'timeout'
     with Pool(njobs, initializer=_init_worker, initargs=(stack, model)) as pool:
         if ckpt.exists():
             sampler = dynesty.NestedSampler.restore(str(ckpt), pool=pool)
-            print('RESUME', ckpt, 'it=', sampler.it, 'ncall=', int(np.sum(sampler.ncall)), flush=True)
+            print('STATUS RESUMED', flush=True)
         else:
             sampler = dynesty.NestedSampler(ll, pt, prob.ndim, nlive=nlive, sample='rslice', rstate=np.random.default_rng(seed),
                                             pool=pool, queue_size=njobs)
-        last_print = 0.0
-        while True:
-            it0 = sampler.it
-            sampler.run_nested(dlogz=dlogz, maxiter=chunk_iter, add_live=False,
-                               checkpoint_file=str(ckpt), checkpoint_every=60, print_progress=False)
-            if sampler.it - it0 < chunk_iter:
-                status = 'converged'
-                break
-            if time.monotonic() - last_print > 300:
-                last_print = time.monotonic()
-                r = sampler.results
-                print(f'PROGRESS it={sampler.it} ncall={int(np.sum(sampler.ncall))} logz={float(r.logz[-1]):.3f} '
-                      f'elapsed_h={(time.monotonic() - t0) / 3600:.2f}', flush=True)
-            if time.monotonic() > deadline:
-                break
-        if status == 'converged':
-            sampler.run_nested(dlogz=dlogz, add_live=True, checkpoint_file=str(ckpt), checkpoint_every=60, print_progress=False)
-        else:
-            sampler.save(str(ckpt)) if hasattr(sampler, 'save') else None
-            print(f'TIMEOUT it={sampler.it} ncall={int(np.sum(sampler.ncall))} checkpoint={ckpt}', flush=True)
+        # A chunk boundary is not convergence. Keep the full sampler (including
+        # live points, random generator, proposal queue and bounding state).
+        from nested_state import advance
+        status, final_dlogz = advance(sampler, ckpt, dlogz, chunk_iter, deadline)
+        if status != 'converged':
             return 'timeout'
     res = sampler.results
     logz, logzerr = float(res.logz[-1]), float(res.logzerr[-1])
@@ -183,10 +174,11 @@ def run(stack, model, seed, nlive, dlogz, njobs, max_hours, outroot, chunk_iter=
         summ[n] = dict(mean=mean, sd=sd, q={str(x): float(np.interp(x, cum, res.samples[o, i])) for x in (0.16, 0.5, 0.84, 0.95)})
     maxll = float(np.max(res.logl))
     out = dict(schema='NEXO_N2_NESTED_V1', stack=stack, model=model, seed=seed, nlive=nlive, dlogz_target=dlogz, params=prob.names,
-               logZ=logz, logZ_err=logzerr, niter=int(res.niter), ncall=int(np.sum(res.ncall)), ESS=ess, max_loglike=maxll,
+               dlogz_final=final_dlogz, stop_reason='CONVERGED', logZ=logz, logZ_err=logzerr, niter=int(res.niter), ncall=int(np.sum(res.ncall)), ESS=ess, max_loglike=maxll,
                n_bad=int(np.sum(res.logl <= BAD / 2)), posterior=summ, fmin=FMIN, dynesty=dynesty.__version__,
                elapsed_s_last_chunk=time.monotonic() - t0)
     np.savez_compressed(outroot / 'results' / f'{tag}_samples.npz', samples=res.samples, logl=res.logl, logwt=res.logwt, logz=res.logz)
     resfile.write_text(json.dumps(out, indent=2) + '\n')
-    print('DONE', tag, json.dumps({k: out[k] for k in ('logZ', 'logZ_err', 'niter', 'ncall', 'ESS', 'max_loglike')}), flush=True)
+    print('STATUS CONVERGED', flush=True)
     return 'done'
+
