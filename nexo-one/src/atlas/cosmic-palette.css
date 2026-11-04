@@ -1,59 +1,59 @@
 /* Shared only inside NEXO. The frame can consume this CSS independently.
    Tokens carry no data and change no authentication or lifecycle behavior. */
 :root {
-  --nexo-bg: #f6f8fb;
+  --nexo-bg: #ffffff;
   --nexo-surface: #ffffff;
   --nexo-surface-raised: #edf2f8;
   --nexo-text: #152334;
   --nexo-muted: #526177;
   --nexo-line: #d5deea;
-  --nexo-control: #a1b5cf;
-  --nexo-accent: #0063b1;
+  --nexo-control: #a4aff4;
+  --nexo-accent: #06038d;
   --nexo-on-accent: #ffffff;
-  --nexo-highlight: #07518b;
+  --nexo-highlight: #2420ae;
   --nexo-amber: #815318;
   color-scheme: light;
 }
 :root[data-theme="dark"], .pw {
-  --nexo-bg: #313c4c;
-  --nexo-surface: #263345;
-  --nexo-surface-raised: #3c4b5f;
+  --nexo-bg: #0b1024;
+  --nexo-surface: #10172f;
+  --nexo-surface-raised: #1a2441;
   --nexo-text: #f4f7fb;
   --nexo-muted: #bdcbdc;
-  --nexo-line: #7389a3;
-  --nexo-control: #a1b5cf;
-  --nexo-accent: #99cfff;
-  --nexo-on-accent: #102234;
-  --nexo-highlight: #b2d7ff;
+  --nexo-line: #747cc9;
+  --nexo-control: #a4aff4;
+  --nexo-accent: #b9c9ff;
+  --nexo-on-accent: #060354;
+  --nexo-highlight: #c9d4ff;
   --nexo-amber: #f2b66d;
   color-scheme: dark;
 }
 .pw[data-theme="light"] {
-  --nexo-bg: #f6f8fb;
+  --nexo-bg: #ffffff;
   --nexo-surface: #ffffff;
   --nexo-surface-raised: #edf2f8;
   --nexo-text: #152334;
   --nexo-muted: #526177;
   --nexo-line: #d5deea;
-  --nexo-control: #a1b5cf;
-  --nexo-accent: #0063b1;
+  --nexo-control: #a4aff4;
+  --nexo-accent: #06038d;
   --nexo-on-accent: #ffffff;
-  --nexo-highlight: #07518b;
+  --nexo-highlight: #2420ae;
   --nexo-amber: #815318;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
 :root:not([data-theme]) {
-  --nexo-bg: #313c4c;
-  --nexo-surface: #263345;
-  --nexo-surface-raised: #3c4b5f;
+  --nexo-bg: #0b1024;
+  --nexo-surface: #10172f;
+  --nexo-surface-raised: #1a2441;
   --nexo-text: #f4f7fb;
   --nexo-muted: #bdcbdc;
-  --nexo-line: #7389a3;
-  --nexo-control: #a1b5cf;
-  --nexo-accent: #99cfff;
-  --nexo-on-accent: #102234;
-  --nexo-highlight: #b2d7ff;
+  --nexo-line: #747cc9;
+  --nexo-control: #a4aff4;
+  --nexo-accent: #b9c9ff;
+  --nexo-on-accent: #060354;
+  --nexo-highlight: #c9d4ff;
   --nexo-amber: #f2b66d;
   color-scheme: dark;
 }
