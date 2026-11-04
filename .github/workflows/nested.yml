@@ -214,8 +214,8 @@ jobs:
         shell: bash
         run: |
           set +e
-          # wall budget for the python process: 5.40 h counted from the start of this job (timeout is 5.75 h)
-          MAXH=$(python -c "import os,time; print(round(max(0.2, 5.40-(time.time()-float(os.environ['JOB_T0']))/3600), 3))")
+          # wall budget for the python process: 5.00 h counted from the start of this job (timeout is 5.75 h)
+          MAXH=$(python -c "import os,time; print(round(max(0.2, 5.00-(time.time()-float(os.environ['JOB_T0']))/3600), 3))")
           echo "max-hours for this chunk: $MAXH"
           python code/ckpt_status.py || true
           python code/run_n2.py --stack "${{ matrix.stack }}" --model "${{ matrix.model }}" --seedidx "${{ matrix.seedidx }}" \
