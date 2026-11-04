@@ -49,8 +49,8 @@ These are numerical presets, not scientific accuracy guarantees. `standard`
 uses linear lensing settings from CAMB at lens_potential_accuracy=0. CAMB may
 turn nonlinear lensing on for high. In that case we reuse time sources
 (`only_time_sources=True`) rather than frozen nonlinear transfer functions,
-so nonlinear corrections are recomputed for each primordial spectrum. Explicit
-CAMB NonLinear settings and all input background keys participate in identity.
+so nonlinear corrections are recomputed for each primordial spectrum. NonLinear and profile/accuracy overrides are rejected: choose one documented
+profile. All accepted background keys participate in identity.
 
 ## Cache and processes
 
