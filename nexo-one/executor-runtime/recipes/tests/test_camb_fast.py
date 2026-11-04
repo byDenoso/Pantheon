@@ -27,7 +27,7 @@ class Contracts(unittest.TestCase):
         self.assertIsNotNone(power)
         with self.assertRaises(ValueError): cf._power({'k': k[::-1].tolist(), 'pk': pk.tolist()})
         with self.assertRaises(ValueError): cf._power({'As': -1})
-        for key in ('As', 'nrun', 'r', 'nt', 'initial_power_model', 'AccuracyBoost'):
+        for key in ('As', 'nrun', 'r', 'nt', 'initial_power_model', 'AccuracyBoost', 'lAccuracyBoost', 'lSampleBoost', 'DoLateRadTruncation', 'max_eta_k', 'NonLinear', 'Accuracy.AccuracyBoost', 'InitPower.ns'):
             with self.assertRaises(ValueError): cf._params({key: 0}, cf.PROFILES['fast'], {})
 
     def test_nonlinear_index_contract(self):
