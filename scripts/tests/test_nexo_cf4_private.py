@@ -1,6 +1,6 @@
 """Synthetic privacy regressions: never download public science data or contact Drive."""
 import contextlib
-import importlib.util
+import ast
 import io
 import json
 import os
@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -172,13 +172,17 @@ class PrivateOutputTests(unittest.TestCase):
         self.assertEqual(seen['env']['NEXO_CF4_PRIVATE_OUTPUT'], '1')
     def test_recipe_entrypoint_refuses_public_route_before_compute(self):
         path = ROOT / 'nexo-one/executor-runtime/recipes/cf4_velocity.py'
-        spec = importlib.util.spec_from_file_location('private_test_cf4', path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        with patch.dict(os.environ, {}, clear=True), patch.object(module, 'run') as run:
+        # Writer CI deliberately has only stdlib. Exercise the real entrypoint
+        # AST without importing numerical dependencies; numerical CI tests the
+        # unchanged full module separately.
+        tree = ast.parse(path.read_text())
+        main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'main')
+        namespace = {'os': os, 'run': Mock()}
+        exec(compile(ast.Module(body=[main], type_ignores=[]), str(path), 'exec'), namespace)
+        with patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(SystemExit, 'PRIVATE_OUTPUT_ROUTE_REQUIRED'):
-                module.main()
-            run.assert_not_called()
+                namespace['main']()
+        namespace['run'].assert_not_called()
     def test_workflow_has_no_public_output_sinks_and_restricts_main(self):
         text = (ROOT / '.github/workflows/nexo-cf4-private.yml').read_text()
         for forbidden in ('upload-artifact', 'download-artifact', 'GITHUB_OUTPUT', 'GITHUB_STEP_SUMMARY', 'tee ', 'tail ', 'grep ', 'pull_request_target'):
