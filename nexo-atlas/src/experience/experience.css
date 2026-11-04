@@ -1,5 +1,6 @@
 .atlas-app[data-area="public"]{--action:#0063b1;--cyan:#99cfff;--orange:#b2d7ff;--on-action:#fff;--on-cyan:#102234}
 :root[data-theme="dark"]{--bg:#313c4c;--bg-2:#263345;--fg:#f4f7fb;--fg-2:#bdcbdc;--line:#7389a3;--cyan:#99cfff;--orange:#b2d7ff;--on-cyan:#102234;--focus:#b1daff;color-scheme:dark}
+:root[data-theme="dark"] .atlas-app[data-area="public"] .nexo-cinema-backdrop::after{background:color-mix(in srgb,var(--bg) 82%,transparent)}
 :root[data-theme="light"] .atlas-app[data-area="public"]{--action:#0063b1;--cyan:#0063b1;--orange:#07518b;--on-cyan:#fff}
 .atlas-app[data-area="public"] .atlas-header{background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
 .atlas-app[data-area="public"] .atlas-hero{column-gap:clamp(24px,5vw,80px);padding-top:clamp(36px,6vw,84px)}
