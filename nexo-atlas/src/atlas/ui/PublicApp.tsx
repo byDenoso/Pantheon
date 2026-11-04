@@ -4,14 +4,13 @@ import {useExplorerState} from './useExplorerState.ts';
 import {useCatalogPosition} from './useCatalogPosition.ts';
 import ArrowIcon from './ArrowIcon.tsx';
 import '../canonical-campaigns.css';
-import {lazy, Suspense, useEffect} from 'react';
+import {useEffect} from 'react';
 import usePublicResearch from './usePublicResearch.ts';
 import PublicResearchHub from './PublicResearchHub.tsx';
 import ResearchLaunch from './ResearchLaunch.tsx';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import Shell from './Shell.tsx';
-import CosmicExplorer from '../../experience/CosmicExplorer.tsx';
 import {goToPublicSection} from '../publicNavigation.ts';
 import '../public-presentation.css';
 import '../site-living.css';
@@ -47,7 +46,6 @@ export default function PublicApp() {
               <button type="button" className="atlas-text-action" onClick={() => goToPublicSection('methods')}>{t.hero.methods}<ArrowIcon direction="right"/></button>
             </div>
           </div>
-          <CosmicExplorer/>
           <ResearchLaunch pub={pub} locale={locale} explore={explore}/>
         </section>
 

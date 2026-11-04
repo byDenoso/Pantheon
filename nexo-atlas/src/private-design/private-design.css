@@ -1,13 +1,13 @@
 /* NEXO · private design layer.
    Additive and scoped: everything lives under `.pw.pd` (add the class `pd` to the workspace root) and is meant to load AFTER workspace.css.
    It restyles the existing presentation classes and adds the `pd-*` classes used by the components in this folder. No data, no behaviour.
-   Identity inherited from the public site: Nunito Black titles, Barlow text, one blue (#1E5BFF) on white or black, wide gutters, hairlines, gas art. */
+   Identity inherited from the public site: Nunito Black titles, Barlow text, Pantone 2738 C (#06038D), white surfaces and dark text, wide gutters, hairlines, gas art. */
 
 /* ------------------------------------------------------------------ tokens */
 .pw.pd{
-  --pd-blue:#0063b1;            /* action, current, accents */
+  --pd-blue:#06038d;            /* action, current, accents */
   --pd-on-blue:#ffffff;
-  --pd-bg:#313c4c; --pd-surface:#263345; --pd-surface-2:#3c4b5f; --pd-ink:#f4f7fb; --pd-ink-2:#bdcbdc; --pd-line:#7389a3; --pd-edge:#a1b5cf; --pd-blue-ink:#99cfff;
+  --pd-bg:#0b1024; --pd-surface:#10172f; --pd-surface-2:#1a2441; --pd-ink:#f4f7fb; --pd-ink-2:#bdcbdc; --pd-line:#747cc9; --pd-edge:#a4aff4; --pd-blue-ink:#b9c9ff;
   --pd-shadow:none; --pd-shadow-hover:0 0 0 1px var(--pd-blue);
   --pd-gas:url('../atlas/assets/expansion-dark-v1.webp'); --pd-gas-blend:screen; --pd-gas-opacity:.22;
   --pd-radius:14px; --pd-radius-s:8px; --pd-max:1440px; --pd-gutter:clamp(16px,5.3vw,76px);
@@ -20,7 +20,7 @@
   font-family:var(--pd-body);
 }
 .pw.pd[data-theme=light]{
-  --pd-bg:#ffffff; --pd-surface:#ffffff; --pd-surface-2:#f3f6fd; --pd-ink:#0a1220; --pd-ink-2:#48566c; --pd-line:#d3ddf0; --pd-edge:#6b7a94; --pd-blue-ink:#0063b1;
+  --pd-bg:#ffffff; --pd-surface:#ffffff; --pd-surface-2:#f3f6fd; --pd-ink:#0a1220; --pd-ink-2:#48566c; --pd-line:#d3ddf0; --pd-edge:#6b7a94; --pd-blue-ink:#06038d;
   --pd-shadow:0 1px 2px rgba(10,18,32,.05),0 10px 28px rgba(10,18,32,.06); --pd-shadow-hover:0 1px 2px rgba(10,18,32,.06),0 16px 36px rgba(30,91,255,.16);
   --pd-gas:url('../atlas/assets/cmb-light-v1.webp'); --pd-gas-blend:multiply; --pd-gas-opacity:.38;
 }
@@ -216,3 +216,6 @@ html[data-motion=paused] .pw.pd .pw-content:not(.pw-web-content)::before{animati
   .pw.pd .pd-roster ul{display:flex;gap:8px;overflow-x:auto;padding:8px 16px 6px;scroll-snap-type:x proximity;scrollbar-width:thin}
   .pw.pd .pd-roster li{flex:0 0 auto;scroll-snap-align:start}.pw.pd .pd-agent{width:auto;max-width:240px;border-color:var(--pd-line)}
 }
+
+.pw.pd[data-theme=light] :is(h1,h2,h3,h4,h5,h6){color:#06038d}
+.pw.pd[data-theme=light] .pw-content::before{opacity:0}

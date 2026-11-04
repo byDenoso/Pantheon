@@ -11,7 +11,7 @@ test('initial appearance honors the saved choice before artwork or loading route
    const values={document,window:{matchMedia:()=>({matches:systemDark})},localStorage:{getItem:key=>{assert.equal(key,'atlas.theme');if(blockedStorage)throw Error('Storage blocked');return pref;}}};
    for(const [key,value] of Object.entries(values))Object.defineProperty(globalThis,key,{value,configurable:true});
    initializeTheme();
-   assert.equal(document.documentElement.dataset.theme,resolveTheme(blockedStorage||!['light','dark','system'].includes(pref)?'dark':pref,systemDark));
+   assert.equal(document.documentElement.dataset.theme,resolveTheme(blockedStorage||!['light','dark','system'].includes(pref)?'light':pref,systemDark));
   }
  }finally{for(const [key,descriptor] of saved)if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}
  const entry=readFileSync('src/main.tsx','utf8');

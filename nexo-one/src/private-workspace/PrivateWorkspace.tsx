@@ -29,7 +29,7 @@ export default function PrivateWorkspace({state, generatedAt, route, refresh}: {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => { let pref: string | null = null; try { pref = localStorage.getItem('atlas.theme'); } catch { /* unavailable storage */ }
-      const next = pref === 'light' || pref === 'dark' ? pref : pref === 'system' ? (mq.matches ? 'dark' : 'light') : 'dark';
+      const next = pref === 'light' || pref === 'dark' ? pref : pref === 'system' ? (mq.matches ? 'dark' : 'light') : 'light';
       document.documentElement.dataset.theme = next; setTheme(next);
     };
     const changed = (event: StorageEvent) => { if (event.key === 'atlas.theme' || event.key === null) apply(); };

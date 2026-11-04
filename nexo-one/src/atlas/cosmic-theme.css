@@ -68,3 +68,5 @@
   .atlas-hero-copy h1 { overflow-wrap: anywhere; }
 }
 @media (forced-colors: active) { .atlas-btn { border: 1px solid ButtonText; } }
+
+:root[data-theme="light"] .atlas-app :is(h1,h2,h3,h4,h5,h6){color:#06038d}
