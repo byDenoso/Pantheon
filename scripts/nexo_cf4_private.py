@@ -157,14 +157,14 @@ def upload(root, session):
             archive.add(path, arcname=path.name, recursive=False)
     payload = buffer.getvalue()
     # A user-owned, preallocated empty binary avoids service-account ownership/quota.
-    # Never create a file or overwrite an existing result, even on workflow rerun.
+    # No create; reject nonempty targets at this check (not an atomic CAS).
+    # The configured output is single-use and must be exclusively reserved.
     file_id = empty_output(session, cfg)
-    (root / "delivery.json").write_text(json.dumps({"id": file_id, "verified": False}), encoding="utf-8")
+    (root / "delivery.json").write_text(json.dumps({"id": file_id, "verified": False,
+        "bytes": len(payload), "sha256": digest(payload)}), encoding="utf-8")
     checked(session.patch("https://www.googleapis.com/upload/drive/v3/files/" + file_id,
         params={"uploadType": "media"}, headers={"Content-Type": "application/gzip"},
         data=payload, timeout=180))
-    # Keep uncertain delivery identity local before readback; never print it.
-    (root / "delivery.json").write_text(json.dumps({"id": file_id, "verified": False}), encoding="utf-8")
     meta = metadata(session, file_id)
     permissions(session, file_id, allowed)
     permissions(session, folder, allowed)
