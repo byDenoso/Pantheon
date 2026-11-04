@@ -484,9 +484,16 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
                 counts['preexisting_invalid'] += 1
             elif not state and (reason := _terminal_reason(exc, row[0] if row else "")):
                 invalid_to_mark.append((PLAIN_TAB, "O", number, "INVALID:" + reason))
-            elif not state and isinstance(exc, ValueError) and str(exc) == "MISMATCHED_ROW_ID":
-                # Wrong title under AGENTS 2026-11-03.4. Keep the source
-                # unchanged and recoverable; the producer must re-emit.
+            elif not state and isinstance(exc, ValueError) and (
+                    (str(exc) == "MISMATCHED_ROW_ID" and len(row) > 3
+                     and row[3] == "RESULTADOS" and KEY.fullmatch(row[0])) or
+                    (str(exc) in ("PLAIN_METADATA_MISSING", "MISSING_TIME")
+                     and row and KEY.fullmatch(row[0])) or
+                    (str(exc) == "INVALID_TAB_OR_ID" and row
+                     and KEY.fullmatch(row[0]))):
+                # Mutable producer contract: preserve the proposal, leave
+                # state empty, and permit an explicit corrected re-emission.
+                # MURAL identity mismatch remains a hard failure.
                 counts["contract_pending"] += 1
             if row and isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
