@@ -163,35 +163,66 @@ class Recovery(IsolatedSummaryTestCase):
             result=w.run(session,apply=apply)
         return result, session
 
-    def test_terminalizes_malformed_result_and_stays_green(self):
+    def test_contract_title_violation_stays_recoverable(self):
         bad=plain("RESULTADOS")
-        bad[7]="invalid nonquestion title with unexpected length"
+        bad[7]="An overly long declaration, not a question, " + "x"*150
         counts,session=self.invoke([bad])
         self.assertEqual(counts["invalid"],1)
-        self.assertEqual(counts["preexisting_invalid"],1)
-        self.assertEqual(counts["terminal_invalid_new"],1)
+        self.assertEqual(counts["preexisting_invalid"],0)
+        self.assertEqual(counts["contract_pending"],1)
+        self.assertEqual(counts["terminal_invalid_new"],0)
         self.assertEqual(counts["new_failures"],0)
-        self.assertEqual(session.marks,[(2,"INVALID:MISMATCHED_ROW_ID")])
+        self.assertEqual(session.marks,[])
         self.assertEqual(session.posts,[])
         self.assertEqual(w.result_status(counts, True),"READBACK_VERIFIED")
-        bad[14]="INVALID:MISMATCHED_ROW_ID"
-        repeat,second=self.invoke([bad])
-        self.assertEqual(repeat["terminal_invalid_new"],0)
-        self.assertEqual(repeat["preexisting_invalid"],1)
+        repeated,second=self.invoke([bad])
+        self.assertEqual(repeated["contract_pending"],1)
         self.assertEqual(second.marks,[])
 
     def test_preserves_legacy_document_state_url(self):
         row=plain("RESULTADOS")
         url="https://docs.google.com/document/d/Abc123_-xyz/edit"
         row[14]=url
-        counts,session=self.invoke([row])
+        historical_id = w.hashlib.sha256(ID.encode("utf-8")).hexdigest()
+        with patch.object(w, "_HISTORICAL_LINK_IDENTITIES", {historical_id}):
+            counts,session=self.invoke([row])
         self.assertEqual(counts["quarantined"],1)
         self.assertEqual(counts["preexisting_quarantined"],1)
         self.assertEqual(counts["legacy_state_links"],1)
+        self.assertEqual(counts["new_state_links"],0)
         self.assertEqual(counts["new_failures"],0)
         self.assertEqual(session.marks,[])
         self.assertEqual(session.posts,[])
         self.assertEqual(w.result_status(counts, True),"READBACK_VERIFIED")
+
+    def test_future_document_state_is_active_failure(self):
+        row=plain("RESULTADOS")
+        row[14]="https://docs.google.com/document/d/FutureProducerInvalid123/edit"
+        counts,session=self.invoke([row])
+        self.assertEqual(counts["legacy_state_links"],0)
+        self.assertEqual(counts["new_state_links"],1)
+        self.assertEqual(counts["quarantined"],1)
+        self.assertEqual(counts["preexisting_quarantined"],0)
+        self.assertEqual(counts["new_failures"],1)
+        self.assertEqual(session.marks,[])
+        self.assertEqual(w.result_status(counts,True),"PARTIAL_RECONCILIATION")
+
+    def test_mural_identity_mismatch_cannot_be_contract_pending(self):
+        row=plain("MURAL")
+        row[11]="different-id"
+        counts,session=self.invoke([row])
+        self.assertEqual(counts["contract_pending"],0)
+        self.assertEqual(counts["new_failures"],1)
+        self.assertEqual(session.marks,[])
+        self.assertEqual(w.result_status(counts,True),"PARTIAL_RECONCILIATION")
+
+    def test_structural_error_still_terminal_after_readback(self):
+        row=plain("RESULTADOS")
+        row[13]="unexpected trailing payload"
+        counts,session=self.invoke([row])
+        self.assertEqual(counts["terminal_invalid_new"],1)
+        self.assertEqual(counts["contract_pending"],0)
+        self.assertEqual(session.marks,[(2,"INVALID:PLAIN_TRAILING_VALUES")])
 
     def test_unknown_state_remains_failure(self):
         row=plain("RESULTADOS")
