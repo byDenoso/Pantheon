@@ -16,7 +16,8 @@ PROFILES = {
     'standard': dict(lmax=3000, lens_potential_accuracy=0, AccuracyBoost=1.0),
     'high': dict(lmax=3000, lens_potential_accuracy=1, AccuracyBoost=2.0),
 }
-PRIMORDIAL = {'As', 'ns', 'pivot_scalar', 'k', 'pk'}
+PRIMORDIAL = {'As', 'ns', 'pivot_scalar', 'k', 'pk', 'effective_ns_for_nonlinear'}
+FORBIDDEN_BACKGROUND = PRIMORDIAL | {'nrun', 'nrunrun', 'r', 'nt', 'ntrun', 'pivot_tensor', 'parameterization', 'initial_power_model', 'InitPower', 'lmax', 'lens_potential_accuracy', 'AccuracyBoost'}
 SCHEMA = 1
 
 
@@ -45,7 +46,7 @@ def _power(spec):
     if ('k' in spec) != ('pk' in spec):
         raise ValueError('k and pk must be supplied together')
     if 'k' in spec:
-        if set(spec) != {'k', 'pk'}:
+        if set(spec) - {'k', 'pk', 'effective_ns_for_nonlinear'}:
             raise ValueError('Tabulated spectrum cannot also specify power-law parameters')
         k, pk = np.asarray(spec['k'], dtype=float), np.asarray(spec['pk'], dtype=float)
     else:
@@ -59,19 +60,26 @@ def _power(spec):
     if k[0] > 1e-7 or k[-1] < 100:
         raise ValueError('Spectrum must cover 1e-7 through 100 Mpc^-1; no implicit extrapolation')
     power = SplinedInitialPower()
+    effective_ns = spec.get('effective_ns_for_nonlinear', spec.get('ns', .965) if 'k' not in spec else None)
+    if effective_ns is not None:
+        if not np.isfinite(effective_ns):
+            raise ValueError('Nonfinite effective nonlinear spectral index')
+        power.effective_ns_for_nonlinear = effective_ns
     power.set_scalar_table(k, pk)
     return power
 
 
 def _params(background, profile, spec):
     import camb
-    if set(background) & PRIMORDIAL:
-        raise ValueError('Put primordial parameters in primordial, not background')
+    if set(background) & FORBIDDEN_BACKGROUND:
+        raise ValueError('Unsupported primordial or profile override in background')
     pars = camb.set_params(**background)
     pars.set_for_lmax(profile['lmax'], lens_potential_accuracy=profile['lens_potential_accuracy'])
     pars.set_accuracy(AccuracyBoost=profile['AccuracyBoost'])
     if pars.WantTensors:
         raise ValueError('Tensor spectra are not supported by this scalar recipe')
+    if pars.NonLinear in (camb.model.NonLinear_lens, camb.model.NonLinear_both) and 'k' in spec and 'effective_ns_for_nonlinear' not in spec:
+        raise ValueError('Nonlinear feature spectra require explicit effective_ns_for_nonlinear')
     pars.InitPower = _power(spec)
     return pars
 
@@ -154,6 +162,9 @@ def evaluate(background, variations, *, profile='standard', workers=1, threads=1
     # A single primordial-only group intentionally uses one worker.
     if not jobs:
         return []
+    # Set inherited environment BEFORE spawn reimports caller __main__.
+    # Call evaluate from the controlling thread, not concurrent application threads.
+    _initialize(threads)
     with ProcessPoolExecutor(max_workers=min(workers, len(jobs)),
                              mp_context=multiprocessing.get_context('spawn'),
                              initializer=_initialize, initargs=(threads,)) as pool:
