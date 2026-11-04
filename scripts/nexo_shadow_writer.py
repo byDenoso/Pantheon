@@ -370,12 +370,41 @@ def flush_verified_appends(session, stored, counts, queued, *, batch_applied=Fal
     queued.clear()
 
 _TERMINAL_CODES = frozenset({
-    "PLAIN_WIDTH_OR_TYPE_INVALID", "PLAIN_METADATA_MISSING",
-    "INVALID_TAB_OR_ID", "PLAIN_TRAILING_VALUES", "MISMATCHED_ROW_ID",
-    "MISSING_TIME", "INVALID_WIDTH_OR_TYPE", "BAD_STABLE_ID_OR_LENGTH",
-    "INVALID_OBJECT", "MISMATCHED_STABLE_ID", "DUPLICATE_KEY",
-    "NONFINITE",
+    # Structural failures only. Mutable policy/identity mismatches must remain
+    # recoverable via corrected source events, not permanent INVALID receipts.
+    "PLAIN_WIDTH_OR_TYPE_INVALID", "PLAIN_TRAILING_VALUES",
+    "INVALID_WIDTH_OR_TYPE", "BAD_STABLE_ID_OR_LENGTH",
+    "INVALID_OBJECT", "DUPLICATE_KEY", "NONFINITE",
 })
+
+# Frozen identities of the seven document-URL state violations observed on
+# 2026-11-03. Hashes avoid publishing private event IDs in source.
+_HISTORICAL_LINK_IDENTITIES = frozenset({
+    "67fb4b341e73f1ddbe71849296d316541cdee23b7502b96cae910983d8c2a267",
+    "ca6edd8b7ddca8761560067caf0e86c2c12975bc97efc31516d9a5499795a293",
+    "8869981c97ab87a2547a7d8c004a1bd68e13032fdddc5f9e839e8c7ea1e2dcfc",
+    "494160313aa04f95fa988083676ca29aac359e53e9d0b39a9450fbdc46d3f436",
+    "4989883d78b10140cf98c942e7760f9fb6cc17357539801dafa89e3662df2aa8",
+    "b93b53c2ec5d2d0eab512771b5c48f48df195c1e5d538e861e39aabf7cc8a69d",
+    "071e85dc5c832dfd2253d90681e639d3721b9e86ee43296c7adee64b76f11323",
+})
+
+
+def _historical_state_link(item):
+    return (_legacy_state_document_link(item["state"]) and
+            item["mark_tab"] == PLAIN_TAB and
+            item["data"]["tab"] == "RESULTADOS" and
+            hashlib.sha256(item["data"]["stable_id"].encode("utf-8")).hexdigest()
+            in _HISTORICAL_LINK_IDENTITIES)
+
+
+def _terminal_reason(exc, stable_id):
+    code = str(exc)
+    if isinstance(exc, ValueError) and code in _TERMINAL_CODES:
+        return code
+    if code == "INVALID_TAB_OR_ID" and not KEY.fullmatch(stable_id):
+        return "INVALID_STABLE_ID"
+    return None
 
 
 def _legacy_state_document_link(value):
@@ -400,6 +429,7 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
               "preexisting_invalid": 0, "preexisting_quarantined": 0,
               "new_failures": 0, "isolated_schema_collisions": 0,
               "terminal_invalid_new": 0, "legacy_state_links": 0,
+              "contract_pending": 0, "new_state_links": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
 
     legacy_rows = page_rows(session, SPOOL, LEGACY_TAB, "E")
@@ -426,8 +456,8 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
             state = row[4] if len(row) > 4 and isinstance(row[4], str) else ""
             if state.startswith('INVALID:'):
                 counts['preexisting_invalid'] += 1
-            elif not state and isinstance(exc, ValueError) and str(exc) in _TERMINAL_CODES:
-                invalid_to_mark.append((LEGACY_TAB, "E", number, "INVALID:" + str(exc)))
+            elif not state and (reason := _terminal_reason(exc, row[0])):
+                invalid_to_mark.append((LEGACY_TAB, "E", number, "INVALID:" + reason))
             if isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
 
@@ -452,8 +482,12 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
             state = row[14] if len(row) > 14 and isinstance(row[14], str) else ""
             if state.startswith('INVALID:'):
                 counts['preexisting_invalid'] += 1
-            elif not state and isinstance(exc, ValueError) and str(exc) in _TERMINAL_CODES:
-                invalid_to_mark.append((PLAIN_TAB, "O", number, "INVALID:" + str(exc)))
+            elif not state and (reason := _terminal_reason(exc, row[0] if row else "")):
+                invalid_to_mark.append((PLAIN_TAB, "O", number, "INVALID:" + reason))
+            elif not state and isinstance(exc, ValueError) and str(exc) == "MISMATCHED_ROW_ID":
+                # Wrong title under AGENTS 2026-11-03.4. Keep the source
+                # unchanged and recoverable; the producer must re-emit.
+                counts["contract_pending"] += 1
             if row and isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
                 if (len(row) >= 4 and row[3] in TABS
@@ -553,9 +587,12 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
             counts['preexisting_quarantined'] += sum(
                 isinstance(item['state'], str) and (
                     item['state'].startswith(('INVALID:', 'PENDING_SYNC')) or
-                    _legacy_state_document_link(item['state'])) for item in items)
+                    _historical_state_link(item)) for item in items)
             counts["legacy_state_links"] += sum(
-                _legacy_state_document_link(item["state"]) for item in items)
+                _historical_state_link(item) for item in items)
+            counts["new_state_links"] += sum(
+                _legacy_state_document_link(item["state"]) and
+                not _historical_state_link(item) for item in items)
             continue
         # Resolve the strongest existing receipt first within this identity.
         # This never reorders distinct identities for scientific bookkeeping.
@@ -591,7 +628,8 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     # Separate genuinely new problems from pre-existing, explicitly marked
     # historical debt. Both remain visible; neither is silently discarded.
     counts['new_failures'] = (
-        counts['invalid'] - counts['preexisting_invalid'] +
+        counts['invalid'] - counts['preexisting_invalid'] -
+        counts['contract_pending'] +
         counts['quarantined'] - counts['preexisting_quarantined'] +
         counts['unresolved'] + counts['conflict'] + counts['target_conflicts'] +
         sum(counts.get('curation_' + key, 0) for key in ('invalid', 'unresolved', 'conflict')))
@@ -614,7 +652,8 @@ def result_status(counts, apply):
     quarantined = counts.get("quarantined", 0)
     if old_invalid > invalid or old_quarantined > quarantined:
         return "PARTIAL_RECONCILIATION"
-    active = (invalid - old_invalid + quarantined - old_quarantined +
+    active = (invalid - old_invalid - counts.get("contract_pending", 0) +
+              quarantined - old_quarantined +
               sum(counts.get(key, 0) for key in (
                   "unresolved", "conflict", "target_conflicts",
                   "curation_invalid", "curation_unresolved", "curation_conflict")))
@@ -759,7 +798,13 @@ def main():
                 with open(output, "a", encoding="utf-8") as stream:
                     stream.write("invalid_quarantine_alert=" +
                         ("true" if result.get("terminal_invalid_new", 0) or
-                         result.get("legacy_state_links", 0) else "false") + "\n")
+                         result.get("legacy_state_links", 0) or
+                         result.get("contract_pending", 0) or
+                         result.get("new_state_links", 0) else "false") + "\n")
+                    stream.write(
+                        "writer_alert_counts=" + ",".join(str(result.get(key, 0))
+                        for key in ("contract_pending", "legacy_state_links",
+                                    "new_state_links", "terminal_invalid_new")) + "\n")
             except OSError:
                 pass
     step_summary(result, meter.metrics if meter else {}, time.monotonic()-started, status)
