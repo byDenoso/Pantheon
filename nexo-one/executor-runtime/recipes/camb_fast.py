@@ -17,7 +17,7 @@ PROFILES = {
     'high': dict(lmax=3000, lens_potential_accuracy=1, AccuracyBoost=2.0),
 }
 PRIMORDIAL = {'As', 'ns', 'pivot_scalar', 'k', 'pk', 'effective_ns_for_nonlinear'}
-FORBIDDEN_BACKGROUND = PRIMORDIAL | {'nrun', 'nrunrun', 'r', 'nt', 'ntrun', 'pivot_tensor', 'parameterization', 'initial_power_model', 'InitPower', 'lmax', 'lens_potential_accuracy', 'AccuracyBoost'}
+FORBIDDEN_BACKGROUND = PRIMORDIAL | {'nrun', 'nrunrun', 'r', 'nt', 'ntrun', 'pivot_tensor', 'parameterization', 'initial_power_model', 'InitPower', 'lmax', 'lens_potential_accuracy', 'AccuracyBoost', 'lAccuracyBoost', 'lSampleBoost', 'DoLateRadTruncation', 'min_l_logl_sampling', 'max_eta_k', 'lens_margin', 'k_eta_fac', 'lens_k_eta_reference', 'nonlinear', 'NonLinear', 'max_l'}
 SCHEMA = 1
 
 
@@ -71,7 +71,7 @@ def _power(spec):
 
 def _params(background, profile, spec):
     import camb
-    if set(background) & FORBIDDEN_BACKGROUND:
+    if set(background) & FORBIDDEN_BACKGROUND or any(key.startswith(('InitPower.', 'Accuracy.')) for key in background):
         raise ValueError('Unsupported primordial or profile override in background')
     pars = camb.set_params(**background)
     pars.set_for_lmax(profile['lmax'], lens_potential_accuracy=profile['lens_potential_accuracy'])
