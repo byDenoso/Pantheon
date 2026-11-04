@@ -32,3 +32,8 @@ lnB = logZ(model) - logZ(LCDM, same stack) with sqrt(sum of squares) error; two 
 
 ## Hypothesis
 Relative to flat LCDM with identical data and shared priors, early quintessence n=3 (1 or 3 free parameters) changes the Bayesian evidence of S1/S2. No direction is assumed.
+
+## Amendment, 04/11/2026 (before any logZ was seen)
+- Scope: the evidence comparison is LCDM vs PEER1P (J3) on S1. The P3 legs stop at their next re-dispatch (control/active_models.json); no P3 Bayes factor will be reported from this run.
+- P1 priors re-confirmed unchanged from matrix V2: fde_zc U(0, 0.5); theta_i = 2.89155 and zc = 10^3.81 fixed. The Bayes factor is conditional on these fixed values and on the width of the fde_zc prior; a sensitivity case with fde_zc U(0, 0.18) is a separate analysis.
+- Clarification: A_s is log-uniform (ln(1e10 A_s) uniform in [ln 5, ln 40]), as implemented in code/build.py.

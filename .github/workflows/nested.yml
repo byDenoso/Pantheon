@@ -92,6 +92,14 @@ jobs:
           seeds = [0, 1] if ss == "all" else [int(ss)]
           ping = b(c.get("ping", False))
           only = b(c.get("only_smoke", False))
+          # control/active_models.json (no push trigger) lists the models whose legs may still start; re-dispatched legs of other models stop here
+          try:
+              active = json.load(open("control/active_models.json"))["active_models"]
+          except FileNotFoundError:
+              active = ["LCDM", "P1", "P3"]
+          models = [m for m in models if m in active]
+          if not models:
+              only = True
           include = [{"stack": stack, "model": m, "seedidx": s, "name": f"{stack}-{m}-s{s}"} for m in models for s in seeds]
           if ping or only:
               include = [{"stack": stack, "model": "none", "seedidx": 0, "name": "none"}]  # placeholder; the nested job is skipped by its `if`
