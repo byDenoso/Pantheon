@@ -432,7 +432,8 @@ class Recovery(IsolatedSummaryTestCase):
         invalid=_recovery_plain(_recovery_data()); invalid[12]='stray'
         counts,s=self.invoke([invalid,_recovery_plain(_recovery_data('event-good'))])
         self.assertEqual(counts['invalid'],1); self.assertEqual(counts['written'],1)
-        self.assertEqual(w.result_status(counts,True),'PARTIAL_RECONCILIATION')
+        self.assertEqual(counts['terminal_invalid_new'],1)
+        self.assertEqual(w.result_status(counts,True),'READBACK_VERIFIED')
 
     def test_extra_columns_are_rejected(self):
         with self.assertRaises(ValueError): w.decode_plain(_recovery_plain(_recovery_data())+['unseen'])
