@@ -1,0 +1,31 @@
+name: CAMB fast smoke
+on:
+  pull_request:
+    paths:
+      - 'nexo-one/executor-runtime/recipes/camb_fast.py'
+      - 'nexo-one/executor-runtime/recipes/tests/*camb_fast.py'
+      - '.github/workflows/camb-fast-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'camb==1.6.6' 'numpy>=1.24,<3'
+      - name: Smoke (three minute bound, no scientific output)
+        shell: bash
+        run: |
+          if timeout 180s python -m unittest discover -s nexo-one/executor-runtime/recipes/tests -p test_camb_fast.py > "$RUNNER_TEMP/camb-smoke.log" 2>&1; then
+            echo 'STATUS PASS'
+          else
+            echo 'STATUS FAIL'
+            exit 1
+          fi
