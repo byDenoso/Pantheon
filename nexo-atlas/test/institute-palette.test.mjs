@@ -20,6 +20,10 @@ test('public and private light/dark text, accent and action colors remain legibl
  const css=readFileSync('src/private-design/private-design.css','utf8');
  const privateDark=block(css,'.pw.pd{');
  const privateLight=block(css,'.pw.pd[data-theme=light]{');
+ assert.equal(value(light,'cyan').toLowerCase(),'#003087','requested public accent');
+ assert.equal(value(privateLight,'pd-blue').toLowerCase(),'#003087','requested private accent');
+ assert.equal(value(light,'bg').toLowerCase(),'#ffffff','light background');
+ assert.equal(value(dark,'bg').toLowerCase(),'#000000','dark background');
  for(const [name,theme] of [['public dark',dark],['public light',light]]){
   assert.ok(contrast(value(theme,'fg'),value(theme,'bg'))>=4.5,name+' body');
   assert.ok(contrast(value(theme,'fg-2'),value(theme,'bg-2'))>=4.5,name+' secondary');

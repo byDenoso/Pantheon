@@ -4,7 +4,7 @@
 .atlas-app[data-area="public"]{
   --font-body:"IBM Plex Sans",var(--font);--font-heading:var(--font-body);
   --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
-  --action:#245b3b;--on-action:#ffffff;--control-line:#74887a;--nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
+  --action:#003087;--on-action:#ffffff;--control-line:#717f94;--nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
   font:400 15px/1.6 var(--font-body);background:var(--bg);
 }
 .atlas-app[data-area="public"] :is(h1,h2,h3,h4){text-wrap:balance}

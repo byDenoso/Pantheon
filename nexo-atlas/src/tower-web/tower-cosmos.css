@@ -1,8 +1,8 @@
-/* Tower web (#/teia): neutral surfaces and accessible green accents. */
-.tc{--bg:#151b18;--surface:#1d2520;--text:#f0f4f0;--secondary:#c6d3c8;--blue:#b0d5b8;--accent:#b0d5b8;--accent-text:#b0d5b8;--line:#526358;--tint:rgba(176,213,184,.14);
+/* Tower web (#/teia): neutral surfaces and accessible blue accents. */
+.tc{--bg:#000000;--surface:#111318;--text:#f4f6f9;--secondary:#c6cdd9;--blue:#a9c5ff;--accent:#a9c5ff;--accent-text:#a9c5ff;--line:#525e70;--tint:rgba(169,197,255,.14);
   position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:56px minmax(0,1fr);background:var(--bg);color:var(--text);
   font:400 14px/1.45 'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-.tc[data-theme=light]{--bg:#ffffff;--surface:#f5f8f5;--text:#1b2520;--secondary:#45534a;--blue:#245b3b;--accent:#245b3b;--accent-text:#245b3b;--line:#cad4cc;--tint:rgba(36,91,59,.1)}
+.tc[data-theme=light]{--bg:#ffffff;--surface:#f6f7f9;--text:#161b25;--secondary:#465161;--blue:#003087;--accent:#003087;--accent-text:#003087;--line:#cbd0d8;--tint:rgba(0,48,135,.1)}
 .tc[data-inspector=open]{grid-template-columns:minmax(0,1fr) 288px}
 .tc *{box-sizing:border-box}
 /* the legacy app's global element styles must not leak in */

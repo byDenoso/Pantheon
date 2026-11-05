@@ -1,16 +1,16 @@
-// Neutral Tower surfaces with a muted green accent. Historical BLUE token names
+// Neutral Tower surfaces with a muted blue accent. Historical BLUE token names
 // remain for compatibility with the renderer and its Canvas fallback.
 export type Theme = 'light' | 'dark';
 export interface Tokens {bg: string; surface: string; text: string; secondary: string; /** interface highlight */ blue: string; /** colour of filaments and nodes */ mark: string; /** brightest light of dense knots (dark) / deepest ink (light) */ hot: string; /** selection ring / focus */ ring: string; line: string; /** blue that is legible as text on this theme */ accentText: string}
-/** Green for text and controls on white. */
-export const BLUE = '#245B3B';
-/** Accessible light green for text and controls on dark surfaces. */
-export const BLUE_LIT = '#B0D5B8';
-export const WEB_BLUE = '#87B89A';
-export const WEB_LIGHT = '#D1E6D6';
+/** Blue for text and controls on white. */
+export const BLUE = '#003087';
+/** Accessible light blue for text and controls on dark surfaces. */
+export const BLUE_LIT = '#a9c5ff';
+export const WEB_BLUE = '#6592df';
+export const WEB_LIGHT = '#d9e6ff';
 export const TOKENS: Record<Theme, Tokens> = {
-  light: {bg: '#FFFFFF', surface: '#F5F8F5', text: '#1B2520', secondary: '#45534A', blue: BLUE, mark: BLUE, hot: '#19442C', ring: '#1B2520', line: '#CAD4CC', accentText: BLUE},
-  dark: {bg: '#151B18', surface: '#1D2520', text: '#F0F4F0', secondary: '#C6D3C8', blue: BLUE_LIT, mark: WEB_BLUE, hot: WEB_LIGHT, ring: '#F0F4F0', line: '#526358', accentText: BLUE_LIT},
+  light: {bg: '#FFFFFF', surface: '#f6f7f9', text: '#161b25', secondary: '#465161', blue: BLUE, mark: BLUE, hot: '#001e58', ring: '#161b25', line: '#cbd0d8', accentText: BLUE},
+  dark: {bg: '#000000', surface: '#111318', text: '#f4f6f9', secondary: '#c6cdd9', blue: BLUE_LIT, mark: WEB_BLUE, hot: WEB_LIGHT, ring: '#f4f6f9', line: '#525e70', accentText: BLUE_LIT},
 };
 export const rgb = (hex: string): [number, number, number] => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 export const rgba = (hex: string, a: number) => { const [r, g, b] = rgb(hex); return `rgba(${r},${g},${b},${a})`; };

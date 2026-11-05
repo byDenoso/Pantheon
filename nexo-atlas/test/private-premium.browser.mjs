@@ -51,9 +51,9 @@ try{
  if(verify){await page.fill('#atlas-pin','synthetic-wrong-code');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.getByRole('alert').waitFor();assert.equal(await page.locator('#atlas-pin').getAttribute('aria-invalid'),'true');assert.equal(await page.locator('#atlas-pin').inputValue(),'');assert.equal(await page.locator('.atlas-private-frame').count(),0);}
  if(verify){
   await openPreferences();await page.getByRole('button',{name:'Claro',exact:true}).click();
-  assert.equal(await page.locator('.atlas-session-bar h1').evaluate(el=>getComputedStyle(el).color),'rgb(27, 37, 32)','light login heading uses neutral ink');
+  assert.equal(await page.locator('.atlas-session-bar h1').evaluate(el=>getComputedStyle(el).color),'rgb(22, 27, 37)','light login heading uses neutral ink');
   await openPreferences();await page.getByRole('button',{name:'Escuro',exact:true}).click();
-  assert.equal(await page.locator('.atlas-session-bar h1').evaluate(el=>getComputedStyle(el).color),'rgb(240, 244, 240)','dark login heading uses light ink');
+  assert.equal(await page.locator('.atlas-session-bar h1').evaluate(el=>getComputedStyle(el).color),'rgb(244, 246, 249)','dark login heading uses light ink');
  }
  await page.fill('#atlas-pin','synthetic-demo-only');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('.atlas-private-frame').waitFor();
  const frame=page.frames().find(f=>f.url().includes('/api/atlas-private-ui'));

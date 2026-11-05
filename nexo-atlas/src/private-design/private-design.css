@@ -1,17 +1,17 @@
 /* NEXO · private design layer.
    Additive and scoped: everything lives under `.pw.pd` (add the class `pd` to the workspace root) and is meant to load AFTER workspace.css.
    It restyles the existing presentation classes and adds the `pd-*` classes used by the components in this folder. No data, no behaviour.
-   Identity inherited from the public site: neutral surfaces, restrained green accents, wide gutters and readable text. */
+   Identity inherited from the public site: neutral surfaces, restrained blue accents, wide gutters and readable text. */
 
 /* ------------------------------------------------------------------ tokens */
 .pw.pd{
-  --pd-blue:#b0d5b8;            /* historical token name, now the green accent */
-  --pd-on-blue:#102316;
-  --pd-bg:#151b18; --pd-surface:#1d2520; --pd-surface-2:#232d26; --pd-ink:#f0f4f0; --pd-ink-2:#c6d3c8; --pd-line:#526358; --pd-edge:#8da494; --pd-blue-ink:#b0d5b8;
+  --pd-blue:#a9c5ff;            /* historical token name, now the blue accent */
+  --pd-on-blue:#00112f;
+  --pd-bg:#000000; --pd-surface:#111318; --pd-surface-2:#1b1e23; --pd-ink:#f4f6f9; --pd-ink-2:#c6cdd9; --pd-line:#525e70; --pd-edge:#9ba9c0; --pd-blue-ink:#a9c5ff;
   --pd-shadow:none; --pd-shadow-hover:0 0 0 1px var(--pd-blue);
   --pd-gas:url('../atlas/assets/expansion-dark-v1.webp'); --pd-gas-blend:screen; --pd-gas-opacity:.10;
   --pd-radius:14px; --pd-radius-s:8px; --pd-max:1440px; --pd-gutter:clamp(16px,5.3vw,76px);
-  --pd-title:'Atlas Rounded','Nunito',ui-rounded,system-ui,sans-serif; --pd-body:'Atlas Barlow','Barlow',system-ui,sans-serif; --pd-mono:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  --pd-title:'IBM Plex Sans',system-ui,sans-serif; --pd-body:'IBM Plex Sans',system-ui,sans-serif; --pd-mono:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
   --pd-quick:.14s; --pd-base:.2s; --pd-ease:cubic-bezier(.2,.7,.2,1);
   --pd-sl:env(safe-area-inset-left,0px); --pd-sr:env(safe-area-inset-right,0px); --pd-sb:env(safe-area-inset-bottom,0px);
   /* the workspace's own variables follow the tokens, so its existing rules stay coherent */
@@ -20,15 +20,16 @@
   font-family:var(--pd-body);
 }
 .pw.pd[data-theme=light]{
-  --pd-blue:#245b3b; --pd-on-blue:#ffffff;
-  --pd-bg:#ffffff; --pd-surface:#ffffff; --pd-surface-2:#f5f8f5; --pd-ink:#1b2520; --pd-ink-2:#45534a; --pd-line:#cad4cc; --pd-edge:#74887a; --pd-blue-ink:#245b3b;
-  --pd-shadow:0 1px 2px rgba(20,30,22,.05),0 10px 28px rgba(20,30,22,.06); --pd-shadow-hover:0 1px 2px rgba(20,30,22,.06),0 16px 36px rgba(36,91,59,.12);
+  --pd-blue:#003087; --pd-on-blue:#ffffff;
+  --pd-bg:#ffffff; --pd-surface:#ffffff; --pd-surface-2:#f6f7f9; --pd-ink:#161b25; --pd-ink-2:#465161; --pd-line:#cbd0d8; --pd-edge:#717f94; --pd-blue-ink:#003087;
+  --pd-shadow:0 1px 2px rgba(20,30,22,.05),0 10px 28px rgba(20,30,22,.06); --pd-shadow-hover:0 1px 2px rgba(20,30,22,.06),0 16px 36px rgba(0,48,135,.12);
   --pd-gas:url('../atlas/assets/cmb-light-v1.webp'); --pd-gas-blend:multiply; --pd-gas-opacity:.38;
 }
 
 /* ------------------------------------------------------------------ shell: same header language as the public site */
 .pw.pd .pw-header{height:var(--pw-head);gap:clamp(18px,3vw,44px);padding:0 calc(var(--pd-gutter) + var(--pd-sr)) 0 calc(var(--pd-gutter) + var(--pd-sl));max-width:none;border-bottom:1px solid var(--pd-line);background:var(--pd-bg)}
-.pw.pd .pw-brand{font:900 30px/1 var(--pd-title);gap:16px;letter-spacing:-.01em!important}
+.pw.pd .pw-brand{font:600 30px/1 var(--pd-title);gap:16px;letter-spacing:-.01em!important}
+.pw.pd :is(h1,h2,h3,h4){font-weight:600}
 .pw.pd .pw-brand small{font:400 14px/1.2 var(--pd-body);color:var(--pd-ink-2);margin-top:8px}
 .pw.pd .pw-header nav{gap:clamp(16px,2.2vw,30px)}
 .pw.pd .pw-header nav a{font-size:17px;font-weight:500;color:var(--pd-ink-2)}
@@ -87,7 +88,7 @@
 .pw.pd .pw-two{max-width:1040px;gap:14px;border-top:0}
 .pw.pd .pw-two>.pw-block{border:1px solid var(--pd-line);margin-bottom:14px}
 .pw.pd .pw-two>.pw-block+.pw-block{border-top:1px solid var(--pd-line)}
-.pw.pd .pw-question{font-family:var(--pd-title);font-weight:900;letter-spacing:-.02em!important;font-size:clamp(22px,2.6vw,32px);line-height:1.18;max-width:30ch}
+.pw.pd .pw-question{font-family:var(--pd-title);font-weight:600;letter-spacing:-.02em!important;font-size:clamp(22px,2.6vw,32px);line-height:1.18;max-width:30ch}
 .pw.pd .pw-outline{max-width:1040px;padding:28px;margin-bottom:28px}
 .pw.pd .pw-folds{max-width:1040px}
 .pw.pd .pw-outline .pw-folds{margin-bottom:0;border-bottom:0}
@@ -128,7 +129,7 @@
 .pw.pd .pd-agent:hover{background:var(--pd-surface-2)}
 .pw.pd .pd-agent[aria-pressed=true]{border-color:var(--pd-blue);background:var(--pd-surface-2)}
 .pw.pd .pd-agent b{font-weight:500;font-size:16px;overflow-wrap:anywhere}.pw.pd .pd-agent small{grid-column:2;font-size:13px;color:var(--pd-ink-2)}
-.pw.pd .pd-mono{grid-row:span 2;display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--pd-blue);color:var(--pd-on-blue);font:900 15px/1 var(--pd-title);letter-spacing:0}
+.pw.pd .pd-mono{grid-row:span 2;display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--pd-blue);color:var(--pd-on-blue);font:600 15px/1 var(--pd-title);letter-spacing:0}
 .pw.pd .pd-mono[data-absent]{background:var(--pd-surface-2);color:var(--pd-ink-2);box-shadow:inset 0 0 0 1px var(--pd-edge)}
 .pw.pd .pd-feed{display:grid;gap:14px;min-width:0}
 .pw.pd .pd-feed-status{font-size:15px;color:var(--pd-ink-2);margin:0}
@@ -136,7 +137,7 @@
 .pw.pd .pd-post-head{display:grid;grid-template-columns:40px minmax(0,1fr);gap:0 14px;align-items:center;margin-bottom:14px}
 .pw.pd .pd-post-who{font-weight:500;font-size:17px;margin:0!important;overflow-wrap:anywhere}.pw.pd .pd-post-who span{font-weight:400;color:var(--pd-ink-2)}
 .pw.pd .pd-post-when{grid-column:2;font-size:14px;color:var(--pd-ink-2);margin:0!important}
-.pw.pd .pd-post h3{font:900 clamp(20px,1.8vw,24px)/1.2 var(--pd-title)!important;letter-spacing:-.015em!important;color:var(--pd-ink);margin:0 0 8px;overflow-wrap:anywhere}
+.pw.pd .pd-post h3{font:600 clamp(20px,1.8vw,24px)/1.2 var(--pd-title)!important;letter-spacing:-.015em!important;color:var(--pd-ink);margin:0 0 8px;overflow-wrap:anywhere}
 .pw.pd .pd-post-body{font-size:17px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;max-width:72ch;margin:0}
 .pw.pd .pd-post-body[data-clamped]{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:7;overflow:hidden}
 .pw.pd .pd-more{margin-top:8px;min-height:44px;padding:0;border:0;background:none;color:var(--pd-blue-ink);font:500 16px/1 var(--pd-body);cursor:pointer}
