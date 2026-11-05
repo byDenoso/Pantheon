@@ -1,17 +1,17 @@
 /* NEXO Research: final public identity layer. All scientific values stay in their source components. */
 html:root .atlas-app[data-area="public"],
 html:root[data-theme="dark"] .atlas-app[data-area="public"] {
-  --bg:#081322;--bg-2:#0d1c30;--fg:#edf3f8;--fg-2:#b1bfd0;--line:#2b4058;
-  --cyan:#7bdeed;--orange:#b0beed;--focus:#7bdeed;--on-cyan:#071b25;
-  --action:#7bdeed;--on-action:#071b25;--control-line:#72879e;
-  --font-body:"IBM Plex Sans",system-ui,sans-serif;--font-heading:Georgia,"Times New Roman",serif;
+  --bg:#000000;--bg-2:#111318;--fg:#f4f6f9;--fg-2:#c0c8d4;--line:#525e70;
+  --cyan:#a9c5ff;--orange:#a9c5ff;--focus:#a9c5ff;--on-cyan:#00112f;
+  --action:#a9c5ff;--on-action:#00112f;--control-line:#9ba9c0;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;--font-heading:"IBM Plex Sans",system-ui,sans-serif;
   --nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
   color-scheme:dark;background:var(--bg);color:var(--fg);font:400 16px/1.65 var(--font-body);
 }
 html:root[data-theme="light"] .atlas-app[data-area="public"] {
-  --bg:#f8fafb;--bg-2:#eef3f6;--fg:#10283e;--fg-2:#4b6174;--line:#cbd6df;
-  --cyan:#08778c;--orange:#3b5795;--focus:#08778c;--on-cyan:#fff;
-  --action:#113a55;--on-action:#fff;--control-line:#758b9d;color-scheme:light;
+  --bg:#ffffff;--bg-2:#f6f7f9;--fg:#161b25;--fg-2:#465161;--line:#cbd0d8;
+  --cyan:#003087;--orange:#003087;--focus:#003087;--on-cyan:#ffffff;
+  --action:#003087;--on-action:#ffffff;--control-line:#717f94;color-scheme:light;
 }
 html:root .atlas-app[data-area="public"] :is(h1,h2,h3,h4,h5,h6) {color:var(--fg)}
 html:root .atlas-app[data-area="public"] :is(button,input,select,summary) {font-family:var(--font-body)}
@@ -30,7 +30,7 @@ html:root .atlas-app[data-area="public"] .atlas-toc {gap:20px}
 html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a) {font-size:13px;font-weight:400;color:var(--fg-2);background:none;border:0;min-height:44px;text-decoration:none;display:inline-flex;align-items:center}
 html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a):hover {color:var(--cyan)}
 html:root .atlas-app[data-area="public"] .atlas-toc [aria-current] {color:var(--cyan)}
-html:root .atlas-app[data-area="public"] .atlas-preferences>summary {border-radius:3px;font-size:12px}
+html:root .atlas-app[data-area="public"] .atlas-preferences>summary {border-radius:3px;border-color:var(--control-line);font-size:12px}
 html:root .atlas-app[data-area="public"] .atlas-controls {background:var(--bg-2)}
 html:root .atlas-app[data-area="public"] .atlas-seg button[aria-pressed="true"] {background:var(--cyan);color:var(--on-cyan)}
 html:root .atlas-app[data-area="public"] .atlas-public-main {max-width:1440px;--stage-gutter:clamp(20px,4vw,68px);padding:0 var(--stage-gutter)}
@@ -43,9 +43,9 @@ html:root .atlas-app[data-area="public"] .atlas-hero-copy {margin:0;padding:0;bo
 html:root .atlas-app[data-area="public"] .atlas-eyebrow {font:400 11px/1.65 var(--font-mono,"IBM Plex Mono",monospace);letter-spacing:.12em;color:var(--cyan)}
 html:root .atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow {font-size:10px;margin-bottom:28px;letter-spacing:.13em}
 html:root .atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow::before {width:24px}
-html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 {font:400 clamp(48px,5.4vw,82px)/1.06 var(--font-heading);letter-spacing:-.045em;margin:0 0 28px;overflow-wrap:normal;text-wrap:balance}
+html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 {font:600 clamp(48px,5.4vw,82px)/1.06 var(--font-heading);letter-spacing:-.045em;margin:0 0 28px;overflow-wrap:normal;text-wrap:balance}
 html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 span {display:block;color:var(--fg)}
-html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 span:last-child {font-style:italic;color:var(--cyan)}
+html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 span:last-child {font-style:normal;color:var(--cyan)}
 html:root .atlas-app[data-area="public"] .atlas-hero-lead {font-size:17px;line-height:1.75;color:var(--fg-2);max-width:49ch;margin:0 0 30px}
 html:root .atlas-app[data-area="public"] .atlas-hero-actions {display:flex;flex-wrap:wrap;gap:12px}
 html:root .atlas-app[data-area="public"] .atlas-btn {background:var(--action);border:1px solid var(--action);color:var(--on-action);border-radius:3px;font-size:14px;font-weight:500;min-height:48px;box-shadow:none}
@@ -53,7 +53,7 @@ html:root .atlas-app[data-area="public"] .atlas-text-action {border-radius:3px;m
 html:root .atlas-app[data-area="public"] .atlas-btn::before {display:none}
 html:root .atlas-app[data-area="public"] .nexo-featured-evidence {
   min-width:0;padding:28px 30px;border:1px solid var(--line);border-top:2px solid var(--cyan);border-radius:3px;
-  background:linear-gradient(145deg,color-mix(in srgb,var(--cyan) 4%,var(--bg-2)),var(--bg-2));
+  background:var(--bg-2);
   color:var(--fg);align-self:center;position:relative;
 }
 .nexo-evidence-kicker {display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;color:var(--cyan)}

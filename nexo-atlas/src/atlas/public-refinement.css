@@ -4,7 +4,7 @@
 .atlas-app[data-area="public"]{
   --font-body:"IBM Plex Sans",var(--font);--font-heading:var(--font-body);
   --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
-  --action:#1e5bff;--on-action:#ffffff;--control-line:#728196;--nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
+  --action:#003087;--on-action:#ffffff;--control-line:#717f94;--nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
   font:400 15px/1.6 var(--font-body);background:var(--bg);
 }
 .atlas-app[data-area="public"] :is(h1,h2,h3,h4){text-wrap:balance}
@@ -46,7 +46,7 @@
 .atlas-app[data-area="public"] .atlas-research-lines p,
 .atlas-app[data-area="public"] .atlas-steps p{font-size:15px;line-height:1.65}
 .atlas-preferences{position:relative;color:var(--fg)}
-.atlas-preferences>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:5px;cursor:pointer;list-style:none;font:500 13px/1.4 var(--font-body,var(--font))}
+.atlas-preferences>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 14px;border:1px solid var(--control-line,var(--line));border-radius:5px;cursor:pointer;list-style:none;font:500 13px/1.4 var(--font-body,var(--font))}
 .atlas-preferences>summary::-webkit-details-marker{display:none}
 .atlas-preferences>summary::after{content:"+";font-size:18px;color:var(--fg-2)}
 .atlas-preferences[open]>summary::after{content:"−"}

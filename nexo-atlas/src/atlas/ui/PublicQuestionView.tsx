@@ -5,8 +5,9 @@ import {pick} from '../publicItems.ts';
 import type {QuestionGroup, QuestionMember} from '../publicQuestionGroups.ts';
 import {campaignBrief, campaignConditions, associatedTestKind} from '../publicCampaigns.ts';
 import PublicTestView from './PublicTestView.tsx';
+import StudyRevisionNotice from './StudyRevisionNotice.tsx';
 import {questionHref,SOFTWARE_QUESTIONS} from '../researchExplorer.ts';
-import {visualsForTest,type PublicVisual} from '../publicVisuals.ts';
+import {indexVisualsByTest,visualsForTest,visualTestKey,type PublicVisual} from '../publicVisuals.ts';
 import {presentLabel,duplicateOrdinals} from '../presentNumbers.ts';
 import {testAnchors,testHref} from '../publicStudyRoutes.ts';
 import QuestionFigures from './LazyQuestionFigures.tsx';
@@ -47,7 +48,7 @@ export default function PublicQuestionView({group, overview = group, locale, sea
   const ordinals = useMemo(() => { const marks = duplicateOrdinals(overview.members.map(identity)); return new Map(overview.members.map((member, index) => [member.test.id, marks[index]])); }, [overview, locale]);
   const searchable = !searching && count >= SEARCHABLE_FROM, needle = fold(testQuery.trim());
   const shown = searchable && needle ? group.members.filter(member => fold([associatedTestKind(member, brief, locale), ...[member.label, member.detail, member.section, member.test.question, member.test.method, member.test.result, member.test.answers].map(value => pick(value, locale))].join(' ')).includes(needle)) : group.members;
-  const groupVisuals = useMemo(() => { if (!standalone || !visuals.length) return {visuals: [] as PublicVisual[], links: {}}; const seen = new Set<string>(), all: PublicVisual[] = [], links: Record<string, {question: QuestionMember['test']['question']; href: string}> = {}; for (const member of overview.members) for (const visual of visualsForTest(visuals, member.test)) { if (seen.has(visual.id)) continue; seen.add(visual.id); all.push(visual); links[visual.id] = {question: member.test.question, href: testHref(overview.id, anchors.get(member.test.id))}; } return {visuals: all, links}; }, [standalone, visuals, overview, anchors]);
+  const groupVisuals = useMemo(() => { if (!standalone || !visuals.length) return {visuals: [] as PublicVisual[], links: {}}; const seen = new Set<string>(), all: PublicVisual[] = [], links: Record<string, {question: QuestionMember['test']['question']; href: string}> = {}, byTest=indexVisualsByTest(visuals); for (const member of overview.members) for (const visual of byTest.get(visualTestKey(member.test))??[]) { if (seen.has(visual.id)) continue; seen.add(visual.id); all.push(visual); links[visual.id] = {question: member.test.question, href: testHref(overview.id, anchors.get(member.test.id))}; } return {visuals: all, links}; }, [standalone, visuals, overview, anchors]);
   const date = (value: string) => new Intl.DateTimeFormat(en ? 'en-GB' : 'pt-BR', {dateStyle: 'medium', timeZone: 'America/Sao_Paulo'}).format(new Date(value));
   const sections: [string, QuestionMember[]][] = [];
   for (const member of shown) {
@@ -57,6 +58,7 @@ export default function PublicQuestionView({group, overview = group, locale, sea
     else sections.push([section, [member]]);
   }
   return <article className="atlas-question-group atlas-campaign-update" id={`update-${group.id}`} aria-labelledby={standalone?'study-title':`${group.id}-title`}>
+    <StudyRevisionNotice group={overview} locale={locale}/>
     <p className="atlas-campaign-kicker">{operational ? (en ? 'Software validation' : 'Validação de software') : (en ? 'Cosmology · Research summary' : 'Cosmologia · Síntese da investigação')}</p>
     {!standalone&&<h3 id={`${group.id}-title`}><a className="nexo-question-link" href={questionHref(group.id)}>{pick(group.title, locale)}<span className="nexo-share-arrow"><ArrowIcon/></span></a></h3>}
     {brief ? <>

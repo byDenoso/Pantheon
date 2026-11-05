@@ -55,4 +55,6 @@ test('crew joins declared roles with what each one registered, alerts first',()=
   assert.equal(out.find(m=>m.name==='S2').next,new Date(2026,10,3,10,22,0).getTime());
   assert.equal(tone('pausado'),'warn');
   assert.equal(tone('erro de leitura'),'bad');
+  assert.equal(tone('inativa'),'bad');
+  assert.equal(crew([{papel:'Synthetic',cadencia:'1h minuto 06',estado:'concluída'}],[],now)[0].next,null);
 });

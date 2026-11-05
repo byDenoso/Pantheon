@@ -1,0 +1,16 @@
+.nexo-claims,.nexo-record{max-width:78rem;margin-inline:auto}
+.nexo-claims header{max-width:64rem;margin-block:3rem 2rem}
+.nexo-claims header h1{margin-block:.5rem 1rem}
+.nexo-claims header p,.nexo-record p{line-height:1.65}
+.nexo-claims-search{display:grid;gap:.5rem;max-width:32rem;font-weight:600}
+.nexo-claims-search input{width:100%;padding:.8rem;border:1px solid currentColor;border-radius:.3rem;background:transparent;color:inherit;font:inherit}
+.nexo-claim-list{padding:0;list-style:none;display:grid;gap:1.5rem;margin-block:2rem}
+.nexo-claim-list li,.nexo-record{border-top:1px solid currentColor;padding-top:1.5rem}
+.nexo-claim-list h2{font-size:clamp(1.15rem,2vw,1.45rem);line-height:1.3}
+.nexo-claim-list p{line-height:1.65;max-width:70rem}
+.nexo-record{margin-block:3rem 2rem}
+.nexo-record-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:1rem 2rem}
+.nexo-record-fields dt{font-weight:700;margin-bottom:.25rem}
+.nexo-record-fields dd{margin:0;line-height:1.5}
+.nexo-record-history{padding-inline-start:1.25rem}
+.nexo-record-history details{margin-block:1rem;overflow-wrap:anywhere}

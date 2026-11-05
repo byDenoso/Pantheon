@@ -1,0 +1,24 @@
+{
+  "contract": "NEXO_PUBLIC_RESULT_REGISTRY_V1",
+  "records": [
+    {"questionId":"question-precedentes","versions":[]},
+    {"questionId":"question-faixas-supernovas","versions":[]},
+    {"questionId":"question-grupos-bao","versions":[]},
+    {"questionId":"question-pergunta-33","versions":[]},
+    {"questionId":"question-pergunta-34","versions":[]},
+    {"questionId":"question-autointeracao","versions":[]},
+    {"questionId":"question-versao-bao","versions":[]},
+    {"questionId":"question-calibracao-bao","versions":[]},
+    {"questionId":"question-pergunta-142","versions":[]},
+    {"questionId":"question-pergunta-143","versions":[]},
+    {"questionId":"question-pergunta-144","versions":[]},
+    {"questionId":"question-pergunta-145","versions":[]},
+    {"questionId":"question-pontos-cosmologicos","versions":[]},
+    {"questionId":"question-pergunta-157","versions":[]},
+    {"questionId":"question-pergunta-158","versions":[]},
+    {"questionId":"question-pergunta-161","versions":[]},
+    {"questionId":"question-expansao-crescimento","versions":[]},
+    {"questionId":"question-pergunta-167","versions":[]},
+    {"questionId":"question-pergunta-168","versions":[]}
+  ]
+}

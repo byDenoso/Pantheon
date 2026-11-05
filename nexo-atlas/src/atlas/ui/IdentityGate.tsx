@@ -1,6 +1,7 @@
 import {useEffect, useState, type FormEvent, type ReactNode} from 'react';
 import {useLocale} from './LocaleProvider.tsx';
 import Shell from './Shell.tsx';
+import './private-area.css';
 
 type Access = {signedIn: boolean; owner: boolean; setupRequired: boolean};
 export default function IdentityGate({children}: {children: ReactNode}) {

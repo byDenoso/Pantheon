@@ -14,7 +14,7 @@ import ReadingTour from './ReadingTour.tsx';
 import Explained from './Explained.tsx';
 import {useMessages} from './LocaleProvider.tsx';
 import {useReadingMode} from './useReadingMode.ts';
-import {SEARCH_EVENT} from './ResearchLaunch.tsx';
+import {SEARCH_EVENT,takePendingSearch} from './ResearchLaunch.tsx';
 import TopicDistribution from '../../experience/TopicDistribution.tsx';
 
 function HubIcon({tab}:{tab:string}) {
@@ -31,7 +31,7 @@ export function ResearchMap({entries,locale}:{entries:ResearchEntry[];locale:Loc
   const en=locale==='en',plainMode=useReadingMode()==='plain';
   const [topic,setTopic]=useExplorerState<string>('map.topic','all'),[query,setQuery]=useExplorerState<string>('map.query',''),[selected,setSelected]=useExplorerState<string>('map.selected',''),[page,setPage]=useExplorerState<number>('map.page',0);
   // The hero search field hands its query to this list.
-  useEffect(()=>{const receive=(event:Event)=>{const value=(event as CustomEvent<string>).detail;if(typeof value!=='string')return;setQuery(value);setTopic('all');setPage(0);setSelected('');};window.addEventListener(SEARCH_EVENT,receive);return()=>window.removeEventListener(SEARCH_EVENT,receive);},[setQuery,setTopic,setPage,setSelected]);
+  useEffect(()=>{const apply=(value:string)=>{setQuery(value);setTopic('all');setPage(0);setSelected('');};const receive=(event:Event)=>{const value=(event as CustomEvent<string>).detail;if(typeof value!=='string')return;takePendingSearch();apply(value);};window.addEventListener(SEARCH_EVENT,receive);const queued=takePendingSearch();if(queued!==null)apply(queued);return()=>window.removeEventListener(SEARCH_EVENT,receive);},[setQuery,setTopic,setPage,setSelected]);
   const searched=filterResearch(entries,{query,locale});
   const categories=[{id:'all',label:en?'All subjects':'Todos os assuntos'},...TOPICS.map(t=>({id:t.id,label:pick(t.label,locale)})),{id:'other',label:en?'Other questions':'Outras perguntas'}].map(c=>({...c,entries:searched.filter(e=>c.id==='all'||(c.id==='other'?e.topics.length===0:e.topics.includes(c.id as typeof e.topics[number])))})).filter(c=>c.entries.length);
   const category=categories.find(c=>c.id===topic)??categories[0];
@@ -49,7 +49,7 @@ export function ResearchMap({entries,locale}:{entries:ResearchEntry[];locale:Loc
         <div className="nexo-constellation" aria-label={en?'Select a question in this subject':'Selecione uma pergunta neste assunto'}>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><ellipse cx="50" cy="50" rx="36" ry="38" className="nexo-orbit-ring"/>{visible.map((e,j)=>{const [x,y]=positions[j];return <path key={e.id} d={`M50 50 Q${50+(x-50)*.3} ${y} ${x} ${y}`} className={`nexo-orbit-link ${chosen.id===e.id?'is-selected':''}`}/>;})}</svg>
           <div className="nexo-orbit-center" aria-hidden="true"><strong>{category.entries.length}</strong><span>{en?(category.entries.length===1?'question':'questions'):(category.entries.length===1?'pergunta':'perguntas')}</span></div>
-          {visible.map((e,j)=>{const [x,y]=positions[j];return <button type="button" key={e.id} className="nexo-orbit-node" style={{left:`${x}%`,top:`${y}%`}} aria-label={`${current*8+j+1}. ${pick(e.question,locale)}`} aria-pressed={chosen.id===e.id} onClick={()=>choose(e.id)} title={pick(e.question,locale)}><span>{String(current*8+j+1).padStart(2,'0')}</span></button>;})}
+          {visible.map((e,j)=>{const [x,y]=positions[j],number=String(current*8+j+1).padStart(2,'0');return <button type="button" key={e.id} className="nexo-orbit-node" style={{left:`${x}%`,top:`${y}%`}} aria-label={`${number}. ${pick(e.question,locale)}`} aria-pressed={chosen.id===e.id} onClick={()=>choose(e.id)} title={pick(e.question,locale)}><span>{number}</span></button>;})}
           <span className="nexo-orbit-caption">{en?'Select a numbered question':'Selecione uma pergunta numerada'}</span>
         </div>
         <aside className="nexo-map-selected" aria-live="polite" aria-atomic="true"><p className="atlas-kind">{category.id==='all'?(chosen.topics.length?pick(TOPICS.find(t=>t.id===chosen.topics[0])!.label,locale):(en?'Other questions':'Outras perguntas')):category.label}</p><h4>{pick(chosen.question,locale)}</h4><EntryTags entry={chosen} locale={locale}/><p className="nexo-map-record-count">{chosen.tests} {en?'associated analyses':'análises associadas'}</p>{plainMode&&chosen.plain&&<p className="nexo-map-plain">{pick(chosen.plain,locale)}</p>}{chosen.summary&&(!plainMode||!chosen.plain)&&<Explained as="p" className="nexo-map-preview" text={pick(chosen.summary,locale)} locale={locale}/>}<a className="nexo-map-open" href={chosen.href}>{en?'Explore this question':'Explorar esta pergunta'} <ArrowIcon/></a></aside>

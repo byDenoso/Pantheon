@@ -4,12 +4,14 @@ import {useEffect} from 'react';
 export function useCinematicMotion(enabled: boolean) {
   useEffect(() => {
     if (!enabled || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const root = document.querySelector<HTMLElement>('.atlas-public-main');
+    // Study and claims routes have no cinematic targets. Avoid downloading or
+    // evaluating the animation library until a page actually needs it.
+    if (!root?.querySelector('.atlas-hero-copy, .atlas-public-content > .atlas-section')) return;
     let cancelled = false;
     let cleanup = () => {};
     void import('gsap').then(({gsap}) => {
       if (cancelled) return;
-      const root = document.querySelector<HTMLElement>('.atlas-public-main');
-      if (!root) return;
       const observers: IntersectionObserver[] = [];
       const ctx = gsap.context(() => {
         const intro = root.querySelectorAll('.atlas-hero-copy > *, .nexo-featured-evidence');

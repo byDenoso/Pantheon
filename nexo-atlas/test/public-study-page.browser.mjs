@@ -50,6 +50,19 @@ const overflow = page => page.evaluate(() => ({viewport: innerWidth, scroll: doc
 async function check(name, run) { if (onlyChecks.length && !onlyChecks.some(pattern => name.includes(pattern))) return; try { const evidence = await run(); report.checks.push({name, status: 'PASS', ...(evidence === undefined ? {} : {evidence})}); console.log(`PASS ${name}`); } catch (error) { report.checks.push({name, status: 'FAIL', error: error.message}); console.error(`FAIL ${name}: ${error.message}`); } }
 
 try {
+  await check('study footer waits for the delayed catalog, while breadcrumb navigation remains available', async () => {
+    const context = await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});
+    site.control.publicDelayMs = 1200;
+    try {
+      const page=await context.newPage();
+      await page.goto(origin+STUDY_ROUTE,{waitUntil:'domcontentloaded'});
+      await page.locator('.nexo-study-page p[role="status"]').first().waitFor();
+      assert.equal(await page.locator('.nexo-study-footer').count(),0);
+      assert.equal(await page.locator('.nexo-study-breadcrumb a').isVisible(),true);
+      await page.locator('.atlas-question-group').waitFor();
+      assert.equal(await page.locator('.nexo-study-footer').count(),1);
+    } finally {site.control.publicDelayMs=0;await context.close();}
+  });
   await check('document head follows the investigation: title, canonical, og:url and description', async () => {
     const s = await open({width: 1280});
     const head = await s.page.evaluate(() => ({title: document.title, canonical: document.querySelector('link[rel=canonical]').href, og: document.querySelector('meta[property="og:url"]').content, description: document.querySelector('meta[name=description]').content, path: location.pathname}));

@@ -4,7 +4,7 @@
 import {createHash} from 'node:crypto';
 import {readdirSync, readFileSync, statSync, writeFileSync} from 'node:fs';
 import {join, relative, resolve, sep} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 import {build} from 'vite';
 
 export const MANIFEST_CONTRACT = 'ATLAS_PRIVATE_ASSETS_V1';
@@ -38,7 +38,7 @@ export async function buildPrivateUi(out = DEFAULT_OUT) {
   return {outDir, files: writeManifest(outDir)};
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const i = process.argv.indexOf('--out');
   const {outDir, files} = await buildPrivateUi(i > 0 ? process.argv[i + 1] : DEFAULT_OUT);
   console.log(`private ui: ${Object.keys(files).length} files -> ${relative(root, outDir) || outDir}`);

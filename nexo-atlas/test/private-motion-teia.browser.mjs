@@ -7,6 +7,7 @@ import {chromium} from 'playwright';
 import {startPrivateUiServer} from './helpers/private-ui-browser.mjs';
 
 const output = process.env.PRIVATE_MOTION_QA_OUTPUT ? resolve(process.env.PRIVATE_MOTION_QA_OUTPUT) : null;
+const only = process.env.PRIVATE_MOTION_QA_ONLY || '';
 const executablePath = process.env.CHROMIUM_PATH || process.env.CHROMIUM_EXECUTABLE || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const server = await startPrivateUiServer(), browser = await chromium.launch({headless: true, executablePath, args: ['--no-sandbox']});
 const report = {source: 'synthetic local fixture; not live Tower data', executablePath, checks: [], limitations: [
@@ -85,6 +86,7 @@ async function chooseTheme(page, frame, theme) {
 }
 
 async function check(name, run) {
+  if (only && !name.includes(only)) return;
   try {
     const evidence = await run();
     report.checks.push({name, status: 'PASS', evidence});
@@ -157,7 +159,7 @@ try {
         return style ? {animationName: style.animationName, transform: style.transform} : null;
       });
       assert.equal(backdrop?.animationName, 'none');
-      await route(frame, '#/teia', '.tc-stage');
+      await route(frame, '#/teia/cosmos', '.tc-stage');
       const stage = frame.locator('.tc-stage');
       await stage.locator('canvas.tc-2d').waitFor();
       assert.equal(await frame.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), true);
@@ -172,9 +174,10 @@ try {
     const {context, page, frame} = await login({patchCanvas: true});
     try {
       await page.clock.install();
-      await route(frame, '#/teia', '.tc-stage');
+      await route(frame, '#/teia/cosmos', '.tc-stage');
       const stage = frame.locator('.tc-stage');
       await stage.locator('canvas.tc-2d').waitFor();
+      await frame.locator('.tc-stage[data-renderer="canvas"]').waitFor();
       await frame.locator('html[data-motion=running]').waitFor({state: 'attached'});
       const selectTest = async id => {
         const search = frame.locator('.tc-search input');

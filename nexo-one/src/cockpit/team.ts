@@ -5,7 +5,7 @@ import {agentName, type LiveEvent} from '../private-workspace/liveEvents.ts';
 import type {Row} from './api.ts';
 
 export type Tone = 'ok' | 'warn' | 'bad' | undefined;
-export const tone = (value = ''): Tone => /erro|falh|bloq|parad|block|fail|desativ|off|alert/i.test(value) ? 'bad' : /aguard|pend|paus|revis|wait/i.test(value) ? 'warn' : /ativ|rodando|andamento|ok|conclu|running|done/i.test(value) ? 'ok' : undefined;
+export const tone = (value = ''): Tone => /erro|falh|bloq|parad|block|fail|desativ|inativ|off|alert/i.test(value) ? 'bad' : /aguard|pend|paus|revis|wait/i.test(value) ? 'warn' : /ativ|rodando|andamento|ok|conclu|running|done/i.test(value) ? 'ok' : undefined;
 
 export type Cadence =
   | {kind: 'hourly'; every: number; minute: number; label: string}
@@ -67,7 +67,7 @@ export function crew(equipe: Row[], events: LiveEvent[], now: number): CrewMembe
     const latest = own.reduce<LiveEvent | null>((a, e) => !a || (e.when as number) > (a.when as number) ? e : a, null);
     return {
       name, papel: r.papel.trim(), estado: (r.estado ?? '').trim(), tone: t, cadence,
-      next: t === 'bad' || t === 'warn' ? null : nextRun(cadence, now),
+      next: t === 'bad' || t === 'warn' || /conclu|done/i.test(r.estado ?? '') ? null : nextRun(cadence, now),
       last: latest?.when ?? null, lastText: latest ? (latest.title || latest.body) : '',
       hours, activeHours: hours.filter(n => n > 0).length, fronts: splitFronts(r.frentes),
     };

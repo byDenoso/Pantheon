@@ -35,9 +35,13 @@ export function projectPrivateShadowBoard(board) {
     authority: 'SHADOW', projection_only: true, writeback: 'FORBIDDEN',
     source_id: board.source_id, modified_at: board.modified_at ?? null,
   };
+  result.availability = Object.fromEntries(Object.keys(FIELDS).map(name => {
+    const value=board.availability?.[name];
+    return [name, value==='available'||value==='unavailable' ? value : 'unknown'];
+  }));
   for (const [name, fields] of Object.entries(FIELDS)) {
     if (!Array.isArray(board[name])) throw new Error('SHADOW_TAB_INVALID');
-    result[name] = board[name].map(row => safeRow(row, fields)).filter(Boolean);
+    result[name] = result.availability[name]==='available' ? board[name].map(row => safeRow(row, fields)).filter(Boolean) : [];
   }
   result.counts = Object.fromEntries(Object.keys(FIELDS).map(name => [name, result[name].length]));
   return result;

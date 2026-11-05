@@ -29,24 +29,25 @@ function Dial({m, now}: {m: CrewMember; now: number}) {
 
 function nextText(m: CrewMember, now: number) {
   if (m.next !== null) return `às ${hhmm(m.next)} · em ${minutesTo(m.next, now)} min`;
+  if (/conclu|done/i.test(m.estado)) return 'Concluída; nenhuma próxima execução inferida';
   if (m.tone === 'warn') return 'Em pausa; nenhuma execução prevista';
   if (m.tone === 'bad') return 'Parada; nenhuma execução prevista';
   if (m.cadence.kind === 'unknown') return 'Sem horário na cadência declarada';
   return 'Horário de início não declarado';
 }
 
-export default function CockpitTeam({equipe, mural, resultados, resumo}: {equipe: Row[]; mural: Row[]; resultados: Row[]; resumo: Row[]}) {
+export default function CockpitTeam({equipe, mural, resultados, resumo, activityComplete}: {equipe: Row[]; mural: Row[]; resultados: Row[]; resumo: Row[]; activityComplete: boolean}) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const tick = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(tick); }, []);
   const events = useMemo(() => liveEvents(mural as unknown as MuralRow[], resultados as unknown as ResultadoRow[], resumo as unknown as ResumoRow[]), [mural, resultados, resumo]);
   const members = useMemo(() => crew(equipe, events, now), [equipe, events, now]);
-  if (!members.length) return <p className="ck-note">Aba EQUIPE vazia.</p>;
+  if (!members.length) return <p className="ck-note">Nenhuma automação disponível neste recorte da aba EQUIPE.</p>;
 
   const count = (t: CrewMember['tone']) => members.filter(m => m.tone === t).length;
   const soon = members.filter(m => m.next !== null).sort((a, b) => a.next! - b.next!)[0];
   return <div className="ck-crew">
     <p className="ck-crew-summary">
-      <span><b>{count('ok')}</b>ativas</span>
+      <span><b>{count('ok')}</b>sem alerta registrado</span>
       <span data-tone="warn"><b>{count('warn')}</b>em pausa ou aguardando</span>
       <span data-tone="bad"><b>{count('bad')}</b>com alerta</span>
       {soon && <span className="ck-crew-soon">Próxima execução: <b>{soon.name}</b> em {minutesTo(soon.next!, now)} min</span>}
@@ -64,15 +65,15 @@ export default function CockpitTeam({equipe, mural, resultados, resumo}: {equipe
           <dl>
             <div><dt>Cadência</dt><dd>{m.cadence.label}</dd></div>
             <div><dt>Próxima execução</dt><dd>{nextText(m, now)}</dd></div>
-            <div><dt>Último registro</dt><dd>{m.last === null ? 'nenhum no Mural ou em Resultados' : `${ago(m.last, now)}${on ? ' · trabalhando' : ''}`}</dd></div>
+            <div><dt>Último registro</dt><dd>{m.last === null ? 'nenhum nas fontes disponíveis neste recorte' : `${ago(m.last, now)}${on ? ' · registro recente' : ''}`}</dd></div>
           </dl>
         </div>
-        <div>
+        {activityComplete ? <div>
           <div className="ck-crew-pulse" role="img" aria-label={`Atividade nas últimas 24 horas: ${m.activeHours} de 24 horas com registro`}>
             {m.hours.map((n, h) => <span key={h} data-on={n > 0 || undefined} style={{'--h': n / peak} as CSSProperties}/>)}
           </div>
           <p className="ck-crew-legend" aria-hidden="true"><span>−24 h</span><span>{m.activeHours}/24 h com registro</span><span>agora</span></p>
-        </div>
+        </div> : <p className="ck-crew-legend">Histórico por hora indisponível: leitura parcial das fontes de atividade.</p>}
         {m.lastText && <p className="ck-crew-last">{m.lastText}</p>}
         {m.fronts.length > 0 && <ul className="ck-crew-fronts" aria-label="Frentes">{m.fronts.slice(0, 6).map(f => <li key={f} title={f}>{f}</li>)}{m.fronts.length > 6 && <li>+{m.fronts.length - 6}</li>}</ul>}
       </li>;

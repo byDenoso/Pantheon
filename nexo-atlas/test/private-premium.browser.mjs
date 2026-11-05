@@ -46,14 +46,28 @@ const output=process.env.PRIVATE_PREMIUM_SHOTS||'/workspace/artifacts/private-pr
 await mkdir(output,{recursive:true});const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE||'/usr/bin/chromium',args:['--no-sandbox']});
 try{
  const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'pt-BR',timezoneId:'America/Sao_Paulo'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith(origin)&&!r.url().startsWith('data:'))foreign.push(r.url());});
+ const signedOut=await context.newPage();
+ await signedOut.route('**/api/atlas-access',route=>route.fulfill({json:{signedIn:false,owner:false,setupRequired:false}}));
+ await signedOut.goto(origin+'/#/privado');
+ await signedOut.getByRole('link',{name:'Entrar com ChatGPT'}).waitFor();
+ assert.equal(await signedOut.locator('.private-root').evaluate(el=>getComputedStyle(el).paddingTop),'44px','the identity gate keeps its styles before the private module loads');
+ await signedOut.close();
+ const openPreferences=async()=>{const menu=page.locator('.atlas-preferences');if(await menu.getAttribute('open')===null)await menu.locator('summary').click();};
  await page.goto(origin+'/#/privado');await page.locator('#atlas-pin').waitFor();await page.screenshot({path:output+'/01-login-desktop.png'});
  if(verify){await page.fill('#atlas-pin','synthetic-wrong-code');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.getByRole('alert').waitFor();assert.equal(await page.locator('#atlas-pin').getAttribute('aria-invalid'),'true');assert.equal(await page.locator('#atlas-pin').inputValue(),'');assert.equal(await page.locator('.atlas-private-frame').count(),0);}
- if(verify)await page.getByRole('button',{name:'Escuro',exact:true}).click();
+ if(verify){
+  await openPreferences();await page.getByRole('button',{name:'Claro',exact:true}).click();
+  assert.equal(await page.locator('.atlas-session-bar h1').evaluate(el=>getComputedStyle(el).color),'rgb(22, 27, 37)','light login heading uses neutral ink');
+  await openPreferences();await page.getByRole('button',{name:'Escuro',exact:true}).click();
+  assert.equal(await page.locator('.atlas-session-bar h1').evaluate(el=>getComputedStyle(el).color),'rgb(244, 246, 249)','dark login heading uses light ink');
+ }
  await page.fill('#atlas-pin','synthetic-demo-only');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('.atlas-private-frame').waitFor();
  const frame=page.frames().find(f=>f.url().includes('/api/atlas-private-ui'));
+ await frame.locator('.pw').waitFor();
  const shot=async name=>{await page.screenshot({path:output+'/'+name+'.png'});};
  const route=async(hash,selector,name)=>{await frame.evaluate(value=>location.hash=value,hash);await frame.locator(selector).first().waitFor();await shot(name);report.push({hash,viewport:await page.viewportSize(),name});assert.ok(await frame.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name);};
- await route('#/teia','.tc-stage canvas','02-web-desktop');
+ await route('#/teia','.kg','02-web-desktop');
+ await route('#/teia/cosmos','.tc-stage .tc-2d','02a-cosmos-desktop');
  await route('#/teia/dominios','.pw-index','03-domains-desktop');
  await route('#/teia/dominio/OLYMPUS','.pw-rows','04-domain-desktop');
  await route('#/teia/testes','.pw-rows','05-tests-desktop');
@@ -71,15 +85,15 @@ try{
  await frame.getByRole('button',{name:/Abrir registro/}).first().click();await frame.locator('.pm-record').waitFor();await shot('17-memory-record');
  if(verify){await frame.getByRole('button',{name:'Adicionar anotação ou correção',exact:true}).click();await frame.getByLabel('Sua anotação',{exact:true}).fill('Synthetic annotation draft only');await frame.getByLabel('Motivo da alteração',{exact:true}).fill('Synthetic UI review');await frame.getByRole('button',{name:'Preparar revisão',exact:true}).click();await frame.getByText('Proposta preparada, ainda não salva',{exact:true}).waitFor();await shot('17b-memory-draft');}
  await route('#/teia/teste/NOT-PRESENT','.pw-page','18-missing-test');
- await page.getByRole('button',{name:'EN',exact:true}).click();await route('#/teia/continuidade','.pw-outline','19-continuity-en');
+ await openPreferences();await page.getByRole('button',{name:'EN',exact:true}).click();await route('#/teia/continuidade','.pw-outline','19-continuity-en');
  if(verify){await frame.getByRole('heading',{name:'Projects and next steps',exact:true}).waitFor();assert.equal(await frame.getByText('Projetos e próximos passos',{exact:true}).count(),0);}
  if(verify){const maximum=await frame.locator('input[type=datetime-local]').getAttribute('max');const expected=await frame.evaluate(()=>{const date=new Date();return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);});assert.equal(maximum,expected);const reads=control.continuityReads;await frame.locator('input[type=datetime-local]').fill('2999-01-01T00:00');await frame.getByRole('alert').waitFor();assert.equal(control.continuityReads,reads,'future dates never trigger a source request');await frame.locator('input[type=datetime-local]').fill('');await frame.locator('.pw-outline').first().waitFor();}
- await page.getByRole('button',{name:'Light',exact:true}).click();await frame.locator('.pw[data-theme=light]').waitFor();await shot('20-continuity-light');
+ await openPreferences();await page.getByRole('button',{name:'Light',exact:true}).click();await frame.locator('.pw[data-theme=light]').waitFor();await shot('20-continuity-light');
  if(verify){await route('#/teia/memoria','.mcp-grant','20b-mcp-grant-light');const panel=frame.locator('.mcp-grant');await panel.getByText('No active grant.',{exact:true}).waitFor();assert.equal(await panel.getByRole('checkbox').isDisabled(),true);assert.equal(await panel.getByRole('button',{name:'Authorize for 30 days',exact:true}).isDisabled(),true);await panel.getByRole('button',{name:'Refresh authorization status',exact:true}).click();assert.equal(control.grantWrites,0);await panel.scrollIntoViewIfNeeded();await shot('20c-mcp-grant-inspection');const contrast=await panel.evaluate(el=>{const style=getComputedStyle(el),rgb=value=>value.match(/[0-9.]+/g).slice(0,3).map(Number).map(v=>{const n=v/255;return n<=.04045?n/12.92:Math.pow((n+.055)/1.055,2.4);}),lum=value=>{const c=rgb(value);return .2126*c[0]+.7152*c[1]+.0722*c[2];},a=lum(style.color),b=lum(style.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);});assert.ok(contrast>=4.5,'MCP grant text must remain legible in light theme: '+contrast);control.grantActive=true;await panel.getByRole('button',{name:'Refresh authorization status',exact:true}).click();await panel.getByRole('button',{name:'Revoke MCP access',exact:true}).waitFor();await shot('20e-mcp-active-readonly');control.grantError=true;await panel.getByRole('button',{name:'Refresh authorization status',exact:true}).click();await panel.getByRole('alert').waitFor();await shot('20f-mcp-status-error');assert.equal(control.grantWrites,0);control.grantError=false;await route('#/teia/continuidade','.pw-outline','20d-continuity-restored');}
  control.continuityError={error:'PRIVATE_SOURCE_UNAVAILABLE'};await frame.getByRole('button',{name:verify?'Refresh':'Atualizar',exact:true}).click();await frame.getByRole('alert').waitFor();await shot('21-continuity-error');control.continuityError=null;
  await page.setViewportSize({width:390,height:844});
  if(verify){await frame.locator('.pd-nav-toggle').click();assert.equal(await frame.locator('.pd-nav-toggle').getAttribute('aria-expanded'),'true');await frame.locator('.pd-nav-menu').getByRole('link',{name:'Board',exact:true}).click();await frame.locator('.pw-board-post').first().waitFor();await frame.locator('.pd-nav-toggle').click();await frame.locator('.pd-nav-toggle').press('Escape');assert.equal(await frame.locator('.pd-nav-toggle').getAttribute('aria-expanded'),'false');assert.equal(await frame.evaluate(()=>document.activeElement?.classList.contains('pd-nav-toggle')),true);}
- for(const [hash,selector,name]of [['#/teia/dominios','.pw-index','22-domains-mobile'],['#/teia/testes','.pw-rows','23-tests-mobile'],['#/teia/teste/TEST-01','.pw-test','24-test-mobile'],['#/teia/operacao','.pw-ops','25-operations-mobile'],['#/teia/mural','.pw-board-post','26-board-mobile'],['#/teia/continuidade','.pw-outline','27-continuity-mobile'],['#/teia/organograma','.tw canvas','28-organogram-mobile'],['#/teia','.tc-stage canvas','29-web-mobile']])await route(hash,selector,name);
+ for(const [hash,selector,name]of [['#/teia/dominios','.pw-index','22-domains-mobile'],['#/teia/testes','.pw-rows','23-tests-mobile'],['#/teia/teste/TEST-01','.pw-test','24-test-mobile'],['#/teia/operacao','.pw-ops','25-operations-mobile'],['#/teia/mural','.pw-board-post','26-board-mobile'],['#/teia/continuidade','.pw-outline','27-continuity-mobile'],['#/teia/organograma','.tw canvas','28-organogram-mobile'],['#/teia','.kg','29-web-mobile'],['#/teia/cosmos','.tc-stage .tc-2d','29a-cosmos-mobile']])await route(hash,selector,name);
  if(verify){await page.getByRole('button',{name:'Research autonomy',exact:true}).click();await page.locator('.research-autonomy').getByRole('alert').waitFor();await shot('29b-autonomy-unavailable');await page.locator('.research-autonomy').getByRole('button',{name:'Back',exact:true}).click();await page.locator('.atlas-private-frame').waitFor();}
  await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.locator('.atlas-private-frame').waitFor({state:'detached'});await shot('30-login-mobile');
  control.authenticated=true;control.sourceError={error:'PRIVATE_SOURCE_UNAVAILABLE',connectorStatus:'reauthentication_required'};

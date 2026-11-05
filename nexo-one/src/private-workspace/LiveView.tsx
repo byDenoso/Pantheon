@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {SystemState} from '../contracts/system.ts';
 import type {Lang} from '../i18n/state-language.ts';
-import {shadowBoardOf} from './shadow.ts';
+import {shadowBoardOf,shadowTabAvailable} from './shadow.ts';
 import {COMPLAINT, agentName, liveEvents, type Kind} from './liveEvents.ts';
 import ActivityChart from '../cockpit/ActivityChart.tsx';
 
@@ -11,8 +11,8 @@ import ActivityChart from '../cockpit/ActivityChart.tsx';
 
 const REFRESH_MS = 60_000, ACTIVE_MS = 90 * 60_000;
 const COPY = {
-  pt: {title: 'Ao vivo', lead: 'O que as automações estão fazendo agora: recados no Mural, resultados novos e mudanças de rumo. Atualiza sozinho a cada minuto.', agents: 'Equipe', active: 'ativa', idle: 'parada', last: 'último sinal', feed: 'Linha do tempo', all: 'Tudo', mural: 'Mural', resultado: 'Resultados', resumo: 'Mudanças', complaints: 'Reclamações e pedidos', auto: 'Atualização automática', updated: 'Lida às', empty: 'Nada por aqui ainda.', unknown: 'sem data', more: 'Ver mais', to: 'para'},
-  en: {title: 'Live', lead: 'What the automations are doing now: Mural posts, new results and changes of course. Refreshes itself every minute.', agents: 'Team', active: 'active', idle: 'idle', last: 'last signal', feed: 'Timeline', all: 'All', mural: 'Mural', resultado: 'Results', resumo: 'Changes', complaints: 'Complaints and requests', auto: 'Auto refresh', updated: 'Read at', empty: 'Nothing here yet.', unknown: 'no date', more: 'Show more', to: 'to'},
+  pt: {title: 'Atividade recente', lead: 'Registros da última leitura disponível. Um registro recente não comprova execução atual.', agents: 'Equipe', active: 'registro recente', idle: 'sem registro recente no recorte', last: 'último registro', feed: 'Linha do tempo', all: 'Tudo', mural: 'Mural', resultado: 'Resultados', resumo: 'Mudanças', complaints: 'Reclamações e pedidos', auto: 'Atualização automática', updated: 'SHADOW modificada em', empty: 'Nenhum registro disponível neste recorte.', unknown: 'sem data', more: 'Ver mais', to: 'para'},
+  en: {title: 'Recent activity', lead: 'Records from the latest available read. A recent record does not establish current execution.', agents: 'Team', active: 'recent record', idle: 'no recent record in this read', last: 'last record', feed: 'Timeline', all: 'All', mural: 'Mural', resultado: 'Results', resumo: 'Changes', complaints: 'Complaints and requests', auto: 'Auto refresh', updated: 'SHADOW modified at', empty: 'No records available in this read.', unknown: 'no date', more: 'Show more', to: 'to'},
 } as const;
 
 const hue = (name: string) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
@@ -30,12 +30,12 @@ export default function LiveView({state, lang, refresh}: {state: SystemState; la
   const l = lang === 'en' ? 'en' : 'pt', c = COPY[l];
   const board = useMemo(() => shadowBoardOf(state), [state]);
   const [filter, setFilter] = useState<'all' | Kind | 'complaints'>('all'), [limit, setLimit] = useState(30);
-  const [auto, setAuto] = useState(true), [readAt, setReadAt] = useState(() => Date.now()), [now, setNow] = useState(() => Date.now());
+  const [auto, setAuto] = useState(true), [now, setNow] = useState(() => Date.now());
   const seen = useRef<Set<string> | null>(null);
-  const events = useMemo(() => liveEvents(board?.mural ?? [], board?.resultados ?? [], board?.resumo ?? []), [board]);
+  const activityReadable = (['mural','resultados','resumo'] as const).every(tab=>shadowTabAvailable(board,tab));
+  const events = useMemo(() => liveEvents(shadowTabAvailable(board,'mural') ? board?.mural ?? [] : [], shadowTabAvailable(board,'resultados') ? board?.resultados ?? [] : [], shadowTabAvailable(board,'resumo') ? board?.resumo ?? [] : []), [board]);
   // Items not present in the previous read get the arrival animation.
   const fresh = useMemo(() => { const before = seen.current; const next = new Set(events.map(e => e.key)); seen.current = next; return before ? new Set(events.filter(e => !before.has(e.key)).map(e => e.key)) : new Set<string>(); }, [events]);
-  useEffect(() => { setReadAt(Date.now()); }, [state]);
   useEffect(() => { const tick = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(tick); }, []);
   useEffect(() => {
     if (!auto || !refresh) return;
@@ -47,7 +47,7 @@ export default function LiveView({state, lang, refresh}: {state: SystemState; la
 
   const agents = useMemo(() => {
     const map = new Map<string, {name: string; last: number | null; what: string; role: string}>();
-    for (const row of board?.equipe ?? []) map.set(agentName(row.papel), {name: agentName(row.papel), last: null, what: row.frentes, role: row.estado});
+    for (const row of shadowTabAvailable(board,'equipe') ? board?.equipe ?? [] : []) map.set(agentName(row.papel), {name: agentName(row.papel), last: null, what: row.frentes, role: row.estado});
     for (const e of [...events].reverse()) {
       if (!e.agent || e.agent === '—' || e.kind === 'resumo') continue;
       const prev = map.get(e.agent) ?? {name: e.agent, last: null, what: '', role: ''};
@@ -61,10 +61,10 @@ export default function LiveView({state, lang, refresh}: {state: SystemState; la
   const filters: [typeof filter, string][] = [['all', c.all], ['mural', c.mural], ['resultado', c.resultado], ['resumo', c.resumo], ['complaints', c.complaints]];
   return <main className="pw-page pw-live">
     <div className="pw-page-title"><h1 data-private-heading tabIndex={-1}>{c.title}<span className="pw-live-dot" aria-hidden="true"/></h1><p>{c.lead}</p>
-      <p className="pw-live-meta"><label><input type="checkbox" checked={auto} onChange={event => setAuto(event.target.checked)} disabled={!refresh}/> {c.auto}</label><span>{c.updated} <time dateTime={new Date(readAt).toISOString()}>{new Intl.DateTimeFormat(l === 'en' ? 'en-GB' : 'pt-BR', {timeStyle: 'short'}).format(readAt)}</time></span></p>
+      <p className="pw-live-meta"><label><input type="checkbox" checked={auto} onChange={event => setAuto(event.target.checked)} disabled={!refresh}/> {c.auto}</label><span>{c.updated} {board?.modified_at ? <time dateTime={board.modified_at}>{board.modified_at}</time> : c.unknown}</span></p>
     </div>
     {board?.unavailable && <p className="pw-empty" role="status">{board.unavailable}</p>}
-    {board && !board.unavailable && <ActivityChart events={events} end={now} lang={l}/>}
+    {activityReadable ? <ActivityChart events={events} end={now} lang={l}/> : <p className="pw-empty" role="status">{l==='en'?'Activity chart unavailable: one or more source tabs were not read.':'Gráfico indisponível: uma ou mais abas de atividade não foram lidas.'}</p>}
     <section aria-label={c.agents}><h2>{c.agents}</h2>
       <ul className="pw-agents">{agents.map(agent => { const on = agent.last !== null && now - agent.last < ACTIVE_MS; return <li key={agent.name} className="pw-agent" data-active={on} style={{'--agent-hue': hue(agent.name)} as React.CSSProperties}>
         <span className="pw-agent-avatar" aria-hidden="true">{initials(agent.name)}</span>

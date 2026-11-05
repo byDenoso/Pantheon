@@ -6,7 +6,7 @@ import {labHref} from '../features/lab/routes.ts';
 import {normDomain} from '../features/lab/domains.ts';
 import {describeState, type Lang} from '../i18n/state-language.ts';
 import {WORKSPACE_COPY, domainName} from './copy.ts';
-import {SHADOW_COPY, shadowBoardOf, statusRank} from './shadow.ts';
+import {SHADOW_COPY, shadowBoardOf, shadowTabAvailable, statusRank} from './shadow.ts';
 import {canonicalTestRecord, displayValue, domainSummary, filterTests, operationRows, researchHref, testHref, type OperationGroup, type ResearchFilter} from './model.ts';
 
 const PAGE_SIZE = 40;
@@ -105,17 +105,16 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
   const rows = useMemo(() => roadmap.filter(row => status === 'ALL' || row.status === status).sort((a, b) => statusRank(a.status) - statusRank(b.status) || Number(b.prio) - Number(a.prio) || a.item.localeCompare(b.item)), [roadmap, status]);
   const recent = useMemo(() => [...mural].reverse(), [mural]);
   if (!board) return null;
+  const collections={resumo,roadmap,mural,resultados,equipe};
+  const available=shadowTabAvailable(board,tab);
   return <section className="pw-shadow" aria-label={c.title}>
     <header><h2>{c.title}</h2><p>{c.source}{board.modified_at ? ` · ${board.modified_at.slice(0, 16).replace('T', ' ')}Z` : ''}{board.source_ref && <> · <a href={board.source_ref} target="_blank" rel="noreferrer noopener">{c.open}</a></>}</p></header>
     {board.unavailable && <p className="pw-empty" role="status">{c.unavailable} ({board.unavailable})</p>}
     <div className="pw-tabs" role="group" aria-label={c.title}>
-      {resumo.length > 0 && <button type="button" aria-pressed={tab === 'resumo'} onClick={() => { setTab('resumo'); setLimit(20); }}>{c.resumo}<span>{resumo.length}</span></button>}
-      <button type="button" aria-pressed={tab === 'roadmap'} onClick={() => { setTab('roadmap'); setLimit(20); }}>{c.roadmap}<span>{roadmap.length}</span></button>
-      <button type="button" aria-pressed={tab === 'mural'} onClick={() => { setTab('mural'); setLimit(20); }}>{c.mural}<span>{mural.length}</span></button>
-      {resultados.length > 0 && <button type="button" aria-pressed={tab === 'resultados'} onClick={() => { setTab('resultados'); setLimit(20); }}>{c.resultados}<span>{resultados.length}</span></button>}
-      {equipe.length > 0 && <button type="button" aria-pressed={tab === 'equipe'} onClick={() => { setTab('equipe'); setLimit(20); }}>{c.equipe}<span>{equipe.length}</span></button>}
+      {(['resumo','roadmap','mural','resultados','equipe'] as const).map(name=><button key={name} type="button" aria-pressed={tab===name} onClick={()=>{setTab(name);setLimit(20);}}>{c[name]}<span>{shadowTabAvailable(board,name)?collections[name].length:'—'}</span></button>)}
     </div>
-    {tab === 'roadmap' && <>
+    {!available && <p className="pw-empty" role="status">{c.tabUnavailable}</p>}
+    {available && tab === 'roadmap' && <>
       <div className="pw-tabs" role="group" aria-label="status">
         <button type="button" aria-pressed={status === 'ALL'} onClick={() => setStatus('ALL')}>{c.all}</button>
         {statuses.map(key => <button type="button" key={key} aria-pressed={status === key} onClick={() => { setStatus(key); setLimit(20); }}>{key}<span>{roadmap.filter(row => row.status === key).length}</span></button>)}
@@ -128,14 +127,14 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
       {!rows.length && <p className="pw-empty" role="status">{c.empty}</p>}
       {rows.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
     </>}
-    {tab === 'resumo' && <>
+    {available && tab === 'resumo' && <>
       <div className="pw-operations">{resumoRows.slice(0, limit).map((row, index) => <article key={`${row.data_hora}:${row.item}:${index}`} className="pw-operation" data-level={row.nivel}>
         <p className="pw-eyebrow">{row.nivel} · {row.item || '—'} · {row.data_hora}</p><h3>{row.o_que_mudou}</h3><p>{row.impacto}</p>
         {row.link && <p><small>{/^https:\/\//.test(row.link) ? <a href={row.link} target="_blank" rel="noreferrer noopener">{row.link}</a> : row.link}</small></p>}
       </article>)}</div>
       {resumoRows.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
     </>}
-    {tab === 'resultados' && <>
+    {available && tab === 'resultados' && <>
       <div className="pw-operations">{[...resultados].reverse().slice(0, limit).map((row, index) => <article key={`${row.data}:${row.item}:${index}`} className="pw-operation">
         <p className="pw-eyebrow">{row.task || '—'} · {row.item || '—'} · {row.data}</p><h3>{row.titulo}</h3><p>{row.resultado}</p>
         {row.numeros && <p><small>{row.numeros}</small></p>}
@@ -143,10 +142,10 @@ export function ShadowBoard({state, lang}: {state: SystemState; lang: Lang}) {
       </article>)}</div>
       {resultados.length > limit && <button type="button" className="pw-button" onClick={() => setLimit(value => value + 20)}>{c.more}</button>}
     </>}
-    {tab === 'equipe' && <div className="pw-operations">{equipe.map(row => <article key={row.papel} className="pw-operation">
+    {available && tab === 'equipe' && <div className="pw-operations">{equipe.map(row => <article key={row.papel} className="pw-operation">
       <p className="pw-eyebrow">{row.papel} · {row.estado} · {row.cadencia}</p><h3>{row.frentes}</h3><p><small>{row.task_id}</small></p>
     </article>)}</div>}
-    {tab === 'mural' && <>
+    {available && tab === 'mural' && <>
       <div className="pw-operations">{recent.slice(0, limit).map((row, index) => <article key={`${row.data}:${index}`} className="pw-operation">
         <p className="pw-eyebrow">{row.data} · {row.de || '—'} → {row.para || '—'}{row.tipo ? ` · ${row.tipo}` : ''}{row.item ? ` · ${row.item}` : ''}</p><p>{row.texto}</p>
         {row.link && <p><small>{/^https:\/\//.test(row.link) ? <a href={row.link} target="_blank" rel="noreferrer noopener">{row.link}</a> : row.link}</small></p>}

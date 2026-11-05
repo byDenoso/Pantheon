@@ -10,6 +10,7 @@ const catalogRow = n => ({question: bi(`Pergunta sintética ${n}?`), answers: bi
 const CATALOG = {contract: 'ATLAS_PUBLIC_V1', items: [], links: [], tests: [catalogRow(1), catalogRow(2), catalogRow(3)]};
 const BOARD = {
   contract: 'NEXO_SHADOW_BOARD_V1', access: 'PRIVATE', modified_at: '2026-11-01T20:00:00Z', counts: {resultados: 2, roadmap: 1},
+  availability: {roadmap:'available', mural:'available', resumo:'available', resultados:'available', equipe:'available'},
   equipe: [{papel: 'Expansão', task_id: 'x', cadencia: 'horária', frentes: 'H0', estado: 'ativa'}],
   roadmap: [{item: 'FRENTE-SINTETICA-1', titulo: 'Frente sintética de expansão', status: 'em andamento', dono: 'x', prio: '1', proximo_teste: 'Próximo teste sintético', depende_de: '', atualizado: '2026-11-01', nota: ''}],
   resultados: [
@@ -150,6 +151,42 @@ test('cockpit view never reads SHADOW when the source flag is off', async () => 
   assert.equal(reads, 0);
   assert.deepEqual(view.shadow, {available: false, reason: 'SHADOW_SOURCE_DISABLED'});
   assert.equal(view.catalog.rows.length, 3);
+});
+
+test('an unavailable results tab does not report missing approvals or permit new approvals',async()=>{
+  const {store}=memoryStore();
+  const item=towerItem(BOARD.resultados[0]);
+  assert.equal((await saveCockpitSelection({expectedVersion:0,catalog:[],tower:[item],campaigns:[]},deps(store))).status,200);
+  const unavailable={...BOARD,resultados:[],availability:{...BOARD.availability,resultados:'unavailable'}};
+  const local=deps(store,{readShadow:async()=>unavailable});
+  const view=await cockpitView(local);
+  assert.equal(view.shadow.availability.resultados,'unavailable');
+  assert.equal(view.drift.filter(row=>row.kind==='tower').length,0);
+  const keep=await saveCockpitSelection({expectedVersion:1,catalog:[],tower:[item],campaigns:[]},local);
+  assert.equal(keep.status,200);
+  const add=await saveCockpitSelection({expectedVersion:2,catalog:[],tower:[item,towerItem(BOARD.resultados[1])],campaigns:[]},local);
+  assert.equal(add.status,422);
+  assert.equal(add.body.errors[0].code,'SOURCE_UNAVAILABLE');
+});
+
+test('unexpected private source errors are not copied into cockpit output',async()=>{
+  const {store}=memoryStore();
+  const view=await cockpitView(deps(store,{readShadow:async()=>{throw new Error('synthetic-sensitive-detail');}}));
+  assert.deepEqual(view.shadow,{available:false,reason:'SHADOW_SOURCE_UNAVAILABLE'});
+  assert.doesNotMatch(JSON.stringify(view),/synthetic-sensitive-detail/);
+});
+
+test('unknown tab coverage is sanitized and never creates fresh source candidates',async()=>{
+  const {store}=memoryStore();
+  const unknown={...BOARD,availability:{resultados:'synthetic-sensitive-detail',other:'synthetic-sensitive-detail'}};
+  const view=await cockpitView(deps(store,{readShadow:async()=>unknown}));
+  assert.equal(view.shadow.availability.resultados,'unknown');
+  assert.equal(view.shadow.availability.roadmap,'unknown');
+  assert.deepEqual(view.candidates,{tower:[],campaigns:[]});
+  assert.doesNotMatch(JSON.stringify(view.shadow.availability),/synthetic-sensitive-detail/);
+  const add=await saveCockpitSelection({expectedVersion:0,catalog:[],tower:[towerItem(BOARD.resultados[0])],campaigns:[]},deps(store,{readShadow:async()=>unknown}));
+  assert.equal(add.status,422);
+  assert.equal(add.body.errors[0].code,'SOURCE_UNAVAILABLE');
 });
 
 test('a corrupt stored document fails closed on the public route', async () => {

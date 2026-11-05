@@ -1,12 +1,12 @@
 import {requestedQuestion} from '../publicStudyRoutes.ts';
 import PublicStudyPage from './PublicStudyPage.tsx';
+import PublicClaimsPage from './PublicClaimsPage.tsx';
 import {useExplorerState} from './useExplorerState.ts';
 import {useCatalogPosition} from './useCatalogPosition.ts';
 import ArrowIcon from './ArrowIcon.tsx';
 import '../canonical-campaigns.css';
-import {useEffect} from 'react';
+import {Component,lazy,Suspense,useEffect,useState,type ReactNode} from 'react';
 import usePublicResearch from './usePublicResearch.ts';
-import PublicResearchHub from './PublicResearchHub.tsx';
 import ResearchLaunch from './ResearchLaunch.tsx';
 import FeaturedEvidence from './FeaturedEvidence.tsx';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
@@ -20,18 +20,34 @@ import '../public-refinement.css';
 import '../orbital-interface.css';
 import '../reading-mode.css';
 
+// The hub is used only on the research landing page, not on a study or claim.
+const PublicResearchHub=lazy(()=>import('./PublicResearchHub.tsx'));
+class HubBoundary extends Component<{en:boolean;onFailure:()=>void;children:ReactNode},{failed:boolean}>{
+  state={failed:false};
+  static getDerivedStateFromError(){return {failed:true};}
+  componentDidCatch(){this.props.onFailure();}
+  render(){return this.state.failed?<div role="alert"><p>{this.props.en?'The research catalog could not be loaded.':'Não foi possível carregar o catálogo de pesquisa.'}</p><button type="button" onClick={()=>location.reload()}>{this.props.en?'Reload the page':'Recarregar a página'}</button></div>:this.props.children;}
+}
+function HubReady({setReady}:{setReady:(ready:boolean)=>void}){
+  useEffect(()=>{setReady(true);return()=>setReady(false);},[setReady]);
+  return null;
+}
+
 export default function PublicApp() {
   const m = useMessages();
   const locale = useLocale();
   const t = PRESENTATION[locale];
   const {pub,checking,pending,checkedAt,refresh}=usePublicResearch();
   const hasRequestedStudy=Boolean(requestedQuestion(window.location.pathname,window.location.search)||new URLSearchParams(window.location.search).get('campanha'));
+  const [hubReady,setHubReady]=useState(false);
   const [savedTab,setResearchTab]=useExplorerState<string>('tab','map');
   const researchTab=['map','figures','updates','compare','catalog'].includes(savedTab)?savedTab:'map';
-  useCatalogPosition(pub.status==='ready',hasRequestedStudy);
+  useCatalogPosition(pub.status==='ready'&&hubReady,hasRequestedStudy);
   const explore=(tab:string)=>{setResearchTab(tab);goToPublicSection('works');};
 
-  useEffect(() => { if(!hasRequestedStudy)document.title = m.heroTitle; }, [m.heroTitle,hasRequestedStudy]);
+  const claimsPath = /^\/claims\/?$/.test(window.location.pathname);
+  useEffect(() => { if(!hasRequestedStudy&&!claimsPath)document.title = m.heroTitle; }, [m.heroTitle,hasRequestedStudy,claimsPath]);
+  if(claimsPath)return <PublicClaimsPage pub={pub} locale={locale} refresh={refresh} pending={pending}/>;
   if(hasRequestedStudy)return <PublicStudyPage pub={pub} locale={locale} refresh={refresh}/>;
 
   return (
@@ -57,7 +73,7 @@ export default function PublicApp() {
           <p className="atlas-eyebrow"><span aria-hidden="true">01 / </span>{t.works.label}</p>
           <h2 id="h-works">{t.works.title}</h2>
           </div><p className="nexo-section-lead">{t.works.lead}</p></div>
-          {pub.status==='ready'&&<PublicResearchHub pub={pub} locale={locale} checking={checking} pending={pending} checkedAt={checkedAt} refresh={refresh} activeTab={researchTab} onTabChange={setResearchTab}/>}
+          {pub.status==='ready'&&<HubBoundary en={locale==='en'} onFailure={()=>setHubReady(true)}><Suspense fallback={<p role="status">{locale==='en'?'Loading the research catalog…':'Carregando o catálogo de pesquisa…'}</p>}><HubReady setReady={setHubReady}/><PublicResearchHub pub={pub} locale={locale} checking={checking} pending={pending} checkedAt={checkedAt} refresh={refresh} activeTab={researchTab} onTabChange={setResearchTab}/></Suspense></HubBoundary>}
           {pub.status!=='ready'&&<div className="nexo-public-state atlas-items" data-status={pub.status} aria-busy={pub.status==='loading'}>
             <span className="nexo-state-symbol" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4" stroke="currentColor" strokeWidth="1.2"/></svg></span>
             <div role="status">

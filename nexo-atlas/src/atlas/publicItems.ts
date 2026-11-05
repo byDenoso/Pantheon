@@ -5,7 +5,7 @@ import {guardPublicCampaigns, type PublicCampaign} from './canonicalPublicCampai
 import {fetchPublic, ApiError, isObj, type Fetch, type Locale} from './api.ts';
 import {SELECTION_URL, applySelection, fetchSelection} from './publicSelection.ts';
 import {isCompletePublicTest} from './publicCompleteness.ts';
-import {guardVisual,visualsForTest,type PublicVisual} from './publicVisuals.ts';
+import {guardVisual,visualTestKey,type PublicVisual} from './publicVisuals.ts';
 
 export const ITEM_KINDS = ['method', 'hypothesis', 'limit', 'robustness', 'note'] as const;
 export type ItemKind = typeof ITEM_KINDS[number];
@@ -90,21 +90,34 @@ export type PublicState = {status: 'loading' | 'empty' | 'ready' | 'unavailable'
 
 export async function loadPublic(fetchImpl: Fetch, signal?: AbortSignal, selectionUrl: string = SELECTION_URL): Promise<PublicState> {
   try {
-    let payload = await fetchPublic(fetchImpl, signal);
-    // Owner selection from the private cockpit. Configured URL + unreadable selection = unavailable (fail closed).
+    // The public catalog and the owner selection are independent reads. Start both
+    // together, but never publish either result until the selection is validated.
+    const readTogether = async () => {
+      const controller = new AbortController(), abort = () => controller.abort();
+      if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, {once: true});
+      try {
+        return await Promise.all([fetchPublic(fetchImpl, controller.signal), fetchSelection(fetchImpl, selectionUrl, controller.signal)]);
+      } catch (error) {
+        controller.abort();
+        throw error;
+      } finally {
+        signal?.removeEventListener('abort', abort);
+      }
+    };
+    const [catalog, selection] = selectionUrl ? await readTogether() : [await fetchPublic(fetchImpl, signal), null];
+    let payload = catalog;
+    // Configured URL + unreadable selection = unavailable (fail closed).
     let live: {campaigns: unknown[]; updatedAt?: string} | null = null;
-    if (selectionUrl) {
-      const selection = await fetchSelection(fetchImpl, selectionUrl, signal);
-      if (selection.mode === 'LIVE') { const applied = await applySelection(payload, selection); payload = applied.payload; live = {campaigns: applied.campaigns ?? [], updatedAt: applied.updatedAt}; }
-    }
+    if (selection?.mode === 'LIVE') { const applied = await applySelection(payload, selection); payload = applied.payload; live = {campaigns: applied.campaigns ?? [], updatedAt: applied.updatedAt}; }
     const items = guardItems(payload.items);
     const tests = guardTests(payload.tests ?? []);
+    const testKeys = new Set(tests.map(visualTestKey));
     const guarded=(payload.visuals??[]).map(guardVisual);
     if(guarded.some(v=>!v)||new Set(guarded.map(v=>v!.id)).size!==guarded.length)throw new ApiError('CONTRACT',200);
     // A hidden study takes its figures with it; the selection never invents a figure.
-    const visuals=live?(guarded as PublicVisual[]).filter(v=>v.subject.kind==='legacy-test'&&tests.some(t=>visualsForTest([v],t).length)):guarded;
+    const visuals=live?(guarded as PublicVisual[]).filter(v=>v.subject.kind==='legacy-test'&&testKeys.has(visualTestKey(v.subject))):guarded;
     const visualFields=payload.visuals===undefined?{}:{visuals:visuals as PublicVisual[]};
-    const verifyVisuals=(campaigns:PublicCampaign[]=[])=>{for(const v of visuals as PublicVisual[]){const s=v.subject;if(s.kind==='legacy-test'){if(!tests.some(t=>visualsForTest([v],t).length))throw new ApiError('CONTRACT',200);}else{const t=campaigns.find(c=>c.id===s.campaignId)?.tests.find(t=>t.id===s.testId);if(t?.stage!=='REVIEWED'||!t.result||t.updatedAt!==s.updatedAt||JSON.stringify(t.result)!==JSON.stringify(s.result))throw new ApiError('CONTRACT',200);}}};
+    const verifyVisuals=(campaigns:PublicCampaign[]=[])=>{for(const v of visuals as PublicVisual[]){const s=v.subject;if(s.kind==='legacy-test'){if(!testKeys.has(visualTestKey(s)))throw new ApiError('CONTRACT',200);}else{const t=campaigns.find(c=>c.id===s.campaignId)?.tests.find(t=>t.id===s.testId);if(t?.stage!=='REVIEWED'||!t.result||t.updatedAt!==s.updatedAt||JSON.stringify(t.result)!==JSON.stringify(s.result))throw new ApiError('CONTRACT',200);}}};
     if (live) {
       const campaigns = guardPublicCampaigns(live.campaigns);
       if (campaigns.length !== live.campaigns.length) throw new ApiError('CONTRACT', 200);

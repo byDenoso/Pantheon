@@ -70,6 +70,7 @@ jobs:
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/incident-operations.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/lab-cinematic-integrity.browser.mjs
           NEXO_BASE_URL=http://127.0.0.1:4178 node test/board-message.browser.mjs
+          COCKPIT_QA_URL=http://127.0.0.1:4178 node test/cockpit-source-status.browser.mjs
           baseline_dir="$RUNNER_TEMP/atlas-crew-baseline"
           git fetch --no-tags --depth=1 origin 052fd7e3c1051b3542fd0dcf1be6fc54619e6f67
           git worktree add --detach "$baseline_dir" FETCH_HEAD

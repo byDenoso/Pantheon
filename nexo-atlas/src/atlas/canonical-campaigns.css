@@ -13,7 +13,7 @@
 .atlas-public-campaign h4{font:500 18px/1.4 var(--font-body);margin:0 0 10px}
 .atlas-campaign-controls{margin:28px 0;display:grid;gap:24px}
 .atlas-campaign-controls label{display:grid;gap:8px;max-width:580px;font-size:18px}
-.atlas-campaign-controls input{font:inherit;min-height:48px;padding:10px 14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;width:100%}
+.atlas-campaign-controls input{font:inherit;min-height:48px;padding:10px 14px;background:var(--bg);color:var(--fg);border:1px solid var(--control-line,var(--line));border-radius:8px;width:100%}
 .atlas-campaign-tabs button,.atlas-campaign-pagination button{font:500 18px/1.3 var(--font-body);min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:8px;color:var(--fg);background:transparent;cursor:pointer}
 .atlas-campaign-tabs button[aria-pressed="true"]{background:var(--action);border-color:var(--action);color:#fff}
 .atlas-campaign-pagination button:disabled{opacity:.5;cursor:default}

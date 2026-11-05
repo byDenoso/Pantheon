@@ -6,6 +6,7 @@ import {SHADOW_ID} from '../server/atlas/shadow-board.mjs';
 function board() {
   return {contract:'NEXO_SHADOW_BOARD_V1', access:'PRIVATE', source_id:SHADOW_ID,
     modified_at:'2026-10-20T19:00:00Z',
+    availability:{roadmap:'available',mural:'available',resumo:'available',resultados:'available',equipe:'available'},
     roadmap:[{item:'R1',titulo:'Modelo publicavel',status:'OPEN',unknown:'SECRET'},
              {item:'R5',titulo:'PEER private',status:'OPEN'}],
     mural:[{data:'2026',de:'S1',texto:'Analise independente',id:'x'},
@@ -21,6 +22,20 @@ test('only allowlisted fields and neither restricted program are projected', () 
   assert.equal(x.counts.roadmap,1);
   assert.doesNotMatch(JSON.stringify(x),/peer|olympus/i);
   assert.equal(x.writeback,'FORBIDDEN');
+});
+test('tab availability is projected as an allowlisted state, never inferred from an empty array',()=>{
+  const input=board();
+  input.availability={roadmap:'available',mural:'available',resumo:'unavailable',resultados:'available',equipe:'unavailable'};
+  const projected=projectPrivateShadowBoard(input);
+  assert.deepEqual(projected.availability,input.availability);
+  assert.equal(projected.resultados.length,0);
+  const older=board();delete older.availability;
+  const unknown=projectPrivateShadowBoard(older);
+  assert.equal(unknown.availability.resultados,'unknown');
+  assert.deepEqual(unknown.roadmap,[]);
+  input.availability.resultados='PRIVATE_VALUE';
+  assert.equal(projectPrivateShadowBoard(input).availability.resultados,'unknown');
+  assert.doesNotMatch(JSON.stringify(projected),/PRIVATE_VALUE/);
 });
 test('unavailable, malformed, or untrusted snapshot fails closed', () => {
   assert.throws(()=>projectPrivateShadowBoard({...board(),access:'PUBLIC'}));

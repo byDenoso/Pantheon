@@ -64,7 +64,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
         <button ref={menuButton} type="button" className="atlas-menu-toggle" aria-expanded={menuOpen} aria-controls="atlas-header-menu" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? t.nav.close : area === 'private' ? (locale === 'en' ? 'Options' : 'Opções') : t.nav.menu}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d={menuOpen?'M6 6l12 12M6 18 18 6':'M4 8h16M4 16h16'}/></svg></button>
         <div id="atlas-header-menu" className={`atlas-header-menu${menuOpen ? ' is-open' : ''}`}>
           <nav aria-label={m.navLabel} className="atlas-nav">
-            {area === 'public' && <ul className="atlas-toc">{SECTIONS.map(id => <li key={id}><button type="button" aria-current={activeSection===id?'location':undefined} onClick={() => { setMenuOpen(false); goToPublicSection(id); }}>{t.nav[id]}</button></li>)}<li><a href="/publicacoes.html">{locale==='en'?'Publications':'Publicações'}</a></li></ul>}
+            {area === 'public' && <ul className="atlas-toc">{SECTIONS.map(id => <li key={id}><button type="button" aria-current={activeSection===id?'location':undefined} onClick={() => { setMenuOpen(false); goToPublicSection(id); }}>{t.nav[id]}</button></li>)}<li><a href="/claims/">{locale==='en'?'Statements':'Alegações'}</a></li><li><a href="/publicacoes.html">{locale==='en'?'Publications':'Publicações'}</a></li></ul>}
             {area === 'private' && <a href="/#/">{m.backPublic}</a>}
           </nav>
           <details className="atlas-preferences" ref={preferences} onKeyDown={event => {

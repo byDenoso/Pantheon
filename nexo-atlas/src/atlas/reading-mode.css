@@ -2,10 +2,10 @@
 .nexo-reading-switch{display:inline-flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
 .nexo-reading-switch>span{font-size:13px;color:var(--fg-2)}
 .atlas-app[data-area="public"] .nexo-reading-switch .atlas-seg{border:1px solid var(--line);border-radius:999px;overflow:hidden;gap:0}
-.atlas-app[data-area="public"] .nexo-reading-switch .atlas-seg button{padding:6px 14px;min-height:36px;font-size:13px;border-radius:0}
+.atlas-app[data-area="public"] .nexo-reading-switch .atlas-seg button{padding:6px 14px;min-height:44px;font-size:13px;border-radius:0}
 .atlas-app[data-area="public"] .nexo-reading-switch .atlas-seg button[aria-pressed="true"]{background:var(--cyan);color:var(--on-cyan);font-weight:600}
 
-.nexo-term{all:unset;cursor:pointer;color:inherit;font:inherit;border-bottom:1px dashed var(--cyan);padding-bottom:1px}
+.nexo-term{all:unset;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;vertical-align:middle;cursor:pointer;color:inherit;font:inherit;border-bottom:1px dashed var(--cyan);padding-bottom:1px}
 .nexo-term:hover{border-bottom-style:solid}
 .nexo-term:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
 .nexo-term[aria-expanded="true"]{background:color-mix(in srgb,var(--cyan) 14%,transparent);border-bottom-style:solid}

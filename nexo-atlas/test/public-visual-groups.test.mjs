@@ -7,7 +7,7 @@ import {createWorker} from '../worker/index.mjs';
 import {loadPublic} from '../src/atlas/publicItems.ts';
 import {publicAtlasProjection} from '../worker/public-tests.mjs';
 import {publicEditorialProjection} from '../worker/public-editorial.mjs';
-import {guardVisual} from '../src/atlas/publicVisuals.ts';
+import {guardVisual,indexVisualsByTest,visualsForTest,visualTestKey} from '../src/atlas/publicVisuals.ts';
 import {visualLinks} from '../src/atlas/researchExplorer.ts';
 import {groupPublicVisuals,filterVisualGroups,visualAnalysisCount,comparisonCsv,comparisonProvenance,comparisonRevision} from '../src/atlas/publicVisualGroups.ts';
 import catalog from '../src/atlas/publicVisualComparisons.json' with {type:'json'};
@@ -64,3 +64,14 @@ test('provenance exports contain unchanged originals, configurations, captions a
 });
 
 test('actual worker API and final client guards activate the same reviewed comparisons',async()=>{const response=await createWorker().fetch(new Request('https://nexoresearch.org/api/atlas-public'),{});assert.equal(response.status,200);const body=await response.json();const loaded=await loadPublic(async()=>Response.json(body));assert.equal(loaded.status,'ready');assert.equal(loaded.tests.length,169);assert.equal(loaded.visuals.length,72);assert.deepEqual(loaded.visuals,pub.visuals);assert.equal(groupPublicVisuals(loaded.visuals).length,37);});
+
+test('indexed matching agrees with the complete four-field comparison for all public tests and mutations',()=>{
+ const index=indexVisualsByTest(visuals);
+ for(const test of pub.tests){
+  assert.deepEqual(index.get(visualTestKey(test))??[],visualsForTest(visuals,test));
+  for(const field of ['question','answers','method','result']){
+   const changed=structuredClone(test);changed[field].en+=' synthetic change';
+   assert.deepEqual(index.get(visualTestKey(changed))??[],visualsForTest(visuals,changed));
+  }
+ }
+});

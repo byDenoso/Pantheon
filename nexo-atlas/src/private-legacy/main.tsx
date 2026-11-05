@@ -14,6 +14,7 @@ import '@fontsource/big-shoulders-display/900';
 import '@fontsource/ibm-plex-sans/300';
 import '@fontsource/ibm-plex-sans/400';
 import '@fontsource/ibm-plex-sans/500';
+import '@fontsource/ibm-plex-sans/600';
 import '@fontsource/ibm-plex-mono/400';
 import '@fontsource/ibm-plex-mono/500';
 import '../styles/observatory.css';

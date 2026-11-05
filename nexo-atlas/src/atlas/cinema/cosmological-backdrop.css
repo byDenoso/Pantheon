@@ -23,7 +23,7 @@
 @media(prefers-reduced-motion:reduce){.nexo-cosmic-image,.nexo-themed-image{animation:none!important}}
 
 /* Shared artwork for the authenticated shell, without loading the retired video backdrop. */
-.atlas-app[data-area="private"] .nexo-cosmic-backdrop{inset:-32px}
+.atlas-app[data-area="private"] .nexo-cosmic-backdrop{inset:-32px;filter:grayscale(1);opacity:.22}
 .atlas-app[data-area="private"] .nexo-cosmic-backdrop[data-illustration="cmb"] .nexo-cosmic-image{transform:scale(1.12);animation:none}
 @media(prefers-reduced-motion:no-preference){.atlas-app[data-area="private"] .nexo-cosmic-backdrop[data-illustration="cosmic-expansion"] .nexo-cosmic-image{animation:nexo-private-image-stretch 18s ease-in-out infinite alternate}}
 @keyframes nexo-private-image-stretch{from{transform:scale(1.04,1.04)}to{transform:scale(1.28,1.18)}}
