@@ -1,17 +1,17 @@
 /* NEXO Research: final public identity layer. All scientific values stay in their source components. */
 html:root .atlas-app[data-area="public"],
 html:root[data-theme="dark"] .atlas-app[data-area="public"] {
-  --bg:#081322;--bg-2:#0d1c30;--fg:#edf3f8;--fg-2:#b1bfd0;--line:#2b4058;
-  --cyan:#7bdeed;--orange:#b0beed;--focus:#7bdeed;--on-cyan:#071b25;
-  --action:#7bdeed;--on-action:#071b25;--control-line:#72879e;
+  --bg:#151b18;--bg-2:#1d2520;--fg:#f0f4f0;--fg-2:#bac9bd;--line:#526358;
+  --cyan:#b0d5b8;--orange:#b0d5b8;--focus:#b0d5b8;--on-cyan:#102316;
+  --action:#b0d5b8;--on-action:#102316;--control-line:#8da494;
   --font-body:"IBM Plex Sans",system-ui,sans-serif;--font-heading:Georgia,"Times New Roman",serif;
   --nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
   color-scheme:dark;background:var(--bg);color:var(--fg);font:400 16px/1.65 var(--font-body);
 }
 html:root[data-theme="light"] .atlas-app[data-area="public"] {
-  --bg:#f8fafb;--bg-2:#eef3f6;--fg:#10283e;--fg-2:#4b6174;--line:#cbd6df;
-  --cyan:#08778c;--orange:#3b5795;--focus:#08778c;--on-cyan:#fff;
-  --action:#113a55;--on-action:#fff;--control-line:#758b9d;color-scheme:light;
+  --bg:#ffffff;--bg-2:#f5f8f5;--fg:#1b2520;--fg-2:#45534a;--line:#cad4cc;
+  --cyan:#245b3b;--orange:#245b3b;--focus:#245b3b;--on-cyan:#ffffff;
+  --action:#245b3b;--on-action:#ffffff;--control-line:#74887a;color-scheme:light;
 }
 html:root .atlas-app[data-area="public"] :is(h1,h2,h3,h4,h5,h6) {color:var(--fg)}
 html:root .atlas-app[data-area="public"] :is(button,input,select,summary) {font-family:var(--font-body)}

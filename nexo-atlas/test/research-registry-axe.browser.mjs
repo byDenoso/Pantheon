@@ -11,15 +11,16 @@ if(!existsSync(axePath))throw new Error('axe-core JS indisponível; instale as d
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-gpu']});
 const checks=[];
 try {
-  for(const width of [390,1440]) for(const path of ['/','/claims/','/pesquisa/energia-escura-faixas-supernovas']) {
+  for(const theme of ['light','dark']) for(const width of [390,1440]) for(const path of ['/','/claims/','/pesquisa/energia-escura-faixas-supernovas']) {
     // axe is injected only inside this test context; the deployed CSP is unchanged.
-    const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce',bypassCSP:true});
+    const page=await browser.newPage({viewport:{width,height:900},colorScheme:theme,reducedMotion:'reduce',bypassCSP:true});
+    await page.addInitScript(theme=>localStorage.setItem('atlas.theme',theme),theme);
     await page.goto(origin+path,{waitUntil:'domcontentloaded'});
     if(path==='/claims/')await page.locator('.nexo-claim-list').waitFor();
     if(path.startsWith('/pesquisa/'))await page.locator('.nexo-record').waitFor();
     await page.addScriptTag({path:axePath});
     const violations=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})).violations.map(({id,impact,nodes})=>({id,impact,count:nodes.length}))); // Runtime injected by axe-core.
-    checks.push({path,width,violations});
+    checks.push({path,width,theme,violations});
     await page.close();
   }
 } finally {await browser.close();}

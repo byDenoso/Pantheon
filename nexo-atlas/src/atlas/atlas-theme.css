@@ -1,22 +1,22 @@
-/* Atlas public/private research theme. White surfaces with Pantone 2738 C (#06038D) headings and actions. The token names --cyan / --orange are historical:
-   --cyan is the interface blue, --orange its deep (light) or lit (dark) companion for emphasis and focus.
+/* Atlas research theme: neutral surfaces and a restrained green accent. Token names --cyan / --orange are retained for compatibility:
+   --cyan is the accessible interface accent, --orange its companion for emphasis and focus.
    System font stack only (no external fonts). Contrast ratios are asserted in test/atlas-theme.test.mjs. */
 :root{
   color-scheme:light;
-  --bg:#ffffff; --bg-2:#ffffff; --fg:#142236; --fg-2:#4c5e73; --line:#ccd5e0;
-  --cyan:#06038d; --on-cyan:#ffffff; --orange:#2420ae; --focus:#2420ae;
+  --bg:#ffffff; --bg-2:#f5f8f5; --fg:#1b2520; --fg-2:#45534a; --line:#cad4cc;
+  --cyan:#245b3b; --on-cyan:#ffffff; --orange:#245b3b; --focus:#245b3b;
   --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0b1024; --bg-2:#10172f; --fg:#f4f7fb; --fg-2:#bdcbdc; --line:#747cc9;
-  --cyan:#b9c9ff; --on-cyan:#060354; --orange:#c9d4ff; --focus:#cbd6ff;
+  --bg:#151b18; --bg-2:#1d2520; --fg:#f0f4f0; --fg-2:#bac9bd; --line:#526358;
+  --cyan:#b0d5b8; --on-cyan:#102316; --orange:#b0d5b8; --focus:#b0d5b8;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme]){
     color-scheme:dark;
-    --bg:#0b1024; --bg-2:#10172f; --fg:#f4f7fb; --fg-2:#bdcbdc; --line:#747cc9;
-    --cyan:#b9c9ff; --on-cyan:#060354; --orange:#c9d4ff; --focus:#cbd6ff;
+    --bg:#151b18; --bg-2:#1d2520; --fg:#f0f4f0; --fg-2:#bac9bd; --line:#526358;
+    --cyan:#b0d5b8; --on-cyan:#102316; --orange:#b0d5b8; --focus:#b0d5b8;
   }
 }
 *{box-sizing:border-box}

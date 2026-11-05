@@ -1,5 +1,5 @@
-.tw{--tw-bg:#000000;--tw-panel:#060C14;--tw-line:rgba(30,91,255,.26);--tw-text:#f1f5f7;--tw-dim:#718391;--tw-accent:#6890FF;display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr);gap:0;min-height:100dvh;background:var(--tw-bg);color:var(--tw-text);font:14px/1.45 var(--font-ui,Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif)}
-.tw[data-theme=light]{--tw-bg:#f6f7f9;--tw-panel:#ffffff;--tw-line:#d9dde5;--tw-text:#1d2430;--tw-dim:#5c6675;--tw-accent:#1E5BFF}
+.tw{--tw-bg:#151b18;--tw-panel:#1d2520;--tw-line:#526358;--tw-text:#f0f4f0;--tw-dim:#c6d3c8;--tw-accent:#b0d5b8;display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr);gap:0;min-height:100dvh;background:var(--tw-bg);color:var(--tw-text);font:14px/1.55 var(--font-ui,Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif)}
+.tw[data-theme=light]{--tw-bg:#f5f8f5;--tw-panel:#ffffff;--tw-line:#cad4cc;--tw-text:#1b2520;--tw-dim:#45534a;--tw-accent:#245b3b}
 .tw input{accent-color:var(--tw-accent)}
 .tw header{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:baseline;padding:12px 16px;border-bottom:1px solid var(--tw-line)}
 .tw h1{font-family:var(--obs-display,'Big Shoulders Display',Impact,'Arial Narrow',sans-serif);font-size:20px;margin:0;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
@@ -32,5 +32,5 @@
 .tw .tw-row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:6px 0}
 .tw .tw-btn{font:inherit;font-size:12px;padding:4px 10px;border:1px solid var(--tw-line);border-radius:6px;background:transparent;color:var(--tw-text);cursor:pointer}
 .tw .tw-btn:hover{border-color:var(--tw-accent)} .tw .tw-btn:focus-visible{outline:2px solid var(--tw-accent)}
-.tw .tw-birth{position:absolute;left:14px;top:12px;padding:4px 10px;border:1px solid rgba(30,91,255,.5);border-radius:999px;background:rgba(2,12,18,.85);color:#e8fbff;font-size:12px}
+.tw .tw-birth{position:absolute;left:14px;top:12px;padding:4px 10px;border:1px solid rgba(176,213,184,.5);border-radius:999px;background:rgba(21,27,24,.9);color:#f0f4f0;font-size:12px}
 .tw[data-theme=light] .tw-birth{background:rgba(220,250,235,.9);color:#0b6a3c}

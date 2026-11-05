@@ -14,8 +14,9 @@
 .atlas-private-login.atlas-form{max-width:none;align-content:center;gap:12px;padding:44px;background:var(--bg);border-left:1px solid var(--line)}
 .atlas-private-login-lead{color:var(--fg-2);font-size:14px;line-height:1.65;margin:0 0 18px}
 .atlas-private-login>label{font-size:14px;font-weight:600}
-.atlas-private-login input{min-width:0;width:100%;min-height:52px;border-color:var(--line);border-radius:10px;background:var(--bg-2)}
-.atlas-private-login input[aria-invalid=true]{border-color:var(--orange)}
+.atlas-private-login input{min-width:0;width:100%;min-height:52px;border-color:var(--fg-2);border-radius:10px;background:var(--bg-2)}
+.atlas-private-login input[aria-invalid=true]{border-color:#a12525}
+:root[data-theme="dark"] .atlas-private-login input[aria-invalid=true]{border-color:#ffaaa0}
 .atlas-private-login small{color:var(--fg-2);font-size:12px}
 .atlas-private-login>.atlas-btn{margin-top:16px;min-height:50px;border-radius:10px}
 .atlas-private-login .atlas-warn{font-size:14px;margin:4px 0 0}

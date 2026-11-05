@@ -1,7 +1,7 @@
 // Local server for investigation-page QA: the REAL application entry served by Vite,
 // with the five editorial catalogs swapped for the SYNTHETIC ones and the three public
 // API routes answered in-process. No Worker, Tower, credentials or published values.
-import {mkdtemp, rm, writeFile} from 'node:fs/promises';
+import {mkdtemp, realpath, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
@@ -34,7 +34,10 @@ export async function startStudyServer({port = 0} = {}) {
       if (url.pathname === '/api/atlas-access') return json({signedIn: false, owner: false, setupRequired: false});
       return json({error: 'NOT_FOUND'}, 404);
     }); }};
-  const server = await createServer({root: process.cwd(), cacheDir: join(temp, '.vite'), logLevel: 'error', plugins: [synthetic], server: {host: '127.0.0.1', port, fs: {allow: [process.cwd(), temp]}}});
+  // A worktree may reuse an installed node_modules through a junction. Allow
+  // exactly that resolved dependency directory so local fonts are not lost.
+  const dependencies = await realpath(join(process.cwd(),'node_modules'));
+  const server = await createServer({root: process.cwd(), cacheDir: join(temp, '.vite'), logLevel: 'error', plugins: [synthetic], server: {host: '127.0.0.1', port, fs: {allow: [process.cwd(), temp, dependencies]}}});
   await server.listen();
   return {origin: `http://127.0.0.1:${server.httpServer.address().port}`, fixture, comparisons, control, notice: SYNTHETIC_STUDY_NOTICE,
     async close() { await server.close(); await rm(temp, {recursive: true, force: true}); }};

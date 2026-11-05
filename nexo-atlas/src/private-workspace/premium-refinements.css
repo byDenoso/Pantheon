@@ -1,4 +1,7 @@
 /* Additive refinements for the current Sites workspace; source records remain intact. */
+.pw.pd{font-size:17px;line-height:1.65}
+.pw.pd .pw-page :is(p,li,dd){line-height:1.65}
+.pw.pd .pw-code,.pw.pd .pw-key,.pw.pd .pw-ref{font-size:.9em}
 .pw.pd .pw-skip{z-index:60}
 .pw.pd .pw-refresh-notice{position:relative;z-index:2;margin:16px var(--pd-gutter) 0;padding:14px 18px;border:1px solid var(--pw-line);border-left:3px solid var(--pw-blue);border-radius:8px;background:var(--pw-surface);color:var(--pw-text);font-size:15px}
 .pw.pd .pw-continuity{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px}

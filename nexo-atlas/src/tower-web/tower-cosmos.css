@@ -1,8 +1,8 @@
-/* Tower web (#/teia). Palette: white + blue (light), black + blue (dark); interface blue #1E5BFF (lit #6890FF for text on black). Not all text is blue: body text is ink. */
-.tc{--bg:#000000;--surface:#060B14;--text:#F2F6FD;--secondary:#98A6BC;--blue:#1E5BFF;--accent:#1E5BFF;--accent-text:#6890FF;--line:#17243C;--tint:rgba(30,91,255,.2);
+/* Tower web (#/teia): neutral surfaces and accessible green accents. */
+.tc{--bg:#151b18;--surface:#1d2520;--text:#f0f4f0;--secondary:#c6d3c8;--blue:#b0d5b8;--accent:#b0d5b8;--accent-text:#b0d5b8;--line:#526358;--tint:rgba(176,213,184,.14);
   position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:56px minmax(0,1fr);background:var(--bg);color:var(--text);
   font:400 14px/1.45 'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-.tc[data-theme=light]{--bg:#FFFFFF;--surface:#F4F7FE;--text:#0A1220;--secondary:#48566C;--accent-text:#1E5BFF;--line:#C9D6EE;--tint:rgba(30,91,255,.1)}
+.tc[data-theme=light]{--bg:#ffffff;--surface:#f5f8f5;--text:#1b2520;--secondary:#45534a;--blue:#245b3b;--accent:#245b3b;--accent-text:#245b3b;--line:#cad4cc;--tint:rgba(36,91,59,.1)}
 .tc[data-inspector=open]{grid-template-columns:minmax(0,1fr) 288px}
 .tc *{box-sizing:border-box}
 /* the legacy app's global element styles must not leak in */
