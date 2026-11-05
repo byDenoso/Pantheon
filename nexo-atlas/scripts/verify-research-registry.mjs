@@ -1,15 +1,17 @@
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {validateResearchRegistry, validateReleasableResearchRegistry} from '../src/contracts/research-registry.mjs';
+import {parsePublicRegistryJson,validateResearchRegistry, validateReleasableResearchRegistry} from '../src/contracts/research-registry.mjs';
 import {assertSourceIntegrity} from '../src/contracts/public-source-integrity.mjs';
 import {groupPublicQuestions} from '../src/atlas/publicQuestionGroups.ts';
 import {guardTests} from '../src/atlas/publicItems.ts';
 
 const root = new URL('../', import.meta.url);
 async function readJson(path) {
-  try {return JSON.parse(await readFile(new URL(path, root), 'utf8'));}
-  catch (error) {throw new Error(`JSON público inválido (${path}): ${error.message}`);}
+  let text;
+  try {text=await readFile(new URL(path, root), 'utf8');}
+  catch (error) {throw new Error(`Não foi possível ler ${path}: ${error.message}`);}
+  return parsePublicRegistryJson(text,path);
 }
 export const contentKey = row => createHash('sha256').update(JSON.stringify(Object.fromEntries(['question','answers','method','result'].map(k=>[k,{'pt-BR':row[k]['pt-BR'],en:row[k].en}])))).digest('hex');
 const artifact = await readJson('worker/public-cosmology.json');

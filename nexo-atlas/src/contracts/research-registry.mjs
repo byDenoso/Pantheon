@@ -1,5 +1,10 @@
 import {z} from 'zod';
 
+export function parsePublicRegistryJson(text, path) {
+  try {return JSON.parse(text);}
+  catch (error) {throw new Error(`JSON público inválido (${path}): ${error.message}`);}
+}
+
 // This contract describes public editorial records, never Tower identities. Unknown
 // values stay null; a publication on the website is not a scientific publication.
 const bilingual = z.object({'pt-BR': z.string().trim().min(1).max(4000), en: z.string().trim().min(1).max(4000)}).strict();

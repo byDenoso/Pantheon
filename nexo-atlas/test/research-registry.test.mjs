@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {mkdtempSync,mkdirSync,writeFileSync,copyFileSync,rmSync} from 'node:fs';
 import {execFileSync,spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {publicationKey} from '../worker/public-publication.mjs';
-import {validateResearchRegistry,validateReleasableResearchRegistry,validateAppendOnlyHistory} from '../src/contracts/research-registry.mjs';
+import {parsePublicRegistryJson,validateResearchRegistry,validateReleasableResearchRegistry,validateAppendOnlyHistory} from '../src/contracts/research-registry.mjs';
 import {claimsFromPublic,currentVerifiedClaims} from '../src/atlas/researchRegistry.ts';
 import {guardTests,loadPublic} from '../src/atlas/publicItems.ts';
 import {groupPublicQuestions} from '../src/atlas/publicQuestionGroups.ts';
@@ -61,7 +62,13 @@ test('source mismatch fails even when the separately stored SHA is supplied',()=
  assert.equal(assertSourceIntegrity(actual,index.sourceSha256,actual),'COMMIT_BLOB_VERIFIED');
  assert.equal(assertSourceIntegrity(actual,index.sourceSha256),'PINNED_BLOB_ONLY');
  assert.throws(()=>assertSourceIntegrity(Buffer.concat([actual,Buffer.from('altered')]),index.sourceSha256),/diverge/);
+ const changed=Buffer.concat([actual,Buffer.from('altered')]);
+ const changedHash=createHash('sha256').update(changed).digest('hex');
+ assert.throws(()=>assertSourceIntegrity(changed,changedHash),/blob Git fixado/);
  assert.throws(()=>assertSourceIntegrity(actual,index.sourceSha256,Buffer.from('altered commit blob')),/commit declarado/);
+});
+test('invalid registry JSON has a readable build diagnostic naming the file',()=>{
+ assert.throws(()=>parsePublicRegistryJson('{"records":','src/atlas/researchRegistry.json'),/JSON público inválido \(src\/atlas\/researchRegistry\.json\)/);
 });
 test('simulated LIVE selection, revocation and outage preserve the source boundary',async()=>{
  const second=rows.find(candidate=>publicationKey(candidate)!==key);
