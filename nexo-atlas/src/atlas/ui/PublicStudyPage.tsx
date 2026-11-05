@@ -40,6 +40,6 @@ export default function PublicStudyPage({pub,locale,refresh}:{pub:PublicState;lo
    {pub.status==='ready'&&record&&<PublicCampaignsView campaigns={pub.campaigns!} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage} visuals={pub.visuals}/>}
    {pub.status==='ready'&&record&&<ResearchRecord questionId={record.questionId} locale={locale}/>}
    {(pub.status==='ready'||pub.status==='empty')&&!group&&!record&&<p>{en?'No study is available at this address in the current catalog. Return to research to explore the available studies.':'Nenhum estudo está disponível neste endereço no catálogo atual. Volte à pesquisa para explorar os estudos disponíveis.'}</p>}
-   <footer className="nexo-study-footer"><a href="/?retorno=1#/">{en?'Back to your research view':'Voltar à sua consulta'}</a><a href="/metodo.html">{en?'Methodology':'Metodologia'}</a></footer>
+   {pub.status!=='loading'&&<footer className="nexo-study-footer"><a href="/?retorno=1#/">{en?'Back to your research view':'Voltar à sua consulta'}</a><a href="/metodo.html">{en?'Methodology':'Metodologia'}</a></footer>}
  </main></Shell>;
 }
