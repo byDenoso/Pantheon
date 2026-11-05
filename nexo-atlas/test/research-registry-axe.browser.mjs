@@ -40,6 +40,11 @@ try {
   study.on('request',request=>studyRequests.push(request.url()));
   await study.goto(origin+'/pesquisa/energia-escura-faixas-supernovas',{waitUntil:'networkidle'});
   await study.locator('.nexo-record').waitFor();
+  const staticCatalog=studyRequests.filter(url=>new URL(url).pathname==='/atlas-public.json');
+  if(staticCatalog.length){
+    assert.equal(staticCatalog.length,1,'the preloaded snapshot is reused rather than fetched twice');
+    assert.equal(await study.locator('link[rel="preload"][href="/atlas-public.json"][as="fetch"]').count(),1,'the static snapshot starts loading from the document');
+  }
   assert.ok(!studyRequests.some(url=>/\/assets\/gsap-[^/]+\.js/.test(url)),'study pages do not download unused cinematic animation');
   await study.close();
   const home=await browser.newPage({reducedMotion:'no-preference'});

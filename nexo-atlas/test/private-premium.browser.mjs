@@ -46,6 +46,12 @@ const output=process.env.PRIVATE_PREMIUM_SHOTS||'/workspace/artifacts/private-pr
 await mkdir(output,{recursive:true});const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE||'/usr/bin/chromium',args:['--no-sandbox']});
 try{
  const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'pt-BR',timezoneId:'America/Sao_Paulo'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith(origin)&&!r.url().startsWith('data:'))foreign.push(r.url());});
+ const signedOut=await context.newPage();
+ await signedOut.route('**/api/atlas-access',route=>route.fulfill({json:{signedIn:false,owner:false,setupRequired:false}}));
+ await signedOut.goto(origin+'/#/privado');
+ await signedOut.getByRole('link',{name:'Entrar com ChatGPT'}).waitFor();
+ assert.equal(await signedOut.locator('.private-root').evaluate(el=>getComputedStyle(el).paddingTop),'44px','the identity gate keeps its styles before the private module loads');
+ await signedOut.close();
  const openPreferences=async()=>{const menu=page.locator('.atlas-preferences');if(await menu.getAttribute('open')===null)await menu.locator('summary').click();};
  await page.goto(origin+'/#/privado');await page.locator('#atlas-pin').waitFor();await page.screenshot({path:output+'/01-login-desktop.png'});
  if(verify){await page.fill('#atlas-pin','synthetic-wrong-code');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.getByRole('alert').waitFor();assert.equal(await page.locator('#atlas-pin').getAttribute('aria-invalid'),'true');assert.equal(await page.locator('#atlas-pin').inputValue(),'');assert.equal(await page.locator('.atlas-private-frame').count(),0);}

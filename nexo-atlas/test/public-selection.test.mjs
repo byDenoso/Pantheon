@@ -73,6 +73,60 @@ test('loadPublic fails closed when the configured selection cannot be read', asy
   }
 });
 
+test('catalog and selection start together; pending or failed selection cannot expose catalog', async () => {
+  let releaseCatalog, releaseSelection;
+  const catalogReady = new Promise(resolve => { releaseCatalog = resolve; });
+  const selectionReady = new Promise(resolve => { releaseSelection = resolve; });
+  const started = [];
+  const fetch = async url => {
+    started.push(url);
+    if (url === URL_PUBLIC) { await catalogReady; return json({contract: 'ATLAS_PUBLIC_V1', items: [], links: [], tests: rows.slice(0, 5)}); }
+    if (url === URL_SELECTION) { await selectionReady; return json({error: 'PUBLIC_SELECTION_UNAVAILABLE'}, 503); }
+    return json({error: 'unexpected'}, 404);
+  };
+  let settled = false;
+  const result = loadPublic(fetch, undefined, URL_SELECTION).then(state => { settled = true; return state; });
+  assert.deepEqual(new Set(started), new Set([URL_PUBLIC, URL_SELECTION]));
+  releaseCatalog();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(settled, false, 'catalog is not exposed while the selection is pending');
+  releaseSelection();
+  const state = await result;
+  assert.equal(state.status, 'unavailable');
+  assert.deepEqual(state.tests, []);
+});
+
+test('a failed parallel read aborts its still-pending companion', async () => {
+  let catalogSignal;
+  const fetch = async (url, init) => {
+    if (url === URL_SELECTION) return json({error: 'PUBLIC_SELECTION_UNAVAILABLE'}, 503);
+    catalogSignal = init.signal;
+    return new Promise((resolve, reject) => {
+      if (catalogSignal.aborted) reject(new DOMException('aborted', 'AbortError'));
+      else catalogSignal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), {once: true});
+    });
+  };
+  const state = await loadPublic(fetch, undefined, URL_SELECTION);
+  assert.equal(catalogSignal.aborted, true);
+  assert.equal(state.status, 'unavailable');
+  assert.deepEqual(state.tests, []);
+});
+
+test('caller cancellation aborts both parallel reads and remains an abort', async () => {
+  const signals = [];
+  const fetch = (url, {signal}) => new Promise((resolve, reject) => {
+    signals.push(signal);
+    const abort = () => reject(new DOMException('aborted', 'AbortError'));
+    if (signal.aborted) abort(); else signal.addEventListener('abort', abort, {once: true});
+  });
+  const controller = new AbortController();
+  const result = loadPublic(fetch, controller.signal, URL_SELECTION);
+  controller.abort();
+  await assert.rejects(result, error => error.code === 'ABORTED');
+  assert.equal(signals.length, 2);
+  assert.ok(signals.every(signal => signal.aborted));
+});
+
 // Cross-contract: the cockpit backend (nexo-one) and this public client must agree on keys and shapes.
 import {publicationKey as cockpitKey, publicSelection as cockpitProjection, frontId} from '../../nexo-one/server/atlas/public-selection.mjs';
 test('cockpit backend keys and public projection are accepted unchanged by the public client', async () => {
