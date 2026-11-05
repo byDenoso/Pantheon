@@ -59,7 +59,7 @@ try{
  const frame=page.frames().find(f=>f.url().includes('/api/atlas-private-ui'));
  const shot=async name=>{await page.screenshot({path:output+'/'+name+'.png'});};
  const route=async(hash,selector,name)=>{await frame.evaluate(value=>location.hash=value,hash);await frame.locator(selector).first().waitFor();await shot(name);report.push({hash,viewport:await page.viewportSize(),name});assert.ok(await frame.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name);};
- await route('#/teia','.tc-stage canvas','02-web-desktop');
+ await route('#/teia','.tc-stage .tc-2d','02-web-desktop');
  await route('#/teia/dominios','.pw-index','03-domains-desktop');
  await route('#/teia/dominio/OLYMPUS','.pw-rows','04-domain-desktop');
  await route('#/teia/testes','.pw-rows','05-tests-desktop');
@@ -85,7 +85,7 @@ try{
  control.continuityError={error:'PRIVATE_SOURCE_UNAVAILABLE'};await frame.getByRole('button',{name:verify?'Refresh':'Atualizar',exact:true}).click();await frame.getByRole('alert').waitFor();await shot('21-continuity-error');control.continuityError=null;
  await page.setViewportSize({width:390,height:844});
  if(verify){await frame.locator('.pd-nav-toggle').click();assert.equal(await frame.locator('.pd-nav-toggle').getAttribute('aria-expanded'),'true');await frame.locator('.pd-nav-menu').getByRole('link',{name:'Board',exact:true}).click();await frame.locator('.pw-board-post').first().waitFor();await frame.locator('.pd-nav-toggle').click();await frame.locator('.pd-nav-toggle').press('Escape');assert.equal(await frame.locator('.pd-nav-toggle').getAttribute('aria-expanded'),'false');assert.equal(await frame.evaluate(()=>document.activeElement?.classList.contains('pd-nav-toggle')),true);}
- for(const [hash,selector,name]of [['#/teia/dominios','.pw-index','22-domains-mobile'],['#/teia/testes','.pw-rows','23-tests-mobile'],['#/teia/teste/TEST-01','.pw-test','24-test-mobile'],['#/teia/operacao','.pw-ops','25-operations-mobile'],['#/teia/mural','.pw-board-post','26-board-mobile'],['#/teia/continuidade','.pw-outline','27-continuity-mobile'],['#/teia/organograma','.tw canvas','28-organogram-mobile'],['#/teia','.tc-stage canvas','29-web-mobile']])await route(hash,selector,name);
+ for(const [hash,selector,name]of [['#/teia/dominios','.pw-index','22-domains-mobile'],['#/teia/testes','.pw-rows','23-tests-mobile'],['#/teia/teste/TEST-01','.pw-test','24-test-mobile'],['#/teia/operacao','.pw-ops','25-operations-mobile'],['#/teia/mural','.pw-board-post','26-board-mobile'],['#/teia/continuidade','.pw-outline','27-continuity-mobile'],['#/teia/organograma','.tw canvas','28-organogram-mobile'],['#/teia','.tc-stage .tc-2d','29-web-mobile']])await route(hash,selector,name);
  if(verify){await page.getByRole('button',{name:'Research autonomy',exact:true}).click();await page.locator('.research-autonomy').getByRole('alert').waitFor();await shot('29b-autonomy-unavailable');await page.locator('.research-autonomy').getByRole('button',{name:'Back',exact:true}).click();await page.locator('.atlas-private-frame').waitFor();}
  await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.locator('.atlas-private-frame').waitFor({state:'detached'});await shot('30-login-mobile');
  control.authenticated=true;control.sourceError={error:'PRIVATE_SOURCE_UNAVAILABLE',connectorStatus:'reauthentication_required'};

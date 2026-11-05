@@ -1,4 +1,5 @@
-// Public theme/motion replay on the real Vite entry with a synthetic catalog.
+// Theme/motion replay on the real Vite entry with a synthetic catalog. The public
+// art was retired before this test update; it remains in the private shell.
 // No private source, identity, live data, or media uploads are used.
 import assert from 'node:assert/strict';
 import {mkdir, writeFile} from 'node:fs/promises';
@@ -14,7 +15,7 @@ const report = {notice: site.notice, checks: [], errors: [], browserPath};
 
 if (output) await mkdir(output, {recursive: true});
 
-async function open({width, theme, reducedMotion = 'no-preference'}) {
+async function open({width, theme, reducedMotion = 'no-preference', area = 'private'}) {
   const touch = width <= 430;
   const context = await browser.newContext({viewport: {width, height: touch ? 844 : 900}, deviceScaleFactor: 1, isMobile: touch, hasTouch: touch, colorScheme: theme, reducedMotion, locale: 'en-US'});
   await context.addInitScript(({theme}) => {
@@ -25,17 +26,20 @@ async function open({width, theme, reducedMotion = 'no-preference'}) {
   const page = await context.newPage();
   page.setDefaultTimeout(15000);
   page.on('pageerror', error => report.errors.push(`${width}/${theme}/${reducedMotion}: ${error.message}`));
-  await page.goto(site.origin, {waitUntil: 'domcontentloaded'});
-  await page.locator('.nexo-cosmic-backdrop .nexo-cosmic-image').waitFor();
-  await page.waitForFunction(() => {
-    const image = document.querySelector('.nexo-cosmic-backdrop .nexo-cosmic-image');
-    return image?.complete && image.naturalWidth > 0;
-  });
+  await page.goto(site.origin+(area==='private'?'/#/privado':'/'), {waitUntil: 'domcontentloaded'});
+  await page.locator(`.atlas-app[data-area="${area}"]`).waitFor();
+  if(area==='private'){
+    await page.locator('.nexo-cosmic-backdrop .nexo-cosmic-image').waitFor();
+    await page.waitForFunction(() => {
+      const image = document.querySelector('.nexo-cosmic-backdrop .nexo-cosmic-image');
+      return image?.complete && image.naturalWidth > 0;
+    });
+  }
   return {page, context};
 }
 
 const readArt = page => page.evaluate(() => {
-  const root = document.querySelector('.atlas-app[data-area="public"]');
+  const root = document.querySelector('.atlas-app[data-area="private"]');
   const backdrop = root?.querySelector('.nexo-cosmic-backdrop');
   const image = backdrop?.querySelector('.nexo-cosmic-image');
   const style = image ? getComputedStyle(image) : null;
@@ -56,18 +60,20 @@ const readArt = page => page.evaluate(() => {
 const openMenu = async page => {
   const toggle = page.locator('.atlas-menu-toggle');
   if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+  const preferences = page.locator('.atlas-preferences');
+  if (await preferences.getAttribute('open') === null) await preferences.locator('summary').click();
 };
 const chooseTheme = async (page, theme) => {
   await openMenu(page);
   await page.getByRole('group', {name: 'Theme'}).getByRole('button', {name: theme === 'light' ? 'Light' : 'Dark', exact: true}).click();
-  await page.waitForFunction(expected => document.documentElement.dataset.theme === expected && document.querySelector('.nexo-cosmic-backdrop')?.getAttribute('data-illustration') === (expected === 'light' ? 'cmb' : 'cosmic-expansion'), theme);
+  await page.waitForFunction(expected => {const art=document.querySelector('.nexo-cosmic-backdrop');return document.documentElement.dataset.theme===expected&&(!art||art.getAttribute('data-illustration')===(expected==='light'?'cmb':'cosmic-expansion'));}, theme);
 };
 const setPause = async (page, paused) => {
   await openMenu(page);
   const label = paused ? 'Pause animation' : 'Play animation';
   await page.getByRole('button', {name: label, exact: true}).click();
-  await page.waitForFunction(expected => document.querySelector('.atlas-app[data-area="public"]')?.getAttribute('data-cinema-paused') === String(expected), paused);
-  await page.waitForFunction(expected => getComputedStyle(document.querySelector('.nexo-cosmic-backdrop .nexo-cosmic-image')).animationPlayState === (expected ? 'paused' : 'running'), paused);
+  await page.waitForFunction(expected => document.querySelector('.atlas-app')?.getAttribute('data-cinema-paused') === String(expected), paused);
+  await page.waitForFunction(expected => {const image=document.querySelector('.nexo-cosmic-backdrop .nexo-cosmic-image');return !image||getComputedStyle(image).animationPlayState===(expected?'paused':'running');}, paused);
 };
 
 async function check(name, run) {
@@ -83,7 +89,7 @@ async function check(name, run) {
 
 try {
   for (const width of [390, 1280]) {
-    await check(`dark expansion animates without rotation and pause/resume repeats at ${width}px`, async () => {
+    await check(`private dark expansion animates without rotation and pause/resume repeats at ${width}px`, async () => {
       const {page, context} = await open({width, theme: 'dark'});
       try {
         const before = await readArt(page);
@@ -91,7 +97,7 @@ try {
         assert.equal(before.illustration, 'cosmic-expansion');
         assert.ok(before.src.includes('expansion-dark-v1'), before.src);
         assert.equal(before.videos, 0, 'the active backdrop is the existing image, not a new MP4');
-        assert.equal(before.animationName, 'nexo-image-stretch');
+        assert.equal(before.animationName, 'nexo-private-image-stretch');
         assert.equal(before.animationPlayState, 'running');
         assert.ok(Math.abs(before.matrix.b) < 1e-6 && Math.abs(before.matrix.c) < 1e-6, 'the image scale has no rotation');
         await page.waitForTimeout(700);
@@ -127,13 +133,13 @@ try {
 
         await chooseTheme(page, 'dark');
         const darkAgain = await readArt(page);
-        assert.equal(darkAgain.animationName, 'nexo-image-stretch');
+        assert.equal(darkAgain.animationName, 'nexo-private-image-stretch');
         assert.equal(darkAgain.animationPlayState, 'running');
         return {width, firstDarkTransform: before.transform, laterDarkTransform: moved.transform, pauseCycles, lightCmbTransform: cmbBefore.transform, darkResumed: darkAgain.animationName};
       } finally { await context.close(); }
     });
 
-    await check(`reduced motion leaves dark expansion and light CMB static at ${width}px`, async () => {
+    await check(`private reduced motion leaves dark expansion and light CMB static at ${width}px`, async () => {
       const {page, context} = await open({width, theme: 'dark', reducedMotion: 'reduce'});
       try {
         assert.equal(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), true);
@@ -153,6 +159,19 @@ try {
         return {width, reducedMotion: true, darkTransform: darkBefore.transform, lightTransform: lightBefore.transform};
       } finally { await context.close(); }
     });
+    await check(`public preferences and reduced motion stay functional without retired art at ${width}px`, async () => {
+      const {page,context}=await open({width,theme:'dark',area:'public'});
+      try {
+        assert.equal(await page.locator('.atlas-app[data-area="public"] .nexo-cosmic-backdrop').count(),0);
+        await chooseTheme(page,'light');assert.equal(await page.evaluate(()=>localStorage.getItem('atlas.theme')),'light');
+        await chooseTheme(page,'dark');assert.equal(await page.evaluate(()=>localStorage.getItem('atlas.theme')),'dark');
+        await setPause(page,true);await setPause(page,false);
+        await page.emulateMedia({reducedMotion:'reduce'});
+        await page.waitForFunction(()=>document.querySelector('.atlas-app')?.getAttribute('data-cinema-paused')==='true');
+        await openMenu(page);assert.equal(await page.getByRole('button',{name:'Reduced motion',exact:true}).isDisabled(),true);
+        return {width,publicArtwork:'retired',themes:'light/dark',reducedMotion:true};
+      } finally {await context.close();}
+    });
   }
 } finally {
   await browser.close();
@@ -162,5 +181,5 @@ try {
 
 const failed = report.checks.filter(check => check.status === 'FAIL');
 assert.deepEqual(report.errors, [], report.errors.join('\n'));
-console.log(`${failed.length ? 'FAIL' : 'PASS'}: ${report.checks.length - failed.length}/${report.checks.length} public theme/motion browser checks; synthetic catalog only.`);
+console.log(`${failed.length ? 'FAIL' : 'PASS'}: ${report.checks.length - failed.length}/${report.checks.length} public/private theme/motion browser checks; synthetic catalog only.`);
 if (failed.length) process.exit(1);
