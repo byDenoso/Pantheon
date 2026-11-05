@@ -14,7 +14,15 @@ test('server-only private assets require a reviewed manifest, integrity and cont
  assert.equal((await readPrivateUiAsset('assets/app.js',{root})).bytes.toString(),bytes);
  for(const name of ['../secret.js','assets/../secret.js','/secret.js','%2e%2e/secret.js','assets/app.js.map','manifest.json','assets/missing.js'])await assert.rejects(readPrivateUiAsset(name,{root}));
  await writeFile(path.join(root,'assets/app.js'),'tampered');await assert.rejects(readPrivateUiAsset('assets/app.js',{root}),/MISMATCH/);
- const outside=await mkdtemp(path.join(tmpdir(),'atlas-outside-fixture-'));t.after(()=>rm(outside,{recursive:true,force:true}));await writeFile(path.join(outside,'escaped.js'),bytes);await symlink(path.join(outside,'escaped.js'),path.join(root,'assets/link.js'));await writeFile(path.join(root,'manifest.json'),JSON.stringify({contract:'ATLAS_PRIVATE_ASSETS_V1',files:{'assets/link.js':sha(bytes)}}));await assert.rejects(readPrivateUiAsset('assets/link.js',{root}),/PRIVATE_ASSET_NOT_FOUND/);
+ const outside=await mkdtemp(path.join(tmpdir(),'atlas-outside-fixture-'));t.after(()=>rm(outside,{recursive:true,force:true}));await writeFile(path.join(outside,'escaped.js'),bytes);
+ const link=path.join(root,'assets','link');await symlink(outside,link,process.platform==='win32'?'junction':'dir');
+ await writeFile(path.join(root,'manifest.json'),JSON.stringify({contract:'ATLAS_PRIVATE_ASSETS_V1',files:{'assets/link/escaped.js':sha(bytes)}}));
+ await assert.rejects(readPrivateUiAsset('assets/link/escaped.js',{root}),/PRIVATE_ASSET_NOT_FOUND/);
+ if(process.platform!=='win32'){
+  await symlink(path.join(outside,'escaped.js'),path.join(root,'assets','file-link.js'));
+  await writeFile(path.join(root,'manifest.json'),JSON.stringify({contract:'ATLAS_PRIVATE_ASSETS_V1',files:{'assets/file-link.js':sha(bytes)}}));
+  await assert.rejects(readPrivateUiAsset('assets/file-link.js',{root}),/PRIVATE_ASSET_NOT_FOUND/);
+ }
 });
 test('private asset routes reject anonymous requests before filesystem lookup or route override',async()=>{
  for(const url of ['/api/atlas-private-ui','/api/atlas-private-assets/assets/app.js','/api/atlas-private-assets/assets/app.js?route=atlas-public','/api/index?route=atlas-private-asset&asset=assets/app.js']){

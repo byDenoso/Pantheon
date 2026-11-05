@@ -3,21 +3,21 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join, resolve} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {join, resolve, sep} from 'node:path';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {buildPrivateUi, listFiles, MANIFEST_CONTRACT} from '../scripts/build-private-ui.mjs';
 import {scanDist} from '../scripts/scan-public-bundle.mjs';
 import {adaptObservation, adaptations} from '../vite.private.config.ts';
 
-const root = new URL('../', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../', import.meta.url));
 let out, publicOut, publicTemp;
 test.before(async () => {
   out = mkdtempSync(join(tmpdir(), 'atlas-private-'));
   await buildPrivateUi(out);
   publicTemp = mkdtempSync(join(tmpdir(), 'atlas-public-'));
   publicOut = join(publicTemp, 'dist');
-  const r = spawnSync('npx', ['vite', 'build', '--outDir', publicOut, '--emptyOutDir'], {cwd: root, encoding: 'utf8'});
+  const r = spawnSync(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), 'build', '--outDir', publicOut, '--emptyOutDir'], {cwd: root, encoding: 'utf8'});
   assert.equal(r.status, 0, r.stderr);
 });
 test.after(() => { rmSync(out, {recursive: true, force: true}); rmSync(publicTemp, {recursive: true, force: true}); });
@@ -27,7 +27,7 @@ test('private manifest: contract, relative paths only, exact SHA256 of every fil
   assert.equal(m.contract, MANIFEST_CONTRACT);
   assert.deepEqual(Object.keys(m).sort(), ['contract', 'files']);
   assert.ok('index.html' in m.files);
-  const onDisk = listFiles(out).map(f => f.slice(out.length + 1)).filter(f => f !== 'manifest.json').sort();
+  const onDisk = listFiles(out).map(f => f.slice(out.length + 1).split(sep).join('/')).filter(f => f !== 'manifest.json').sort();
   assert.deepEqual(Object.keys(m.files).sort(), onDisk, 'manifest lists exactly the emitted files');
   for (const [p, h] of Object.entries(m.files)) {
     assert.doesNotMatch(p, /^\/|\.\.|\\|\.map$/, p);
