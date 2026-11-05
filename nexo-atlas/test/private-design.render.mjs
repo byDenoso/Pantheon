@@ -2,6 +2,7 @@
 import {build} from 'vite';
 import {mkdir,mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 await mkdir(resolve('.sites-runtime'),{recursive:true});
 const temp=await mkdtemp(resolve('.sites-runtime/private-design-render-'));
 try{
@@ -9,7 +10,7 @@ try{
 import React from 'react';
 import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {PrivateNav} from '${resolve('src/private-design/PrivateNav.tsx')}';
+import {PrivateNav} from '${resolve('src/private-design/PrivateNav.tsx').replaceAll('\\','/')}';
 const items=[{key:'web',href:'#/teia',label:'Teia'},{key:'domains',href:'#/teia/dominios',label:'Domínios'},{key:'research',href:'#/teia/testes',label:'Testes'},{key:'operations',href:'#/teia/operacao',label:'Operação'},{key:'board',href:'#/teia/mural',label:'Mural'},{key:'memory',href:'#/teia/memoria',label:'Memória'}];
 for(const current of items.map(i=>i.key)){
  const html=renderToStaticMarkup(<PrivateNav items={items} current={current} label="Área privada" moreLabel="Mais"/>);
@@ -26,5 +27,5 @@ assert.doesNotMatch(withoutMemory,/#\/teia\/memoria/);assert.match(withoutMemory
 console.log('PASS private nav SSR: all current routes, overflow labels, closed disclosure, omitted memory slot, PT/EN. Browser interaction remains unverified.');
  `);
  await build({configFile:false,publicDir:false,logLevel:'error',build:{ssr:`${temp}/entry.tsx`,outDir:`${temp}/out`,emptyOutDir:true,rollupOptions:{output:{entryFileNames:'check.mjs'}}}});
- await import(`${temp}/out/check.mjs`);
+ await import(pathToFileURL(`${temp}/out/check.mjs`).href);
 }finally{await rm(temp,{recursive:true,force:true});}
