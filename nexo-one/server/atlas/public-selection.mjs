@@ -72,7 +72,7 @@ export function catalogCandidates(payload) {
   });
 }
 
-/** SHADOW RESULTADOS row → stable identity and digest of the full row. */
+/** SHADOW RESULTADOS row → stable identity and V1 digest of the bounded projected row. */
 export const towerRowId = row => `r-${sha([row.data, row.task, row.item, row.titulo].map(value => String(value ?? '')).join('\u001f')).slice(0, 24)}`;
 export const frontId = row => `front-${sha(String(row.item ?? row.titulo ?? '')).slice(0, 16)}`;
 export const sourceDigest = row => `sha256:${sha(JSON.stringify(stable(row)))}`;

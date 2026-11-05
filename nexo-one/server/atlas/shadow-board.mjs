@@ -122,22 +122,24 @@ async function readBatchedTabs(titles,options){
   if(batch?.spreadsheetId!==SHADOW_ID)throw new Error('SHADOW_BATCH_IDENTITY_INVALID');
   if(!Array.isArray(batch?.valueRanges)||batch.valueRanges.length!==tabs.length)throw new Error('SHADOW_BATCH_INVALID');
   const result={roadmap:[],mural:[],resumo:[],resultados:[],equipe:[]};
+  const availability=Object.fromEntries(TABS.map(tab=>[tab.name.toLowerCase(),'unavailable']));
   for(let i=0;i<tabs.length;i++){
     const tab=tabs[i],value=batch.valueRanges[i];
     const returnedName=String(value?.range||'').split('!')[0].replace(/^'|'$/g,'');
     if(returnedName!==tab.name||!Array.isArray(value?.values??[]))throw new Error('SHADOW_BATCH_RANGE_INVALID');
-    try{result[tab.name.toLowerCase()]=tableFromRows(value.values??[],tab.columns,OPTIONAL[tab.name]);}
+    try{result[tab.name.toLowerCase()]=tableFromRows(value.values??[],tab.columns,OPTIONAL[tab.name]);availability[tab.name.toLowerCase()]='available';}
     catch(error){if(tab.required)throw error;}
   }
-  return result;
+  return {tables:result,availability};
 }
 async function readFallbackTabs(options){
   // One parallel group instead of two waterfalls. No fallback after cancellation.
   const values=await Promise.all(TABS.map(async tab=>{
-    try{return await readTabRows(tab.name,tab.range,tab.columns,options);}
-    catch(error){if(tab.required||options.signal?.aborted||fatalReadError(error))throw error;return [];}
+    try{return {rows:await readTabRows(tab.name,tab.range,tab.columns,options),status:'available'};}
+    catch(error){if(tab.required||options.signal?.aborted||fatalReadError(error))throw error;return {rows:[],status:'unavailable'};}
   }));
-  return Object.fromEntries(TABS.map((tab,i)=>[tab.name.toLowerCase(),values[i]]));
+  return {tables:Object.fromEntries(TABS.map((tab,i)=>[tab.name.toLowerCase(),values[i].rows])),
+    availability:Object.fromEntries(TABS.map((tab,i)=>[tab.name.toLowerCase(),values[i].status]))};
 }
 
 export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.timeout(15000)}){
@@ -153,19 +155,20 @@ export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.
   const info=await meta.json();
   if(info.id!==SHADOW_ID)throw new Error('SHADOW_METADATA_INVALID');
   signal?.throwIfAborted();
-  let tables;
+  let reading;
   try{
     if(titlesResult.error)throw titlesResult.error;
-    tables=await readBatchedTabs(titlesResult.titles,options);
+    reading=await readBatchedTabs(titlesResult.titles,options);
   }catch(error){
     // Fail closed for denial/cancellation or authoritative missing required tabs.
     if(signal?.aborted||fatalReadError(error)||error?.message==='SHADOW_REQUIRED_TAB_MISSING')throw error;
-    tables=await readFallbackTabs(options);
+    reading=await readFallbackTabs(options);
   }
+  const {tables,availability}=reading;
   const {roadmap,mural,resumo,equipe}=tables;
   const resultados=tables.resultados.slice(-100).map(row=>({...row,numeros:row.numeros.slice(0,600),limites:row.limites.slice(0,600)}));
   return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',source_id:SHADOW_ID,source_ref:`https://docs.google.com/spreadsheets/d/${SHADOW_ID}/edit`,
-    modified_at:typeof info.modifiedTime==='string'?info.modifiedTime:null,roadmap,mural,resumo,resultados,equipe,
+    modified_at:typeof info.modifiedTime==='string'?info.modifiedTime:null,availability,roadmap,mural,resumo,resultados,equipe,
     counts:{roadmap:roadmap.length,mural:mural.length,resumo:resumo.length,resultados:resultados.length,equipe:equipe.length}};
 }
 

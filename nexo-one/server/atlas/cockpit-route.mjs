@@ -13,6 +13,12 @@ export const DEFAULT_CATALOG_URL = 'https://nexoresearch.org/atlas-public.json';
 export const SAVE_SCRIPT = "local cur=redis.call('GET',KEYS[1]) local v=0 if cur then local ok,doc=pcall(cjson.decode,cur) if not ok then return {0,-1} end v=tonumber(doc['version']) or -1 end if v~=tonumber(ARGV[1]) then return {0,v} end redis.call('SET',KEYS[1],ARGV[2]) redis.call('LPUSH',KEYS[2],ARGV[3]) redis.call('LTRIM',KEYS[2],0,99) return {1,v+1}";
 
 const shadowEnabled = env => env.NEXO_ATLAS_SHADOW_SOURCE_ENABLED === 'true';
+const shadowErrors = new Set(['SHADOW_SOURCE_DISABLED','SHADOW_READ_CREDENTIAL_REQUIRED','SHADOW_AUTH_REQUIRED','SHADOW_METADATA_UNAVAILABLE','SHADOW_METADATA_INVALID','SHADOW_REQUIRED_TAB_MISSING','SHADOW_BATCH_TOO_LARGE','SHADOW_BATCH_IDENTITY_INVALID','SHADOW_CANONICAL_UNAVAILABLE']);
+const safeShadowError = error => shadowErrors.has(error?.message) ? error.message : 'SHADOW_SOURCE_UNAVAILABLE';
+const tabAvailability = board => Object.fromEntries(['roadmap','mural','resumo','resultados','equipe'].map(name=>{
+  const value=board?.availability?.[name];
+  return [name,value==='available'||value==='unavailable'?value:'unknown'];
+}));
 
 export async function readStoredSelection(store) {
   const raw = await store('GET', SELECTION_KEY);
@@ -37,12 +43,13 @@ async function sources({env, fetcher, readShadow}) {
     readPublishedCatalog(env, fetcher),
   ]);
   const board = shadow.status === 'fulfilled' ? shadow.value : null;
+  const availability=tabAvailability(board);
   return {
-    board, shadowError: board ? null : String(shadow.reason?.message || 'SHADOW_SOURCE_UNAVAILABLE').slice(0, 80),
+    board, availability, shadowError: board ? null : safeShadowError(shadow.reason),
     catalog: catalog.status === 'fulfilled' ? catalog.value : null,
     catalogError: catalog.status === 'fulfilled' ? null : String(catalog.reason?.message || 'PUBLIC_CATALOG_UNAVAILABLE').slice(0, 80),
-    tower: board ? towerCandidates(board) : null,
-    campaigns: board ? campaignCandidates(board) : null,
+    tower: board && availability.resultados === 'available' ? towerCandidates(board) : null,
+    campaigns: board && availability.roadmap === 'available' ? campaignCandidates(board) : null,
   };
 }
 
@@ -56,10 +63,11 @@ export async function cockpitView({env = process.env, store = atlasStore(env), f
     store('LRANGE', AUDIT_KEY, 0, 19).then(rows => (Array.isArray(rows) ? rows : []).flatMap(row => { try { return [JSON.parse(row)]; } catch { return []; } }), () => []),
   ]);
   const board = src.board;
+  const availableRows=(name,n)=>src.availability[name]==='available' ? tail(board?.[name],n) : [];
   return {
     contract: 'NEXO_COCKPIT_V1', generatedAt: now.toISOString(),
-    shadow: board ? {available: true, modifiedAt: board.modified_at ?? null, counts: board.counts ?? {},
-      equipe: board.equipe ?? [], roadmap: board.roadmap ?? [], resultados: tail(board.resultados, 60), resumo: tail(board.resumo, 20), mural: tail(board.mural, 60)}
+    shadow: board ? {available: true, modifiedAt: board.modified_at ?? null, counts: board.counts ?? {}, availability:src.availability,
+      equipe: availableRows('equipe',300), roadmap: availableRows('roadmap',300), resultados: availableRows('resultados',60), resumo: availableRows('resumo',20), mural: availableRows('mural',60)}
       : {available: false, reason: src.shadowError},
     catalog: src.catalog ? {available: true, url: src.catalog.url, rows: src.catalog.rows} : {available: false, reason: src.catalogError},
     candidates: {tower: src.tower ?? [], campaigns: src.campaigns ?? []},

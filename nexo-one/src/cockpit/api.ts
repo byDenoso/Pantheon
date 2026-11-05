@@ -10,9 +10,11 @@ export type Selection = {
   campaigns: Array<{id: string; digest: string; approvedAt: string; state: 'ongoing' | 'completed'; public: CampaignPublic}>;
 };
 export type Audit = {at: string; version: number; catalog: {count: number; added: number; removed: number}; tower: {count: number; added: number; removed: number}; campaigns: {count: number; added: number; removed: number}};
+export type ShadowTab = 'roadmap' | 'mural' | 'resumo' | 'resultados' | 'equipe';
+export type ShadowAvailability = 'available' | 'unavailable' | 'unknown';
 export type Cockpit = {
   contract: 'NEXO_COCKPIT_V1'; generatedAt: string;
-  shadow: {available: true; modifiedAt: string | null; counts: Record<string, number>; equipe: Row[]; roadmap: Row[]; resultados: Row[]; resumo: Row[]; mural: Row[]} | {available: false; reason: string};
+  shadow: {available: true; modifiedAt: string | null; counts: Record<string, number>; availability?: Partial<Record<ShadowTab,ShadowAvailability>>; equipe: Row[]; roadmap: Row[]; resultados: Row[]; resumo: Row[]; mural: Row[]} | {available: false; reason: string};
   catalog: {available: true; url: string; rows: Array<{key: string; question: Bi; published_at: string | null}>} | {available: false; reason: string};
   candidates: {tower: Array<{id: string; digest: string; source: Row; draft: TowerPublic}>; campaigns: Array<{id: string; digest: string; source: Row; draft: {question: Bi; why: Bi; currentStage: Bi; nextStep: Bi}}>};
   selection: {available: true; value: Selection | null} | {available: false; reason: string};

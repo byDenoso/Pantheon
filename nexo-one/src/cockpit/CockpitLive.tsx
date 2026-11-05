@@ -19,7 +19,7 @@ export const ago = (t: number | null, now: number) => {
   return h < 48 ? `há ${h} h` : new Intl.DateTimeFormat('pt-BR', {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(t));
 };
 
-export default function CockpitLive({mural, resultados, resumo, equipe}: {mural: Row[]; resultados: Row[]; resumo: Row[]; equipe: Row[]}) {
+export default function CockpitLive({mural, resultados, resumo, equipe, activityComplete}: {mural: Row[]; resultados: Row[]; resumo: Row[]; equipe: Row[]; activityComplete: boolean}) {
   const [filter, setFilter] = useState<'all' | Kind | 'complaints'>('all'), [limit, setLimit] = useState(12), [now, setNow] = useState(() => Date.now());
   const events = useMemo(() => liveEvents(mural as unknown as MuralRow[], resultados as unknown as ResultadoRow[], resumo as unknown as ResumoRow[]), [mural, resultados, resumo]);
   const seen = useRef<Set<string> | null>(null);
@@ -42,10 +42,10 @@ export default function CockpitLive({mural, resultados, resumo, equipe}: {mural:
   const shown = events.filter(e => filter === 'all' || (filter === 'complaints' ? isComplaint(e) : e.kind === filter));
   const filters: [typeof filter, string][] = [['all', 'Tudo'], ['mural', 'Mural'], ['resultado', 'Resultados'], ['resumo', 'Mudanças'], ['complaints', 'Reclamações e pedidos']];
   return <div className="ck-live">
-    <ActivityChart events={events} end={now}/>
+    {activityComplete ? <ActivityChart events={events} end={now}/> : <p className="ck-note" role="status">Gráfico indisponível: uma ou mais abas de atividade não puderam ser lidas. Os registros disponíveis continuam abaixo.</p>}
     <ul className="ck-agents">{agents.map(a => { const on = a.last !== null && now - a.last < ACTIVE_MS; return <li key={a.name} className="ck-agent" data-active={on} style={{'--agent-hue': hue(a.name)} as CSSProperties}>
       <span className="ck-avatar" aria-hidden="true">{initials(a.name)}</span>
-      <div><strong>{a.name}</strong><small>{on ? 'trabalhando' : 'parada'} · {ago(a.last, now)}</small>{a.what && <p>{a.what}</p>}</div>
+      <div><strong>{a.name}</strong><small>{on ? 'registro recente' : 'sem registro recente no recorte'} · {ago(a.last, now)}</small>{a.what && <p>{a.what}</p>}</div>
     </li>; })}</ul>
     <div className="ck-seg ck-live-filters" role="group" aria-label="Filtrar linha do tempo">{filters.map(([key, label]) => <button key={key} type="button" aria-pressed={filter === key} onClick={() => { setFilter(key); setLimit(12); }}>{label}</button>)}</div>
     <ol className="ck-feed" aria-live="polite">{shown.slice(0, limit).map(e => <li key={e.key} className="ck-feed-item" data-kind={e.kind} data-alert={isComplaint(e) || undefined} data-fresh={fresh.has(e.key) || undefined} style={{'--agent-hue': hue(e.agent)} as CSSProperties}>
@@ -59,7 +59,7 @@ export default function CockpitLive({mural, resultados, resumo, equipe}: {mural:
         {e.link && /^https:\/\//.test(e.link) && <a href={e.link} target="_blank" rel="noreferrer noopener">Abrir</a>}
       </div>
     </li>)}</ol>
-    {!shown.length && <p className="ck-muted">Nada por aqui ainda. As automações postam no Mural a cada pulso.</p>}
+    {!shown.length && <p className="ck-muted">Nenhum registro disponível neste recorte.</p>}
     {shown.length > limit && <button type="button" className="ck-btn quiet" onClick={() => setLimit(v => v + 12)}>Ver mais</button>}
   </div>;
 }

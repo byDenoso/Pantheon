@@ -1,6 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {liveEvents, parseWhen} from '../src/private-workspace/liveEvents.ts';
 import {workspaceRoute} from '../src/private-workspace/model.ts';
+import {shadowTabAvailable} from '../src/private-workspace/shadow.ts';
+
+test('shadow tab coverage is explicit; missing or failed is not an empty successful read',()=>{
+  assert.equal(shadowTabAvailable({availability:{resultados:'available'}},'resultados'),true);
+  assert.equal(shadowTabAvailable({availability:{resultados:'unavailable'}},'resultados'),false);
+  assert.equal(shadowTabAvailable({},'resultados'),false);
+  assert.equal(shadowTabAvailable({unavailable:'synthetic',availability:{resultados:'available'}},'resultados'),false);
+});
 
 test('live route is reachable inside the private shell', () => {
   assert.deepEqual(workspaceRoute('#/teia/ao-vivo'), {page: 'live'});

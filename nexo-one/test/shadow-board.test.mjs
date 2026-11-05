@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCsv,tableFromCsv,tableFromRows,readShadowBoard,readShadowBoardSafe,ROADMAP_COLUMNS,MURAL_COLUMNS,SHADOW_ID} from '../server/atlas/shadow-board.mjs';
+import {parseCsv,tableFromCsv,tableFromRows,readShadowBoard,readShadowBoardSafe,ROADMAP_COLUMNS,MURAL_COLUMNS,RESULTADOS_COLUMNS,SHADOW_ID} from '../server/atlas/shadow-board.mjs';
 
 const roadmapCsv='item,titulo,status,dono,prio,proximo_teste,depende_de,atualizado,nota\nR1-1.1,"w0wa, offsets ""SN""",PARTIAL,S1,5,"Ajuste, sem CMB",,2026-10-19,\nR1-1.2,Varredura,OPEN,S1,4,Varrer,R1-1.1,2026-10-19,nota\n';
 const muralCsv='data,de,para,texto,link\n2026-10-19,I,S1,"ACHADO: busca omite",PseudoMCP v3.0\n';
@@ -67,6 +67,35 @@ test('RESUMO aparece quando a aba existe e não derruba o quadro quando falta',a
   const board=await readShadowBoard({token:'t',fetchImpl:withResumo});
   assert.equal(board.counts.resumo,1);
   assert.equal(board.resumo[0].nivel,'N1');
+});
+
+test('aba opcional indisponível é distinta de leitura válida e vazia',async()=>{
+  const unavailable=await readShadowBoard({token:'t',fetchImpl:transport()});
+  assert.equal(unavailable.availability.resultados,'unavailable');
+  const base=transport();
+  const header='data,task,item,titulo,resultado,numeros,limites,link_dados\n';
+  const withEmptyResults=async url=>String(url).includes('sheet=RESULTADOS')?{ok:true,text:async()=>header}:base(url);
+  const empty=await readShadowBoard({token:'t',fetchImpl:withEmptyResults});
+  assert.equal(empty.availability.resultados,'available');
+  assert.equal(empty.resultados.length,0);
+});
+
+test('leitura em lote marca aba ausente ou inválida e reconhece aba vazia válida',async()=>{
+  const reply=value=>new Response(JSON.stringify(value),{headers:{'content-type':'application/json'}});
+  const fetchImpl=async url=>{
+    const href=String(url);
+    if(href.includes('/drive/v3/files/'))return reply({id:SHADOW_ID,modifiedTime:'2026-11-01T12:00:00Z'});
+    if(href.includes('values:batchGet'))return reply({spreadsheetId:SHADOW_ID,valueRanges:[
+      {range:'ROADMAP!A:I',values:[[...ROADMAP_COLUMNS]]},
+      {range:'MURAL!A:H',values:[[...MURAL_COLUMNS]]},
+      {range:'RESULTADOS!A:J',values:[[...RESULTADOS_COLUMNS]]},
+      {range:'EQUIPE!A:F',values:[['coluna-inválida']]},
+    ]});
+    return reply({sheets:['ROADMAP','MURAL','RESULTADOS','EQUIPE'].map(title=>({properties:{title}}))});
+  };
+  const result=await readShadowBoard({token:'synthetic',fetchImpl});
+  assert.deepEqual(result.availability,{roadmap:'available',mural:'available',resumo:'unavailable',resultados:'available',equipe:'unavailable'});
+  assert.equal(result.resultados.length,0);
 });
 
 test('MURAL aceita colunas opcionais e mantém as linhas mais recentes',async()=>{

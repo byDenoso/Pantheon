@@ -1,6 +1,6 @@
 # Registro público de resultados — Fase 1
 
-O domínio público `nexoresearch.org` é construído pelo workflow de Pages a partir de `nexo-atlas/`; `nexo-one/` permanece o runtime Vercel e não foi alterado. A Tower continua a autoridade operacional. Este registro é uma projeção editorial do catálogo público, sem leitura de Tower nem nova autoridade científica.
+O domínio público `nexoresearch.org` é construído pelo workflow de Pages a partir de `nexo-atlas/`; `nexo-one/` é um runtime Vercel separado. Nesta revisão, o Cockpit privado de `nexo-one` também recebeu esclarecimentos sobre cobertura da SHADOW e ajustes de legibilidade, sem mudar autenticação, flags ou aprovações legadas. A Tower continua a autoridade operacional. Este registro é uma projeção editorial do catálogo público, sem leitura de Tower nem nova autoridade científica.
 
 `src/atlas/researchRegistry.json` cobre as 19 perguntas do artefato versionado `worker/public-cosmology.json`. Existem 169 textos de referência. As versões científicas, estado editorial científico, identidade canônica, DOIs de dados/código, incertezas estruturadas e histórico não estão disponíveis no artefato. Os vetores `versions` permanecem vazios e a interface exibe explicitamente a informação ausente. A seleção live pode incluir perguntas não presentes nesse arquivo: elas recebem a mesma ficha de dados ausentes, sem gravação ou identificação inventada.
 
