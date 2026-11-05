@@ -17,5 +17,5 @@
 .nx-topic-distribution table{width:100%;max-width:680px;border-collapse:collapse;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums}.nx-topic-distribution th,.nx-topic-distribution td{padding:8px 12px!important;border-bottom:1px solid var(--line);text-align:left;font-size:13px!important;font-weight:400}.nx-topic-distribution thead th{font-weight:600;color:var(--fg-2)}.nx-topic-distribution td{width:85px}
 
 :root[data-theme="light"] .atlas-app .nexo-cinema-backdrop::after{background:#fff}
-:root[data-theme="light"] .atlas-app :is(h1,h2,h3,h4,h5,h6),:root[data-theme="light"] .atlas-app .atlas-hero h1 span{color:#06038d}
+:root[data-theme="light"] .atlas-app :is(h1,h2,h3,h4,h5,h6),:root[data-theme="light"] .atlas-app .atlas-hero h1 span{color:var(--fg)}
 :root[data-theme="dark"] .atlas-app[data-area="public"]{--cyan:#b0d5b8;--orange:#b0d5b8;--on-cyan:#102316}
