@@ -11,7 +11,8 @@ export type PublicClaim = {group: QuestionGroup; test: PublicTest; href: string;
 
 // The current owner selection is applied before this function. A row that is
 // not in the versioned repository source cannot appear on the claims page.
-export async function claimsFromPublic(pub: PublicState): Promise<PublicClaim[]> {
+export async function claimsFromPublic(pub: PublicState, signal?:AbortSignal): Promise<PublicClaim[]> {
+  if (signal?.aborted) throw new DOMException('Cancelled','AbortError');
   if (pub.status !== 'ready') return [];
   const groups = groupPublicQuestions(pub.tests);
   const candidates = groups.flatMap(group => {
@@ -19,10 +20,16 @@ export async function claimsFromPublic(pub: PublicState): Promise<PublicClaim[]>
     return group.members.map(({test}) => ({group, test, href:testHref(group.id, anchors.get(test.id))}));
   });
   const keys = await Promise.all(candidates.map(({test}) => publicationKey(test)));
+  if (signal?.aborted) throw new DOMException('Cancelled','AbortError');
   return candidates.flatMap((candidate, i) => {
     const key = keys[i], sourceKey = key ? sources.get(key) : undefined;
     return sourceKey ? [{...candidate, sourceKey}] : [];
   });
+}
+
+// Never render a result computed for an older selection or an unavailable source.
+export function currentVerifiedClaims(verified:{source:PublicState;rows:PublicClaim[]}|null, pub:PublicState, pending:boolean):PublicClaim[]|null {
+  return !pending&&verified?.source===pub ? verified.rows : null;
 }
 
 type Revision = {version:string;status:'ongoing'|'published'|'retracted'|'unknown';date:string|null;

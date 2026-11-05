@@ -49,3 +49,25 @@ export function validateResearchRegistry(value, reviewedRows, membership) {
   }
   return parsed.data;
 }
+
+// Until field-level publication provenance is available, current releases may
+// publish empty records only. The schema models history for a later review.
+export function validateReleasableResearchRegistry(registry) {
+  if (registry.records.some(entry => entry.versions.length))
+    throw new Error('Versões e motivos de alteração exigem fontes públicas estruturadas por campo.');
+  return registry;
+}
+
+export function validateAppendOnlyHistory(previous, current) {
+  const oldRegistry = researchRegistrySchema.parse(previous);
+  const newRegistry = researchRegistrySchema.parse(current);
+  const next = new Map(newRegistry.records.map(record=>[record.questionId,record]));
+  for (const prior of oldRegistry.records) {
+    const updated=next.get(prior.questionId);
+    if (!updated) throw new Error(`Histórico removido: ${prior.questionId}`);
+    for (let i=0;i<prior.versions.length;i++) {
+      if (!updated.versions[i] || JSON.stringify(updated.versions[i])!==JSON.stringify(prior.versions[i]))
+        throw new Error(`Versão anterior removida ou alterada: ${prior.questionId} / ${prior.versions[i].version}`);
+    }
+  }
+}

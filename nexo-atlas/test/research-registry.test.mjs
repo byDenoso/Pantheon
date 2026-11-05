@@ -2,13 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {publicationKey} from '../worker/public-publication.mjs';
-import {validateResearchRegistry} from '../src/contracts/research-registry.mjs';
-import {claimsFromPublic} from '../src/atlas/researchRegistry.ts';
-import {guardTests} from '../src/atlas/publicItems.ts';
+import {validateResearchRegistry,validateReleasableResearchRegistry,validateAppendOnlyHistory} from '../src/contracts/research-registry.mjs';
+import {claimsFromPublic,currentVerifiedClaims} from '../src/atlas/researchRegistry.ts';
+import {guardTests,loadPublic} from '../src/atlas/publicItems.ts';
 import {groupPublicQuestions} from '../src/atlas/publicQuestionGroups.ts';
+import {assertSourceIntegrity} from '../src/contracts/public-source-integrity.mjs';
+import {PUBLIC_PATH} from '../src/atlas/api.ts';
 
 const source=JSON.parse(readFileSync('worker/public-cosmology.json','utf8'));
 const rows=Object.values(source.records), keyed=new Map(rows.map(row=>[publicationKey(row),row]));
+const index=JSON.parse(readFileSync('src/atlas/reviewedSourceIndex.json','utf8'));
 const groups=groupPublicQuestions(guardTests(rows));
 const membership=new Map();
 for(const group of groups) for(const {test} of group.members){const key=publicationKey(test);const owners=membership.get(key)??new Set();owners.add(group.id);membership.set(key,owners);}
@@ -34,6 +37,47 @@ test('revision history preserves earlier entries and requires a reason for later
  const actual=validateResearchRegistry(registry([base,{...base,version:'correction',changeReason:reason}]),keyed,membership);
  assert.equal(actual.records[0].versions.length,2);
  assert.equal(actual.records[0].versions[1].changeReason['pt-BR'],reason['pt-BR']);
+ assert.throws(()=>validateReleasableResearchRegistry(actual),/fontes públicas estruturadas/);
+ validateAppendOnlyHistory(registry([base]),registry([base,{...base,version:'correction',changeReason:reason}]));
+ assert.throws(()=>validateAppendOnlyHistory(registry([base]),registry([])),/removida ou alterada/);
+ assert.throws(()=>validateAppendOnlyHistory(registry([base]),registry([{...base,version:'replaced'}])),/removida ou alterada/);
+ assert.throws(()=>validateAppendOnlyHistory(registry([base]),{contract:'NEXO_PUBLIC_RESULT_REGISTRY_V1',records:[]}),/Histórico removido/);
+});
+test('a pending or superseded selection never displays an older verified result',async()=>{
+ const selected={status:'ready',items:[],tests:guardTests([row])};
+ const next={status:'ready',items:[],tests:[]};
+ const verified={source:selected,rows:await claimsFromPublic(selected)};
+ assert.equal(currentVerifiedClaims(verified,selected,false).length,1);
+ assert.equal(currentVerifiedClaims(verified,selected,true),null);
+ assert.equal(currentVerifiedClaims(verified,next,false),null);
+ const controller=new AbortController(); const task=claimsFromPublic(selected,controller.signal);controller.abort();
+ await assert.rejects(task,e=>e.name==='AbortError');
+});
+test('source mismatch fails even when the separately stored SHA is supplied',()=>{
+ const actual=readFileSync('worker/public-cosmology.json');
+ assert.equal(assertSourceIntegrity(actual,index.sourceSha256,actual),'COMMIT_BLOB_VERIFIED');
+ assert.equal(assertSourceIntegrity(actual,index.sourceSha256),'PINNED_BLOB_ONLY');
+ assert.throws(()=>assertSourceIntegrity(Buffer.concat([actual,Buffer.from('altered')]),index.sourceSha256),/diverge/);
+ assert.throws(()=>assertSourceIntegrity(actual,index.sourceSha256,Buffer.from('altered commit blob')),/commit declarado/);
+});
+test('simulated LIVE selection, revocation and outage preserve the source boundary',async()=>{
+ const second=rows.find(candidate=>publicationKey(candidate)!==key);
+ const extra={...row,result:{'pt-BR':'SINTÉTICO: atualização aprovada sem origem no repositório.',en:'SYNTHETIC: approved update without repository source.'}};
+ const payload={contract:'ATLAS_PUBLIC_V1',items:[],links:[],tests:[row,second]};
+ const endpoint='https://selection.example/api';
+ const selection=(include,tests=[])=>({contract:'ATLAS_PUBLIC_SELECTION_V1',mode:'LIVE',version:1,updatedAt:'2026-11-01T00:00:00Z',include,tests,campaigns:[]});
+ const json=value=>new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}});
+ const fetchFor=body=>async url=>url===PUBLIC_PATH?json(payload):url===endpoint?(body===null?new Response('',{status:503}):json(body)):new Response('',{status:404});
+ const first=await loadPublic(fetchFor(selection([key],[extra])),undefined,endpoint);
+ const firstClaims=await claimsFromPublic(first);
+ assert.equal(firstClaims.length,1);assert.equal(firstClaims[0].test.result['pt-BR'],row.result['pt-BR']);
+ const revoked=await loadPublic(fetchFor(selection([publicationKey(second)])),undefined,endpoint);
+ assert.equal((await claimsFromPublic(revoked)).length,1);
+ assert.equal(currentVerifiedClaims({source:first,rows:firstClaims},revoked,false),null);
+ const none=await loadPublic(fetchFor(selection([])),undefined,endpoint);
+ assert.equal((await claimsFromPublic(none)).length,0);
+ const unavailable=await loadPublic(fetchFor(null),undefined,endpoint);
+ assert.equal(unavailable.status,'unavailable');assert.deepEqual(await claimsFromPublic(unavailable),[]);
 });
 test('claims are an exact intersection of current selected rows and versioned repository rows',async()=>{
  const modified={...row,result:{...row.result,'pt-BR':row.result['pt-BR']+' alterado'}};

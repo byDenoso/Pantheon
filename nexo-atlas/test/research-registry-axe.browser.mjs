@@ -12,7 +12,8 @@ const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH
 const checks=[];
 try {
   for(const width of [390,1440]) for(const path of ['/','/claims/','/pesquisa/energia-escura-faixas-supernovas']) {
-    const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'});
+    // axe is injected only inside this test context; the deployed CSP is unchanged.
+    const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce',bypassCSP:true});
     await page.goto(origin+path,{waitUntil:'domcontentloaded'});
     if(path==='/claims/')await page.locator('.nexo-claim-list').waitFor();
     if(path.startsWith('/pesquisa/'))await page.locator('.nexo-record').waitFor();

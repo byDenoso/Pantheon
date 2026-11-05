@@ -1,14 +1,15 @@
 import {useEffect,useMemo,useState} from 'react';
 import type {Locale} from '../api.ts';
 import {pick,type PublicState} from '../publicItems.ts';
-import {claimsFromPublic,PUBLIC_SOURCE_URL,type PublicClaim} from '../researchRegistry.ts';
+import {claimsFromPublic,currentVerifiedClaims,PUBLIC_SOURCE_URL,type PublicClaim} from '../researchRegistry.ts';
 import Shell from './Shell.tsx';
 import '../research-registry.css';
 
 export default function PublicClaimsPage({pub,locale,refresh,pending}:{pub:PublicState;locale:Locale;refresh:()=>void;pending:boolean}) {
  const en=locale==='en';
- const [claims,setClaims]=useState<PublicClaim[]|null>(null),[failed,setFailed]=useState(false),[query,setQuery]=useState(''),[shown,setShown]=useState(12);
- useEffect(()=>{let alive=true;setClaims(null);setFailed(false);if(pub.status==='ready'&&!pending)claimsFromPublic(pub).then(rows=>{if(alive)setClaims(rows);}).catch(()=>{if(alive)setFailed(true);});return()=>{alive=false;};},[pub,pending]);
+ const [verified,setVerified]=useState<{source:PublicState;rows:PublicClaim[]}|null>(null),[failed,setFailed]=useState(false),[query,setQuery]=useState(''),[shown,setShown]=useState(12);
+ const claims=currentVerifiedClaims(verified,pub,pending);
+ useEffect(()=>{const controller=new AbortController();setVerified(null);setFailed(false);if(pub.status==='ready'&&!pending)claimsFromPublic(pub,controller.signal).then(rows=>{if(!controller.signal.aborted)setVerified({source:pub,rows});}).catch(()=>{if(!controller.signal.aborted)setFailed(true);});return()=>controller.abort();},[pub,pending]);
  useEffect(()=>{document.title=en?'Public statements · NEXO':'Alegações públicas · NEXO';},[en]);
  const list=useMemo(()=>{const q=query.trim().toLocaleLowerCase(locale);return (claims??[]).filter(c=>!q||[c.test.question,c.test.result,c.test.answers].some(v=>pick(v,locale).toLocaleLowerCase(locale).includes(q)));},[claims,query,locale]);
  return <Shell area="public"><main className="atlas-main atlas-public-main nexo-claims" id="public-content" tabIndex={-1}>
