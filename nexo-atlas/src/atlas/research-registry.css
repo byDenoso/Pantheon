@@ -13,3 +13,4 @@
 .nexo-record-fields dt{font-weight:700;margin-bottom:.25rem}
 .nexo-record-fields dd{margin:0;line-height:1.5}
 .nexo-record-history{padding-inline-start:1.25rem}
+.nexo-record-history details{margin-block:1rem;overflow-wrap:anywhere}

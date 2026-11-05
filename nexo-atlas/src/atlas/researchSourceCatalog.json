@@ -1,0 +1,10 @@
+{
+  "contract": "NEXO_PUBLIC_RESEARCH_SOURCES_V1",
+  "sources": [
+    {
+      "commit": "4b7b14a031d1667dfd951760bbb723d06e25e835",
+      "path": "nexo-atlas/worker/public-cosmology.json",
+      "sha256": "87db77bd91ab8aba5011e571b67f66a1f7a3338b1c5c09c1969625539d3d8767"
+    }
+  ]
+}

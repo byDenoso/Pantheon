@@ -24,6 +24,7 @@ jobs:
       VITE_PUBLIC_API_URL: /atlas-public.json
       PYTHONUTF8: '1'
       NEXO_REQUIRE_SOURCE_COMMIT: '1'
+      NEXO_PUBLIC_BASE_COMMIT: ${{ github.event.pull_request.base.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,3 +60,4 @@ jobs:
             sleep 1
           done
           node test/research-registry-axe.browser.mjs
+          node test/research-revision-notice.browser.mjs

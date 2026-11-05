@@ -28,6 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -42,6 +43,8 @@ jobs:
       - name: Build and verify NEXO Atlas v67b
         working-directory: nexo-atlas
         env:
+          NEXO_REQUIRE_SOURCE_COMMIT: '1'
+          NEXO_PUBLIC_BASE_COMMIT: ${{ github.sha }}
           VITE_PUBLIC_API_URL: /atlas-public.json
           VITE_PRIVATE_COCKPIT_URL: https://nexo-one-two.vercel.app/#/privado
           # Owner selection from the private cockpit (/cockpit on the nexo-one backend).
