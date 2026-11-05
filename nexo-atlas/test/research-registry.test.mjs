@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,copyFileSync,rmSync} from 'node:fs';
+import {execFileSync,spawnSync} from 'node:child_process';
+import path from 'node:path';
 import {publicationKey} from '../worker/public-publication.mjs';
 import {validateResearchRegistry,validateReleasableResearchRegistry,validateAppendOnlyHistory} from '../src/contracts/research-registry.mjs';
 import {claimsFromPublic,currentVerifiedClaims} from '../src/atlas/researchRegistry.ts';
@@ -78,6 +81,29 @@ test('simulated LIVE selection, revocation and outage preserve the source bounda
  assert.equal((await claimsFromPublic(none)).length,0);
  const unavailable=await loadPublic(fetchFor(null),undefined,endpoint);
  assert.equal(unavailable.status,'unavailable');assert.deepEqual(await claimsFromPublic(unavailable),[]);
+});
+test('history CLI reads the real base tree and rejects modification or deletion',()=>{
+ const root=process.cwd();
+ const temp=mkdtempSync(path.join(root,'.tmp-registry-cli-'));
+ assert.equal(path.dirname(temp),root);
+ const app=path.join(temp,'nexo-atlas'), scripts=path.join(app,'scripts'), contracts=path.join(app,'src','contracts'), data=path.join(app,'src','atlas');
+ mkdirSync(scripts,{recursive:true});mkdirSync(contracts,{recursive:true});mkdirSync(data,{recursive:true});
+ try {
+  copyFileSync('scripts/check-research-history.mjs',path.join(scripts,'check-research-history.mjs'));
+  copyFileSync('src/contracts/research-registry.mjs',path.join(contracts,'research-registry.mjs'));
+  const source=path.join(data,'researchRegistry.json');
+  writeFileSync(source,JSON.stringify(registry([base])));
+  execFileSync('git',['init','-q',temp]);
+  execFileSync('git',['-C',temp,'add','nexo-atlas/src/atlas/researchRegistry.json']);
+  execFileSync('git',['-C',temp,'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','synthetic history']);
+  const sha=execFileSync('git',['-C',temp,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+  const run=()=>spawnSync(process.execPath,[path.join(scripts,'check-research-history.mjs')],{cwd:app,encoding:'utf8',env:{...process.env,NEXO_REGISTRY_BASE:sha}});
+  assert.equal(run().status,0);
+  writeFileSync(source,JSON.stringify(registry([])));
+  const removed=run();assert.notEqual(removed.status,0);assert.match(removed.stderr,/removida ou alterada/);
+  writeFileSync(source,JSON.stringify(registry([{...base,version:'altered'}])));
+  const changed=run();assert.notEqual(changed.status,0);assert.match(changed.stderr,/removida ou alterada/);
+ } finally {rmSync(temp,{recursive:true,force:true});}
 });
 test('claims are an exact intersection of current selected rows and versioned repository rows',async()=>{
  const modified={...row,result:{...row.result,'pt-BR':row.result['pt-BR']+' alterado'}};
