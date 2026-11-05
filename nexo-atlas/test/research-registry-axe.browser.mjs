@@ -66,6 +66,41 @@ try {
     await home.waitForFunction(({y,href})=>Math.abs(window.scrollY-y)<6&&document.activeElement?.getAttribute('href')===href,before);
   } finally {clearTimeout(requestTimer);releaseHub();}
   await home.close();
+  // A visitor may search from the hero before the lazily loaded hub exists.
+  const queued=await browser.newPage({reducedMotion:'reduce'});
+  let releaseSearch,startedSearch;
+  const searchGate=new Promise(resolve=>{releaseSearch=resolve;});
+  const searchRequest=new Promise(resolve=>{startedSearch=resolve;});
+  await queued.route(/\/assets\/PublicResearchHub-[^/]+\.js(?:\?.*)?$/,async route=>{startedSearch();await searchGate;await route.continue();});
+  let searchTimer;
+  try {
+    await queued.goto(origin+'/',{waitUntil:'domcontentloaded'});
+    await Promise.race([searchRequest,new Promise((_,reject)=>{searchTimer=setTimeout(()=>reject(new Error('catalog request did not start')),10000);})]);
+    await queued.getByRole('searchbox',{name:'Buscar uma pergunta'}).fill('energia escura');
+    await queued.getByRole('button',{name:'Buscar',exact:true}).click();
+    releaseSearch();
+    await queued.locator('.nexo-research-hub').waitFor();
+    await queued.waitForFunction(()=>document.querySelector('.nexo-research-map input[type=search]')?.value==='energia escura',null,{timeout:3000});
+    await queued.getByRole('tab',{name:'Figuras e gráficos'}).click();
+    await queued.getByRole('searchbox',{name:'Buscar uma pergunta'}).fill('supernovas');
+    await queued.getByRole('button',{name:'Buscar',exact:true}).click();
+    await queued.waitForFunction(()=>document.querySelector('.nexo-research-map input[type=search]')?.value==='supernovas',null,{timeout:3000});
+    await queued.getByRole('searchbox',{name:'Buscar uma pergunta'}).fill('energia escura');
+    await queued.getByRole('button',{name:'Buscar',exact:true}).click();
+    await queued.waitForFunction(()=>document.querySelector('.nexo-research-map input[type=search]')?.value==='energia escura',null,{timeout:3000});
+    const select=queued.locator('.nexo-orbit-node').nth(1);
+    await select.click();
+    const selectedTitle=await queued.locator('.nexo-map-selected h4').textContent();
+    const selectedLink=queued.locator('.nexo-map-open');
+    const selectedHref=await selectedLink.getAttribute('href');
+    await selectedLink.click();
+    await queued.locator('.nexo-record').waitFor();
+    await queued.locator('.nexo-study-breadcrumb a').click();
+    await queued.locator('.nexo-research-hub').waitFor();
+    assert.equal(await queued.getByRole('searchbox',{name:'Buscar pergunta',exact:true}).inputValue(),'energia escura','search survives returning from study');
+    assert.equal(await queued.locator('.nexo-map-selected h4').textContent(),selectedTitle,'selected question survives returning from study');
+    await queued.waitForFunction(href=>document.activeElement?.getAttribute('href')===href,selectedHref);
+  } finally {clearTimeout(searchTimer);releaseSearch();await queued.close();}
 } finally {await browser.close();}
 console.log(JSON.stringify({tool:'axe-core',notice:'Automated checks only; not a conformance audit.',checks},null,2));
 assert.equal(checks.flatMap(x=>x.violations).length,0,'axe-core reported WCAG failures');

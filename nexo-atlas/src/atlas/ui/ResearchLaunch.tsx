@@ -7,6 +7,9 @@ import {researchEntries} from '../researchExplorer.ts';
 
 /** Fired with the typed query; the question list listens and filters itself. */
 export const SEARCH_EVENT='nexo:search';
+// Keep the latest request until the map is mounted; no query is persisted.
+let pendingSearch:string|null=null;
+export function takePendingSearch(){const value=pendingSearch;pendingSearch=null;return value;}
 
 export default function ResearchLaunch({pub,locale,explore}:{pub:PublicState;locale:Locale;explore:(tab:string)=>void}) {
   const en=locale==='en',entries=useMemo(()=>researchEntries(pub),[pub]);
@@ -14,7 +17,7 @@ export default function ResearchLaunch({pub,locale,explore}:{pub:PublicState;loc
   const records=pub.campaigns!==undefined?pub.campaigns.reduce((n,c)=>n+c.tests.length,0)+(pub.selection==='LIVE'?pub.tests.length:0):pub.tests.length;
   // The three shortcuts carry the same names as the hub tabs they open.
   const links=[{id:'map',title:en?'Questions':'Perguntas',body:en?'Search, filter and open each result':'Busque, filtre e abra cada resultado',icon:'map'}, {id:'figures',title:en?'Figures and plots':'Figuras e gráficos',body:en?'Read the published values':'Leia os valores publicados',icon:'plot'}, {id:'updates',title:en?'Latest updates':'Atualizações',body:en?'What was published most recently':'O que foi publicado mais recentemente',icon:'updates'}];
-  const search=(event:React.FormEvent)=>{event.preventDefault();window.dispatchEvent(new CustomEvent(SEARCH_EVENT,{detail:query.trim()}));explore('map');};
+  const search=(event:React.FormEvent)=>{event.preventDefault();pendingSearch=query.trim();window.dispatchEvent(new CustomEvent(SEARCH_EVENT,{detail:pendingSearch}));explore('map');};
   return <div className="nexo-research-launch">
     <div className="nexo-launch-records"><p className="atlas-eyebrow">{en?'Public research':'Pesquisa pública'}</p>{pub.status==='ready'?<p><strong>{publicCount(pub,entries.length,en)}</strong> {en?'questions':'perguntas'}<span aria-hidden="true"> / </span><strong>{publicCount(pub,records,en,true)}</strong> {en?'analyses':'análises'}</p>:<p>{pub.status==='loading'?(en?'Loading the public catalog…':'Carregando o catálogo público…'):(en?'Open the research catalog':'Abra o catálogo de pesquisa')}</p>}</div>
     <div>

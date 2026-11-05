@@ -14,7 +14,7 @@ import ReadingTour from './ReadingTour.tsx';
 import Explained from './Explained.tsx';
 import {useMessages} from './LocaleProvider.tsx';
 import {useReadingMode} from './useReadingMode.ts';
-import {SEARCH_EVENT} from './ResearchLaunch.tsx';
+import {SEARCH_EVENT,takePendingSearch} from './ResearchLaunch.tsx';
 import TopicDistribution from '../../experience/TopicDistribution.tsx';
 
 function HubIcon({tab}:{tab:string}) {
@@ -31,7 +31,7 @@ export function ResearchMap({entries,locale}:{entries:ResearchEntry[];locale:Loc
   const en=locale==='en',plainMode=useReadingMode()==='plain';
   const [topic,setTopic]=useExplorerState<string>('map.topic','all'),[query,setQuery]=useExplorerState<string>('map.query',''),[selected,setSelected]=useExplorerState<string>('map.selected',''),[page,setPage]=useExplorerState<number>('map.page',0);
   // The hero search field hands its query to this list.
-  useEffect(()=>{const receive=(event:Event)=>{const value=(event as CustomEvent<string>).detail;if(typeof value!=='string')return;setQuery(value);setTopic('all');setPage(0);setSelected('');};window.addEventListener(SEARCH_EVENT,receive);return()=>window.removeEventListener(SEARCH_EVENT,receive);},[setQuery,setTopic,setPage,setSelected]);
+  useEffect(()=>{const apply=(value:string)=>{setQuery(value);setTopic('all');setPage(0);setSelected('');};const receive=(event:Event)=>{const value=(event as CustomEvent<string>).detail;if(typeof value!=='string')return;takePendingSearch();apply(value);};window.addEventListener(SEARCH_EVENT,receive);const queued=takePendingSearch();if(queued!==null)apply(queued);return()=>window.removeEventListener(SEARCH_EVENT,receive);},[setQuery,setTopic,setPage,setSelected]);
   const searched=filterResearch(entries,{query,locale});
   const categories=[{id:'all',label:en?'All subjects':'Todos os assuntos'},...TOPICS.map(t=>({id:t.id,label:pick(t.label,locale)})),{id:'other',label:en?'Other questions':'Outras perguntas'}].map(c=>({...c,entries:searched.filter(e=>c.id==='all'||(c.id==='other'?e.topics.length===0:e.topics.includes(c.id as typeof e.topics[number])))})).filter(c=>c.entries.length);
   const category=categories.find(c=>c.id===topic)??categories[0];
