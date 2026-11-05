@@ -16,6 +16,7 @@ try {
     const page=await browser.newPage({viewport:{width,height:900},colorScheme:theme,reducedMotion:'reduce',bypassCSP:true});
     await page.addInitScript(theme=>localStorage.setItem('atlas.theme',theme),theme);
     await page.goto(origin+path,{waitUntil:'domcontentloaded'});
+    if(path==='/')await page.locator('.nexo-research-hub').waitFor();
     if(path==='/claims/')await page.locator('.nexo-claim-list').waitFor();
     if(path.startsWith('/pesquisa/'))await page.locator('.nexo-record').waitFor();
     await page.addScriptTag({path:axePath});
@@ -23,6 +24,48 @@ try {
     checks.push({path,width,theme,violations});
     await page.close();
   }
+  // A failed optional hub chunk must leave the rest of the page usable and
+  // expose a recovery action instead of a blank catalog or a broken shell.
+  const page=await browser.newPage({reducedMotion:'reduce'});
+  let blockedHub=false;
+  await page.route(/\/assets\/PublicResearchHub-[^/]+\.js(?:\?.*)?$/,route=>{blockedHub=true;return route.abort('failed');});
+  await page.goto(origin+'/',{waitUntil:'domcontentloaded'});
+  await page.getByRole('alert').filter({hasText:'Não foi possível carregar o catálogo de pesquisa.'}).waitFor();
+  assert.ok(blockedHub,'the catalog chunk request was intercepted');
+  assert.ok(await page.locator('#public-title').isVisible(),'the landing page remains visible');
+  assert.ok(await page.getByRole('button',{name:'Recarregar a página'}).isVisible(),'a recovery action is visible');
+  await page.close();
+  const study=await browser.newPage({reducedMotion:'no-preference'});
+  const studyRequests=[];
+  study.on('request',request=>studyRequests.push(request.url()));
+  await study.goto(origin+'/pesquisa/energia-escura-faixas-supernovas',{waitUntil:'networkidle'});
+  await study.locator('.nexo-record').waitFor();
+  assert.ok(!studyRequests.some(url=>/\/assets\/gsap-[^/]+\.js/.test(url)),'study pages do not download unused cinematic animation');
+  await study.close();
+  const home=await browser.newPage({reducedMotion:'no-preference'});
+  const animation=home.waitForRequest(request=>/\/assets\/gsap-[^/]+\.js/.test(request.url()));
+  await home.goto(origin+'/',{waitUntil:'domcontentloaded'});
+  await animation;
+  await home.locator('.nexo-research-hub').waitFor();
+  const returnLink=home.locator('.nexo-map-open').first();
+  await returnLink.scrollIntoViewIfNeeded();
+  await returnLink.focus();
+  const before=await home.evaluate(()=>({y:window.scrollY,href:document.activeElement?.getAttribute('href')}));
+  assert.ok(before.href && before.y>0,'a visible catalog link can be saved for return navigation');
+  let releaseHub,startedHub;
+  const hubGate=new Promise(resolve=>{releaseHub=resolve;});
+  const hubRequest=new Promise(resolve=>{startedHub=resolve;});
+  await home.route(/\/assets\/PublicResearchHub-[^/]+\.js(?:\?.*)?$/,async route=>{startedHub();await hubGate;await route.continue();});
+  let requestTimer;
+  try {
+    await home.goto(origin+'/?retorno=1#/',{waitUntil:'domcontentloaded'});
+    await Promise.race([hubRequest,new Promise((_,reject)=>{requestTimer=setTimeout(()=>reject(new Error('catalog request did not start')),10000);})]);
+    assert.equal(await home.locator('.nexo-research-hub').count(),0,'catalog chunk is still delayed');
+    releaseHub();
+    await home.locator('.nexo-research-hub').waitFor();
+    await home.waitForFunction(({y,href})=>Math.abs(window.scrollY-y)<6&&document.activeElement?.getAttribute('href')===href,before);
+  } finally {clearTimeout(requestTimer);releaseHub();}
+  await home.close();
 } finally {await browser.close();}
 console.log(JSON.stringify({tool:'axe-core',notice:'Automated checks only; not a conformance audit.',checks},null,2));
 assert.equal(checks.flatMap(x=>x.violations).length,0,'axe-core reported WCAG failures');
