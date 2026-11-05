@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,dirname,resolve} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {readPublicSourceContexts,publicSourceContext,publicRowKey} from '../src/contracts/public-history-sources.mjs';
@@ -45,7 +45,7 @@ test('a real Git history preserves v1 at commit A when only uncertainty changes 
   assert.throws(()=>readPublicSourceContexts(catalog([b]),{cwd:temp,baseCommit:a.commit}),/não pertence à base pública/);
   assert.throws(()=>readPublicSourceContexts(catalog([{...a,path:'private/secret.json'}]),{cwd:temp,baseCommit:b.commit}),/fora do contrato/);
   assert.throws(()=>readPublicSourceContexts(catalog([{...a,sha256:'f'.repeat(64)}]),{cwd:temp,baseCommit:b.commit}),/SHA-256/);
- }finally{rmSync(temp,{recursive:true,force:true});}
+ }finally{assert.equal(dirname(temp),resolve(tmpdir()));rmSync(temp,{recursive:true,force:true});}
 });
 test('source parsing verifies exact public bytes before indexing duplicate editorial hashes',()=>{
  const bytes=Buffer.from(JSON.stringify({records:{a:original,b:original}}));

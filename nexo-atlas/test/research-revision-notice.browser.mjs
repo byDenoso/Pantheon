@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile,mkdir,mkdtemp,writeFile,realpath,rm} from 'node:fs/promises';
-import {resolve,join} from 'node:path';
+import {resolve,join,dirname} from 'node:path';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {guardTests} from '../src/atlas/publicItems.ts';
@@ -31,4 +31,4 @@ try {
  assert.match(await page.getByRole('complementary',{name:'Scientific revision notice',exact:true}).innerText(),/Retracted.*SYNTHETIC-2/s);
  assert.deepEqual(errors,[]);
  console.log('PASS synthetic browser: stale selected text is explicitly labeled retracted, PT/EN.');
-}finally{await browser?.close();await server?.close();await rm(temp,{recursive:true,force:true});}
+}finally{await browser?.close();await server?.close();assert.equal(dirname(temp),resolve('.sites-runtime'));await rm(temp,{recursive:true,force:true});}

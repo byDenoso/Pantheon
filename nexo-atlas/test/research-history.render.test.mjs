@@ -1,7 +1,8 @@
 import test from 'node:test';
+import assert from 'node:assert/strict';
 import {build} from 'vite';
 import {mkdir,mkdtemp,writeFile,rm} from 'node:fs/promises';
-import {resolve,join} from 'node:path';
+import {resolve,join,dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 test('result history renders both versions, correction reason and field provenance from a synthetic fixture',async()=>{
@@ -29,5 +30,5 @@ for(const locale of ['pt-BR','en']) {
 `);
     await build({configFile:false,publicDir:false,logLevel:'error',build:{ssr:join(temp,'entry.tsx'),outDir:join(temp,'out'),emptyOutDir:true,rollupOptions:{output:{entryFileNames:'check.mjs'}}}});
     await import(pathToFileURL(join(temp,'out/check.mjs')).href);
-  }finally{await rm(temp,{recursive:true,force:true});}
+  }finally{assert.equal(dirname(temp),resolve('.sites-runtime'));await rm(temp,{recursive:true,force:true});}
 });

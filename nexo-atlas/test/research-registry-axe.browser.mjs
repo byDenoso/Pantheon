@@ -10,10 +10,11 @@ const axePath=process.env.AXE_JS ?? resolve('node_modules/axe-core/axe.min.js');
 if(!existsSync(axePath))throw new Error('axe-core JS indisponível; instale as dependências do pacote.');
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-gpu']});
 const checks=[];
+const portuguesePage=async options=>{const page=await browser.newPage({...options,locale:'pt-BR'});await page.addInitScript(()=>localStorage.setItem('atlas.locale','pt-BR'));return page;};
 try {
   for(const theme of ['light','dark']) for(const width of [390,1440]) for(const path of ['/','/claims/','/pesquisa/energia-escura-faixas-supernovas']) {
     // axe is injected only inside this test context; the deployed CSP is unchanged.
-    const page=await browser.newPage({viewport:{width,height:900},colorScheme:theme,reducedMotion:'reduce',bypassCSP:true});
+    const page=await portuguesePage({viewport:{width,height:900},colorScheme:theme,reducedMotion:'reduce',bypassCSP:true});
     await page.addInitScript(theme=>localStorage.setItem('atlas.theme',theme),theme);
     await page.goto(origin+path,{waitUntil:'domcontentloaded'});
     if(path==='/')await page.locator('.nexo-research-hub').waitFor();
@@ -26,7 +27,7 @@ try {
   }
   // A failed optional hub chunk must leave the rest of the page usable and
   // expose a recovery action instead of a blank catalog or a broken shell.
-  const page=await browser.newPage({reducedMotion:'reduce'});
+  const page=await portuguesePage({reducedMotion:'reduce'});
   let blockedHub=false;
   await page.route(/\/assets\/PublicResearchHub-[^/]+\.js(?:\?.*)?$/,route=>{blockedHub=true;return route.abort('failed');});
   await page.goto(origin+'/',{waitUntil:'domcontentloaded'});
@@ -35,7 +36,17 @@ try {
   assert.ok(await page.locator('#public-title').isVisible(),'the landing page remains visible');
   assert.ok(await page.getByRole('button',{name:'Recarregar a página'}).isVisible(),'a recovery action is visible');
   await page.close();
-  const study=await browser.newPage({reducedMotion:'no-preference'});
+  const english=await browser.newPage({locale:'en-US',reducedMotion:'reduce'});
+  await english.addInitScript(()=>localStorage.setItem('atlas.locale','en'));
+  let blockedEnglish=false;
+  await english.route(/\/assets\/PublicResearchHub-[^/]+\.js(?:\?.*)?$/,route=>{blockedEnglish=true;return route.abort('failed');});
+  await english.goto(origin+'/',{waitUntil:'domcontentloaded'});
+  await english.getByRole('alert').filter({hasText:'The research catalog could not be loaded.'}).waitFor();
+  assert.ok(blockedEnglish,'the English catalog chunk request was intercepted');
+  assert.ok(await english.locator('#public-title').isVisible(),'the English landing page remains visible');
+  assert.ok(await english.getByRole('button',{name:'Reload the page'}).isVisible(),'the English recovery action is visible');
+  await english.close();
+  const study=await portuguesePage({reducedMotion:'no-preference'});
   const studyRequests=[];
   study.on('request',request=>studyRequests.push(request.url()));
   await study.goto(origin+'/pesquisa/energia-escura-faixas-supernovas',{waitUntil:'networkidle'});
@@ -47,7 +58,7 @@ try {
   }
   assert.ok(!studyRequests.some(url=>/\/assets\/gsap-[^/]+\.js/.test(url)),'study pages do not download unused cinematic animation');
   await study.close();
-  const home=await browser.newPage({reducedMotion:'no-preference'});
+  const home=await portuguesePage({reducedMotion:'no-preference'});
   const animation=home.waitForRequest(request=>/\/assets\/gsap-[^/]+\.js/.test(request.url()));
   await home.goto(origin+'/',{waitUntil:'domcontentloaded'});
   await animation;
@@ -72,7 +83,7 @@ try {
   } finally {clearTimeout(requestTimer);releaseHub();}
   await home.close();
   // A visitor may search from the hero before the lazily loaded hub exists.
-  const queued=await browser.newPage({reducedMotion:'reduce'});
+  const queued=await portuguesePage({reducedMotion:'reduce'});
   let releaseSearch,startedSearch;
   const searchGate=new Promise(resolve=>{releaseSearch=resolve;});
   const searchRequest=new Promise(resolve=>{startedSearch=resolve;});

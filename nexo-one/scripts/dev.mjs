@@ -9,7 +9,7 @@ const vite=built?null:await(await import('vite')).createServer({
   cacheDir:path.resolve('.tmp', `vite-${process.env.PORT||4173}`),
   resolve:{dedupe:['three']},
   server:{middlewareMode:true,fs:{allow:[path.resolve('.'),realpathSync(path.resolve('node_modules'))]},hmr:{port:24678+Number(process.env.PORT||4173)-4173},watch:{ignored:['**/output/**']}},
-  optimizeDeps:{entries:['index.html','atlas3d/index.html','mcp/index.html']},
+  optimizeDeps:{entries:['index.html','atlas3d/index.html','mcp/index.html','cockpit.html']},
   appType:'spa',
 });
 const root=path.resolve('dist');
