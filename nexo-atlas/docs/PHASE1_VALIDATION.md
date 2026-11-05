@@ -2,7 +2,7 @@
 
 ## Identificação e alcance
 
-Os resultados abaixo referem-se ao código do commit `d8cc1458e2fb8502fb528403351daa2da8e37d04`, compilado localmente. A versão publicada do site pode ser outra. A medição não comprova que este código tenha sido publicado.
+As medições de desempenho, os hashes de build e o smoke LIVE abaixo referem-se ao código do commit `d8cc1458e2fb8502fb528403351daa2da8e37d04`, compilado localmente. A correção do teste bilíngue e da descoberta inicial de dependências do servidor de desenvolvimento foi validada depois e está no commit `c1763e4e1ab1c2eee04a5b962816ca7e7cf8a7c0`; ela não altera o runtime do pacote público medido. A versão publicada do site pode ser outra. Nenhuma dessas medições comprova publicação deste pacote.
 
 | Pacote local | Configuração | SHA-256 do `index.html` | SHA-256 do JavaScript principal |
 | --- | --- | --- | --- |
@@ -33,6 +33,7 @@ O axe-core verificou automaticamente início, `/claims/` e uma página de estudo
 - Com o pacote LIVE local, o navegador usou a origem `https://nexoresearch.org`, enquanto os arquivos do site foram interceptados e servidos pelo pacote local. A seleção pública real respondeu HTTP 200 com CORS para essa origem; a interface exibiu 20 perguntas e 169 análises, e o estudo observado ficou disponível sem erro de página. O teste não demonstra publicação do pacote local no domínio.
 - Testes de seleção cobriram leitura paralela, espera pela seleção, resposta indisponível, cancelamento, revogação e equivalência de figuras pelos quatro campos completos. Nenhuma inferência de publicação ou resultado científico foi acrescentada pelo teste de desempenho.
 - O teste de interface privada usou somente dados sintéticos e passou em português e inglês, nos temas claro e escuro e em larguras de desktop e celular emuladas, incluindo entrada, saída e indisponibilidade da origem. Ele não valida dados privados reais nem substitui o readback autenticado do ambiente publicado.
+- No servidor de desenvolvimento, uma instalação limpa reproduziu a otimização tardia de dependências e o erro de identidade do React ao abrir o Cockpit. A inclusão de `cockpit.html` na varredura inicial, validada em `c1763e4`, fez o mesmo teste completo passar, sem alterar CSP. A recuperação do catálogo foi também validada explicitamente em PT e EN nessa revisão posterior.
 - O Cockpit também passou no navegador com servidor de desenvolvimento, instalação limpa e respostas sintéticas, incluindo origem parcial, coleção vazia, sessão revogada e falha de rede. A entrada foi adicionada à descoberta inicial de dependências após uma reprodução do erro de inicialização com cache frio.
 - `npm run check` de `nexo-atlas`: 572 testes aprovados no Windows. A verificação de `nexo-one` foi executada em cópia isolada com dependências do lockfile: 1.316 testes aprovados, um ignorado e zero falhas; o build privado gerou 115 arquivos. O teste ignorado por ausência do repositório de runtime no primeiro ambiente passou depois em execução focal com esse repositório disponível e dados sintéticos. A suíte completa não foi repetida nessa segunda configuração.
 
