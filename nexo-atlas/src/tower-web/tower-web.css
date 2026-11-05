@@ -32,5 +32,5 @@
 .tw .tw-row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:6px 0}
 .tw .tw-btn{font:inherit;font-size:12px;padding:4px 10px;border:1px solid var(--tw-line);border-radius:6px;background:transparent;color:var(--tw-text);cursor:pointer}
 .tw .tw-btn:hover{border-color:var(--tw-accent)} .tw .tw-btn:focus-visible{outline:2px solid var(--tw-accent)}
-.tw .tw-birth{position:absolute;left:14px;top:12px;padding:4px 10px;border:1px solid rgba(169,197,255,.5);border-radius:999px;background:rgba(21,27,24,.9);color:#f4f6f9;font-size:12px}
-.tw[data-theme=light] .tw-birth{background:rgba(220,250,235,.9);color:#0b6a3c}
+.tw .tw-birth{position:absolute;left:14px;top:12px;padding:4px 10px;border:1px solid rgba(169,197,255,.5);border-radius:999px;background:rgba(21,27,36,.9);color:#f4f6f9;font-size:12px}
+.tw[data-theme=light] .tw-birth{background:#edf3ff;color:#003087}

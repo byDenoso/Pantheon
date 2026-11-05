@@ -43,4 +43,9 @@ test('public and private light/dark text, accent and action colors remain legibl
   assert.ok(contrast(tokens.secondary,tokens.surface)>=4.5,theme+' web secondary');
   assert.ok(contrast(tokens.accentText,tokens.bg)>=4.5,theme+' web accent');
  }
+ const towerCss=readFileSync('src/tower-web/tower-web.css','utf8');
+ const birthLight=block(towerCss,'.tw[data-theme=light] .tw-birth');
+ assert.match(birthLight,/background:#edf3ff/);
+ assert.match(birthLight,/color:#003087/);
+ assert.ok(contrast('#003087','#edf3ff')>=4.5,'web new-test notice');
 });
