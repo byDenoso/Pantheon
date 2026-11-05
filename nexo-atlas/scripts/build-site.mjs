@@ -5,6 +5,8 @@ import {gzipSync} from 'node:zlib';
 import path from 'node:path';
 import {buildPrivateUi} from './build-private-ui.mjs';
 
+await import('./verify-research-registry.mjs');
+
 const root = path.resolve(import.meta.dirname, '..');
 process.chdir(root);
 await rm('dist', {recursive: true, force: true});

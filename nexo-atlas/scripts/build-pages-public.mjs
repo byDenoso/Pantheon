@@ -5,7 +5,8 @@ const output = new URL('../dist/client/', import.meta.url);
 const snapshot = new URL('atlas-public.json', output);
 const marker = new URL('.nojekyll', output);
 const checkOnly = process.argv.includes('--check');
-const routes = Object.values(JSON.parse(await readFile(new URL('../src/atlas/publicStudyRoutes.json', import.meta.url), 'utf8')));
+const routes = [...Object.values(JSON.parse(await readFile(new URL('../src/atlas/publicStudyRoutes.json', import.meta.url), 'utf8'))), '/claims'];
+const validRoute = route => /^\/pesquisa\/[a-z0-9-]+$/.test(route) || route === '/claims';
 const index = await readFile(new URL('index.html', output));
 
 if (!checkOnly) {
@@ -15,7 +16,7 @@ if (!checkOnly) {
   await writeFile(snapshot, await response.text());
   await writeFile(marker, '');
   for (const route of routes) {
-    if (!/^\/pesquisa\/[a-z0-9-]+$/.test(route)) throw new Error('PUBLIC_ROUTE_INVALID');
+    if (!validRoute(route)) throw new Error('PUBLIC_ROUTE_INVALID');
     const directory = new URL(`.${route}/`, output);
     await mkdir(directory, {recursive: true});
     await writeFile(new URL('index.html', directory), index);
@@ -35,7 +36,7 @@ if (/PRIVATE_BOARD_CANARY|NEXO-BRIDGE-CANARY|PRIVATE_SOURCE_DETAIL/i.test(text))
 }
 await readFile(marker);
 for (const route of routes) {
-  if (!/^\/pesquisa\/[a-z0-9-]+$/.test(route)) throw new Error('PUBLIC_ROUTE_INVALID');
+  if (!validRoute(route)) throw new Error('PUBLIC_ROUTE_INVALID');
   const page = await readFile(new URL(`.${route}/index.html`, output));
   if (!page.equals(index)) throw new Error(`PUBLIC_ROUTE_MISMATCH ${route}`);
 }

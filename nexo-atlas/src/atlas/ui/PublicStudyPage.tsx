@@ -10,6 +10,8 @@ import PublicQuestionView from './PublicQuestionView.tsx';
 import PublicCampaignsView from './PublicCampaignsView.tsx';
 import Shell from './Shell.tsx';
 import ReadingSwitch from './ReadingSwitch.tsx';
+import ResearchRecord from './ResearchRecord.tsx';
+import '../research-registry.css';
 
 export default function PublicStudyPage({pub,locale,refresh}:{pub:PublicState;locale:Locale;refresh:()=>void}){
  const en=locale==='en',params=new URLSearchParams(location.search),question=requestedQuestion(location.pathname,location.search),campaign=params.get('campanha');
@@ -34,7 +36,9 @@ export default function PublicStudyPage({pub,locale,refresh}:{pub:PublicState;lo
    {pub.status==='loading'&&<p role="status">{en?'Loading published evidence…':'Carregando as evidências publicadas…'}</p>}
    {pub.status==='unavailable'&&<div role="alert"><p>{en?'The catalog could not be loaded. Try again.':'Não foi possível carregar o catálogo. Tente novamente.'}</p><button type="button" className="atlas-btn" onClick={refresh}>{en?'Try again':'Tentar novamente'}</button></div>}
    {pub.status==='ready'&&group&&<PublicQuestionView group={group} locale={locale} searching={false} visuals={pub.visuals} standalone openAnchor={anchor}/>}
+   {pub.status==='ready'&&group&&<ResearchRecord questionId={group.id} locale={locale}/>}
    {pub.status==='ready'&&record&&<PublicCampaignsView campaigns={pub.campaigns!} locale={locale} generatedAt={pub.generatedAt} coverage={pub.coverage} visuals={pub.visuals}/>}
+   {pub.status==='ready'&&record&&<ResearchRecord questionId={record.questionId} locale={locale}/>}
    {(pub.status==='ready'||pub.status==='empty')&&!group&&!record&&<p>{en?'No study is available at this address in the current catalog. Return to research to explore the available studies.':'Nenhum estudo está disponível neste endereço no catálogo atual. Volte à pesquisa para explorar os estudos disponíveis.'}</p>}
    <footer className="nexo-study-footer"><a href="/?retorno=1#/">{en?'Back to your research view':'Voltar à sua consulta'}</a><a href="/metodo.html">{en?'Methodology':'Metodologia'}</a></footer>
  </main></Shell>;

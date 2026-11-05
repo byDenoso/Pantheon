@@ -1,5 +1,6 @@
 import {requestedQuestion} from '../publicStudyRoutes.ts';
 import PublicStudyPage from './PublicStudyPage.tsx';
+import PublicClaimsPage from './PublicClaimsPage.tsx';
 import {useExplorerState} from './useExplorerState.ts';
 import {useCatalogPosition} from './useCatalogPosition.ts';
 import ArrowIcon from './ArrowIcon.tsx';
@@ -31,7 +32,9 @@ export default function PublicApp() {
   useCatalogPosition(pub.status==='ready',hasRequestedStudy);
   const explore=(tab:string)=>{setResearchTab(tab);goToPublicSection('works');};
 
-  useEffect(() => { if(!hasRequestedStudy)document.title = m.heroTitle; }, [m.heroTitle,hasRequestedStudy]);
+  const claimsPath = /^\/claims\/?$/.test(window.location.pathname);
+  useEffect(() => { if(!hasRequestedStudy&&!claimsPath)document.title = m.heroTitle; }, [m.heroTitle,hasRequestedStudy,claimsPath]);
+  if(claimsPath)return <PublicClaimsPage pub={pub} locale={locale} refresh={refresh} pending={pending}/>;
   if(hasRequestedStudy)return <PublicStudyPage pub={pub} locale={locale} refresh={refresh}/>;
 
   return (

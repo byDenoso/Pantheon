@@ -307,7 +307,7 @@ export function createWorker({readSource = readPrivate, readMemory = readMemoryS
     if (!['GET', 'HEAD'].includes(request.method)) return json({error: 'METHOD_NOT_ALLOWED'}, 405);
     const studyPath=studyRoutes[url.searchParams.get('pergunta')];
     if ((path==='/'||path==='/index.html') && studyPath) return new Response(null,{status:301,headers:{...SECURITY,Location:studyPath}});
-    if (Object.values(studyRoutes).includes(path.replace(/\/$/,'')) || path === '/' || path === '/index.html' || /^\/(?:privado|private)\/?$/.test(path)) {
+    if (Object.values(studyRoutes).includes(path.replace(/\/$/,'')) || /^\/claims\/?$/.test(path) || path === '/' || path === '/index.html' || /^\/(?:privado|private)\/?$/.test(path)) {
       const response = await env.ASSETS.fetch(new Request(new URL('/', url), request));
       const headers = new Headers(response.headers);
       for (const [key, value] of Object.entries({...SECURITY, 'X-Frame-Options': 'SAMEORIGIN', 'Content-Security-Policy': PRIVATE_CSP + "; frame-src 'self'; object-src 'none'"})) headers.set(key, value);
