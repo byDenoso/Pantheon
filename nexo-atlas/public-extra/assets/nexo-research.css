@@ -30,7 +30,7 @@ html:root .atlas-app[data-area="public"] .atlas-toc {gap:20px}
 html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a) {font-size:13px;font-weight:400;color:var(--fg-2);background:none;border:0;min-height:44px;text-decoration:none;display:inline-flex;align-items:center}
 html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a):hover {color:var(--cyan)}
 html:root .atlas-app[data-area="public"] .atlas-toc [aria-current] {color:var(--cyan)}
-html:root .atlas-app[data-area="public"] .atlas-preferences>summary {border-radius:3px;font-size:12px}
+html:root .atlas-app[data-area="public"] .atlas-preferences>summary {border-radius:3px;border-color:var(--control-line);font-size:12px}
 html:root .atlas-app[data-area="public"] .atlas-controls {background:var(--bg-2)}
 html:root .atlas-app[data-area="public"] .atlas-seg button[aria-pressed="true"] {background:var(--cyan);color:var(--on-cyan)}
 html:root .atlas-app[data-area="public"] .atlas-public-main {max-width:1440px;--stage-gutter:clamp(20px,4vw,68px);padding:0 var(--stage-gutter)}
