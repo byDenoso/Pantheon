@@ -9,7 +9,7 @@ async function readDriveSnapshot(env, {fetcher = fetch, tokenProvider = googleTo
   const id = String(env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID || '');
   if (!/^[A-Za-z0-9_-]{1,200}$/.test(id)) throw new Error('PUBLIC_CAMPAIGN_FILE_INVALID');
   const signal = AbortSignal.timeout(20000);
-  const token = await tokenProvider(env, signal, {scopes:['https://www.googleapis.com/auth/drive.readonly']});
+  const token = await tokenProvider(env, signal, {scopes:['https://www.googleapis.com/auth/drive.readonly'], reuseDriveRead:true});
   if (!token) throw new Error('PUBLIC_CAMPAIGN_AUTH_REQUIRED');
   const options = {signal, redirect:'error', cache:'no-store', headers:{Authorization:`Bearer ${token}`, Accept:'application/json'}};
   const base = `https://www.googleapis.com/drive/v3/files/${id}?`;

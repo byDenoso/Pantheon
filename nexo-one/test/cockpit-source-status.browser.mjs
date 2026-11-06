@@ -11,14 +11,18 @@ const snapshot=()=>({contract:'NEXO_COCKPIT_V1',generatedAt:'2026-11-01T21:00:00
   catalog:{available:true,url:'https://catalog.example/atlas-public.json',rows:[]},candidates:{tower:[],campaigns:[]},
   selection:{available:true,value:null},drift:[],audit:[]});
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-gpu']});
-async function open(data,{theme='light',width=390}={}){
+async function open(data,{theme='light',width=390,fakeClock=false}={}){
   const context=await browser.newContext({viewport:{width,height:844},reducedMotion:'reduce'});
   const page=await context.newPage();
   await page.addInitScript(value=>localStorage.setItem('nexo.cockpit.theme',value),theme);
-  const control={data,mode:'ok'};
+  const control={data,mode:'ok',reads:0};
+  if(fakeClock)await page.clock.install();
   await page.route('**/api/atlas-session',route=>route.fulfill({status:200,json:route.request().method()==='DELETE'?{authenticated:false}:{configured:true,authenticated:true}}));
   await page.route('**/api/atlas-public-selection',route=>route.fulfill({status:200,json:{contract:'ATLAS_PUBLIC_SELECTION_V1',mode:'UNSET'}}));
-  await page.route('**/api/atlas-cockpit',route=>control.mode==='network'?route.abort('failed'):control.mode==='unauth'?route.fulfill({status:401,json:{error:'AUTH_REQUIRED'}}):route.fulfill({status:200,json:control.data}));
+  await page.route('**/api/atlas-cockpit',route=>{
+    control.reads++;
+    return control.mode==='network'?route.abort('failed'):control.mode==='unauth'?route.fulfill({status:401,json:{error:'AUTH_REQUIRED'}}):route.fulfill({status:200,json:control.data});
+  });
   await page.goto(origin+'/cockpit.html',{waitUntil:'domcontentloaded'});
   await page.locator('.ck-hero').waitFor();
   return {context,page,control};
@@ -38,6 +42,17 @@ try {
   view.control.mode='network';
   await view.page.locator('.ck-stamp button').click();
   await view.page.getByRole('alert').filter({hasText:'A última atualização falhou'}).waitFor();
+  await view.context.close();
+  const limited=snapshot();limited.shadow={available:false,reason:'SHADOW_CONNECT_RATE_LIMITED'};
+  view=await open(limited,{fakeClock:true});
+  await view.page.getByText('Atualização automática pausada pelo limite da conexão.').waitFor();
+  await view.page.getByLabel('Atualizar a cada 5 minutos').check();
+  await view.page.clock.fastForward(301000);
+  assert.equal(view.control.reads,1,'no automatic reads during rate limiting');
+  view.control.data=snapshot();
+  await view.page.getByRole('button',{name:'Atualizar leitura'}).click();
+  await view.page.getByText('SHADOW consultada',{exact:true}).waitFor();
+  assert.equal(view.control.reads,2,'manual read restores the connected view');
   await view.context.close();
 
   view=await open(snapshot());

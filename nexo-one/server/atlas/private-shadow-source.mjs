@@ -50,7 +50,7 @@ export function projectPrivateShadowBoard(board) {
 export async function readAtlasPrivateShadow(env = process.env, fetcher = fetch,
     {tokenProvider = googleToken, boardReader = readShadowBoard} = {}) {
   const token = await tokenProvider(env, AbortSignal.timeout(8000),
-                                   {scopes: ['https://www.googleapis.com/auth/drive.readonly']});
+                                   {scopes: ['https://www.googleapis.com/auth/drive.readonly'], reuseDriveRead: true});
   if (!token) throw new Error('SHADOW_READ_CREDENTIAL_REQUIRED');
   const board = await boardReader({token, fetchImpl: fetcher, signal: AbortSignal.timeout(20000)});
   return projectPrivateShadowBoard(board);

@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {ProviderError} from './http.mjs';
 
 export const GOOGLE_READ_SCOPES=Object.freeze([
@@ -73,7 +74,16 @@ async function boundedJson(response){
   }finally{await reader.cancel().catch(()=>{});}
 }
 
-export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES}={}){
+// At most one Drive read in flight per worker. Never cache completed credentials.
+let driveRead;
+
+function retryDelay(response){
+  const value=response.headers.get('Retry-After');
+  const seconds=value&&/^\d+$/.test(value)?Number(value)*1000:Date.parse(value)-Date.now();
+  return Number.isFinite(seconds)?Math.max(60000,seconds):60000;
+}
+
+export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES,reuseDriveRead=false}={}){
   if(!env.GOOGLE_CONNECTOR)throw authError('AUTH_REQUIRED','CONNECTOR_MISSING');
   let url;
   try{url=connectorUrl(env.GOOGLE_CONNECTOR);}
@@ -81,12 +91,46 @@ export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES}=
   if(!env.VERCEL_OIDC_TOKEN)throw authError('AUTH_REQUIRED','OIDC_MISSING');
   if(typeof env.VERCEL_OIDC_TOKEN!=='string'||env.VERCEL_OIDC_TOKEN.length>16384||/[\s\u0000-\u001f\u007f]/u.test(env.VERCEL_OIDC_TOKEN))
     throw authError('AUTH_REQUIRED','OIDC_INVALID');
-  const body=JSON.stringify({subject:googleSubject(env),scopes:boundedScopes(scopes)});
+  const requestedScopes=boundedScopes(scopes);
+  const body=JSON.stringify({subject:googleSubject(env),scopes:requestedScopes});
+  signal?.throwIfAborted();
+  if(!reuseDriveRead||requestedScopes.length!==1||requestedScopes[0]!==GOOGLE_READ_SCOPES[0])
+    return (await requestGoogleToken(url,env.VERCEL_OIDC_TOKEN,body,signal)).token;
+
+  // Coalescing and cooldown apply only to the identical connector, subject, scope and runtime identity.
+  const key=createHash('sha256').update(JSON.stringify([url,body,env.VERCEL_OIDC_TOKEN])).digest('hex');
+  const now=Date.now();
+  if(driveRead?.key===key){
+    if(driveRead.retryAt>now)throw authError('RATE_LIMITED','CONNECT_RATE_LIMITED');
+    if(driveRead.pending){
+      const token=await driveRead.pending;
+      signal?.throwIfAborted();
+      return token;
+    }
+  }
+  const entry={key};
+  driveRead=entry;
+  entry.pending=(async()=>{
+    try{
+      return (await requestGoogleToken(url,env.VERCEL_OIDC_TOKEN,body,signal)).token;
+    }catch(error){
+      if(error?.code==='RATE_LIMITED')entry.retryAt=Date.now()+error.retryDelayMs;
+      throw error;
+    }finally{
+      delete entry.pending;
+    }
+  })();
+  const token=await entry.pending;
+  signal?.throwIfAborted();
+  return token;
+}
+
+async function requestGoogleToken(url,oidc,body,signal){
   let response;
   try{
     response=await fetch(url,{
       method:'POST',redirect:'error',signal:signal??AbortSignal.timeout(10000),
-      headers:{Accept:'application/json','Content-Type':'application/json',Authorization:`Bearer ${env.VERCEL_OIDC_TOKEN}`},body
+      headers:{Accept:'application/json','Content-Type':'application/json',Authorization:`Bearer ${oidc}`},body
     });
   }catch{throw authError('UNAVAILABLE','CONNECT_UNAVAILABLE');}
   let data;
@@ -100,8 +144,10 @@ export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES}=
     const providerCode=data?.error?.code??data?.err?.code;
     const detail=typeof providerCode==='string'&&Object.hasOwn(known,providerCode)?known[providerCode]:null;
     const diagnostic=limited?'CONNECT_RATE_LIMITED':detail??(response.status===401?'CONNECT_UNAUTHORIZED':response.status===403?'CONNECT_FORBIDDEN':'CONNECT_UNAVAILABLE');
-    throw authError(code,diagnostic);
+    const error=authError(code,diagnostic);
+    if(limited)error.retryDelayMs=retryDelay(response);
+    throw error;
   }
   if(typeof data?.token!=='string'||!data.token)throw authError('AUTH_REQUIRED','CONNECT_INVALID_RESPONSE');
-  return data.token;
+  return data;
 }

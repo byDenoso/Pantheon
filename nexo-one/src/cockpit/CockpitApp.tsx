@@ -122,7 +122,7 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
   const [tab, setTab] = useState<'catalog' | 'tower' | 'campaigns' | 'audit'>('catalog'), [query, setQuery] = useState('');
   const [saving, setSaving] = useState(false), [status, setStatus] = useState<{tone?: string; text: string} | null>(null), [errors, setErrors] = useState<SaveError[]>([]);
   const [active, setActive] = useState('agora');
-  const [automatic, setAutomatic] = useState(true);
+  const [automatic, setAutomatic] = useState(false);
   const [publicVersion, setPublicVersion] = useState<number | null>(null), [checkingPublic, setCheckingPublic] = useState(false), [publicCheckError, setPublicCheckError] = useState('');
   const checkPublic = useCallback(async () => {
     setCheckingPublic(true); setPublicCheckError('');
@@ -149,6 +149,8 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
   }, []);
 
   const shadow = data.shadow.available ? data.shadow : null;
+  const shadowReason = data.shadow.available ? '' : data.shadow.reason;
+  const shadowRateLimited = shadowReason === 'SHADOW_CONNECT_RATE_LIMITED';
   const readable=(tab:ShadowTab)=>shadow?.availability?.[tab]==='available';
   const unreadTabs=(['roadmap','mural','resumo','resultados','equipe'] as ShadowTab[]).filter(tab=>!readable(tab));
   const towerCands = data.candidates.tower, campCands = data.candidates.campaigns;
@@ -159,11 +161,12 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
   useEffect(() => { if (!dirty) draftVersion.current = selection?.version ?? 0; }, [dirty, selection?.version]);
   const versionConflict = dirty && draftVersion.current !== (selection?.version ?? 0);
   useEffect(() => {
+    if (shadowRateLimited) return;
     const timer = window.setInterval(() => {
       if (canRefresh({automatic, dirty, saving, loading: refreshing, visible: document.visibilityState === 'visible'})) void reload();
-    }, 60000);
+    }, 5 * 60000);
     return () => window.clearInterval(timer);
-  }, [automatic, dirty, saving, refreshing, reload]);
+  }, [automatic, dirty, saving, refreshing, reload, shadowRateLimited]);
   useEffect(() => {
     if (!dirty) return;
     const guard = (event: BeforeUnloadEvent) => {event.preventDefault(); event.returnValue = '';};
@@ -273,9 +276,9 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         <div><p className="ck-eyebrow">Cockpit privado</p><h1>Estado da pesquisa, <em>agora.</em></h1><p>Equipe, frentes e resultados lidos da Tower SHADOW, e o controle do que aparece em nexoresearch.org.</p></div>
         <div className="ck-stamp"><span className="ck-state" data-tone={shadow ? (unreadTabs.length ? 'warn' : 'ok') : 'bad'}>{shadow ? (unreadTabs.length ? 'SHADOW: leitura parcial' : 'SHADOW consultada') : 'SHADOW indisponível'}</span><br/>Consulta iniciada: {when(data.generatedAt)}<br/>Modificação da fonte: {shadow ? when(shadow.modifiedAt) : 'indisponível'}<br/><button type="button" className="ck-btn" disabled={refreshing || dirty || saving} style={{marginTop: 8}} onClick={() => void reload()}>{refreshing ? 'Atualizando…' : 'Atualizar leitura'}</button></div>
       </div>
-      <div className="ck-livebar"><label><input type="checkbox" checked={automatic} onChange={e => setAutomatic(e.target.checked)}/> Atualizar a cada minuto</label><span>{dirty ? 'Atualização pausada durante a edição. Publique ou descarte o rascunho para continuar.' : automatic ? 'Tentativas de atualização enquanto esta página estiver visível.' : 'Atualização manual.'}</span></div>
+      <div className="ck-livebar"><label><input type="checkbox" checked={automatic} onChange={e => setAutomatic(e.target.checked)}/> Atualizar a cada 5 minutos</label><span>{dirty ? 'Atualização pausada durante a edição. Publique ou descarte o rascunho para continuar.' : shadowRateLimited ? 'Atualização automática pausada pelo limite da conexão.' : automatic ? 'Atualizações enquanto esta página estiver visível.' : 'Atualização manual.'}</span></div>
       {refreshError && <p className="ck-note" data-tone="warn" role="alert">A última atualização falhou. Os dados abaixo são da leitura de {when(data.generatedAt)}. Tente atualizar novamente.</p>}
-      {!shadow && <p className="ck-note" data-tone="warn" style={{marginTop: 18}}><strong>Fonte SHADOW indisponível nesta leitura.</strong> Motivo: {(data.shadow as {reason: string}).reason}. Não é possível consultar resultados novos agora. A seleção já aprovada permanece preservada.</p>}
+      {!shadow && <p className="ck-note" data-tone="warn" style={{marginTop: 18}}><strong>{shadowRateLimited ? 'A conexão com o Google atingiu o limite de solicitações.' : 'Fonte SHADOW indisponível nesta leitura.'}</strong> {shadowRateLimited ? 'A atualização automática está pausada. Use Atualizar leitura quando a conexão voltar.' : `Código da falha ${shadowReason}.`} A seleção já aprovada permanece preservada.</p>}
       {shadow && <div className="ck-note"><p role="status"><strong>Fonte SHADOW · recorte limitado.</strong> {unreadTabs.length ? `Abas indisponíveis ou sem cobertura informada: ${unreadTabs.join(', ')}.` : 'As abas listadas responderam nesta consulta.'}</p><details><summary>Cobertura e proveniência</summary><p>A data de modificação é informada pela fonte e não comprova leitura atômica. A consulta usa até 100 linhas recentes de resultados, filtradas na projeção; até 60 seguem para a atividade. A ausência de um registro pode indicar limite da janela ou filtragem, não exclusão.</p><p>A comparação das aprovações usa uma projeção limitada: método e referências não integram seu hash atual, e alguns campos podem ser reduzidos. Ausência de alerta não comprova que a fonte inteira permaneceu igual.</p><p>O snapshot JSON da outra área privada é uma leitura distinta. Esta tela não compara sua revisão com a SHADOW.</p></details></div>}
       <dl className="ck-kpis">
         <div className="ck-kpi"><dt>Resultados no recorte</dt><dd>{readable('resultados') ? towerCands.length : '—'}</dd></div>

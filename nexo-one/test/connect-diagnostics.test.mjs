@@ -58,3 +58,37 @@ test('diagnostic registry is a frozen allowlist',()=>{
   assert.equal(Object.isFrozen(GOOGLE_AUTH_DIAGNOSTICS),true);
   assert.ok(GOOGLE_AUTH_DIAGNOSTICS.every(v=>/^[A-Z_]+$/.test(v)));
 });
+
+test('identical concurrent Drive reads share one request, but the next read rechecks authorization',async()=>{
+  const original=globalThis.fetch;
+  let calls=0;
+  globalThis.fetch=async()=>++calls===2?Response.json({},{status:403}):Response.json({token:`synthetic-${calls}`});
+  const options={scopes,reuseDriveRead:true};
+  try{
+    assert.deepEqual(await Promise.all([googleConnectToken(env,undefined,options),googleConnectToken(env,undefined,options)]),['synthetic-1','synthetic-1']);
+    await assert.rejects(googleConnectToken(env,undefined,options),{googleDiagnostic:'CONNECT_FORBIDDEN'});
+    assert.deepEqual(await Promise.all([
+      googleConnectToken(env,undefined,options),
+      googleConnectToken({...env,VERCEL_OIDC_TOKEN:'different-runtime'},undefined,options),
+    ]),['synthetic-3','synthetic-4']);
+    assert.equal(calls,4);
+  }finally{globalThis.fetch=original;}
+});
+
+test('rate limited Drive read honors Retry-After, then tries the provider again',async(t)=>{
+  t.mock.timers.enable({apis:['Date'],now:Date.now()});
+  const original=globalThis.fetch;
+  let calls=0;
+  globalThis.fetch=async()=>++calls===1?Response.json({}, {status:429,headers:{'Retry-After':'120'}}):Response.json({token:'recovered',expiresAt:Date.now()+3600000});
+  const options={scopes,reuseDriveRead:true};
+  const limited={code:'RATE_LIMITED',googleDiagnostic:'CONNECT_RATE_LIMITED'};
+  try{
+    await assert.rejects(googleConnectToken(env,undefined,options),limited);
+    t.mock.timers.tick(119000);
+    await assert.rejects(googleConnectToken(env,undefined,options),limited);
+    assert.equal(calls,1);
+    t.mock.timers.tick(1000);
+    assert.equal(await googleConnectToken(env,undefined,options),'recovered');
+    assert.equal(calls,2);
+  }finally{globalThis.fetch=original;}
+});
