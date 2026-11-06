@@ -5,6 +5,8 @@ import {googleToken} from '../adapters/google.mjs';
 import {GOOGLE_AUTH_DIAGNOSTICS} from '../adapters/connect.mjs';
 
 const MAX_BYTES = 8 * 1024 * 1024;
+const SNAPSHOT_FRESH_MS = 5 * 60000, SNAPSHOT_STALE_MS = 24 * 3600000;
+let lastSnapshot = null;
 async function readDriveSnapshot(env, {fetcher = fetch, tokenProvider = googleToken} = {}) {
   const id = String(env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID || '');
   if (!/^[A-Za-z0-9_-]{1,200}$/.test(id)) throw new Error('PUBLIC_CAMPAIGN_FILE_INVALID');
@@ -30,7 +32,20 @@ async function readDriveSnapshot(env, {fetcher = fetch, tokenProvider = googleTo
 
 // Reads only the pre-sanitized publication artifact. Never opens Tower or accepts a browser path.
 export async function readPublicCampaignSnapshot(env = {}, options) {
-  if (env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID) return readDriveSnapshot(env, options);
+  if (env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID) {
+    // Public visits share one Drive read per worker: each uncached read costs a Connect token.
+    if (options) return readDriveSnapshot(env, options);
+    const now = Date.now();
+    if (lastSnapshot?.id === env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID && now - lastSnapshot.at < SNAPSHOT_FRESH_MS) return lastSnapshot.value;
+    try {
+      const value = await readDriveSnapshot(env);
+      lastSnapshot = {id: env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID, at: now, value};
+      return value;
+    } catch (error) {
+      if (lastSnapshot?.id === env.NEXO_PUBLIC_CAMPAIGNS_DRIVE_FILE_ID && now - lastSnapshot.at < SNAPSHOT_STALE_MS) return lastSnapshot.value;
+      throw error;
+    }
+  }
   const data = await readFile(env.NEXO_PUBLIC_CAMPAIGNS_FILE || resolve('dist/public-campaigns.json'));
   if (data.byteLength > 8 * 1024 * 1024) throw new Error('PUBLIC_CAMPAIGN_SNAPSHOT_TOO_LARGE');
   return validatePublicCampaignSnapshot(JSON.parse(data.toString('utf8')));
