@@ -369,12 +369,58 @@ def flush_verified_appends(session, stored, counts, queued, *, batch_applied=Fal
     counts["readback_batches"] += 1
     queued.clear()
 
+_TERMINAL_CODES = frozenset({
+    # Structural failures only. Mutable policy/identity mismatches must remain
+    # recoverable via corrected source events, not permanent INVALID receipts.
+    "PLAIN_WIDTH_OR_TYPE_INVALID", "PLAIN_TRAILING_VALUES",
+    "INVALID_WIDTH_OR_TYPE", "BAD_STABLE_ID_OR_LENGTH",
+    "INVALID_OBJECT", "DUPLICATE_KEY", "NONFINITE",
+})
+
+# Frozen identities of the seven document-URL state violations observed on
+# 2026-11-03. Hashes avoid publishing private event IDs in source.
+_HISTORICAL_LINK_IDENTITIES = frozenset({
+    "67fb4b341e73f1ddbe71849296d316541cdee23b7502b96cae910983d8c2a267",
+    "ca6edd8b7ddca8761560067caf0e86c2c12975bc97efc31516d9a5499795a293",
+    "8869981c97ab87a2547a7d8c004a1bd68e13032fdddc5f9e839e8c7ea1e2dcfc",
+    "494160313aa04f95fa988083676ca29aac359e53e9d0b39a9450fbdc46d3f436",
+    "4989883d78b10140cf98c942e7760f9fb6cc17357539801dafa89e3662df2aa8",
+    "b93b53c2ec5d2d0eab512771b5c48f48df195c1e5d538e861e39aabf7cc8a69d",
+    "071e85dc5c832dfd2253d90681e639d3721b9e86ee43296c7adee64b76f11323",
+})
+
+
+def _historical_state_link(item):
+    return (_legacy_state_document_link(item["state"]) and
+            item["mark_tab"] == PLAIN_TAB and
+            item["data"]["tab"] == "RESULTADOS" and
+            hashlib.sha256(item["data"]["stable_id"].encode("utf-8")).hexdigest()
+            in _HISTORICAL_LINK_IDENTITIES)
+
+
+def _terminal_reason(exc, stable_id):
+    code = str(exc)
+    if isinstance(exc, ValueError) and code in _TERMINAL_CODES:
+        return code
+    if code == "INVALID_TAB_OR_ID" and not KEY.fullmatch(stable_id):
+        return "INVALID_STABLE_ID"
+    return None
+
+
+def _legacy_state_document_link(value):
+    """Preserve historical misplaced document pointers; never erase evidence."""
+    return isinstance(value, str) and bool(re.fullmatch(
+        r"https://docs\.google\.com/document/d/[A-Za-z0-9_-]+/edit(?:\?.*)?",
+        value))
+
+
 def run(session, *, apply=False, snapshot=None, batch_applied=False):
     stored = {tab: target_index(session, tab) for tab in TABS}
     seen = {}
     pending = []
     invalid_ids = set()
     malformed_plain = []
+    invalid_to_mark = []
     counts = {"eligible": 0, "written": 0, "invalid": 0, "legacy": 0,
               "plain": 0, "duplicate": 0, "attempted_before": 0, "reconciled": 0,
               "unresolved": 0, "conflict": 0, "quarantined": 0,
@@ -382,6 +428,8 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
               "tail_readback_fallbacks": 0,
               "preexisting_invalid": 0, "preexisting_quarantined": 0,
               "new_failures": 0, "isolated_schema_collisions": 0,
+              "terminal_invalid_new": 0, "legacy_state_links": 0,
+              "contract_pending": 0, "new_state_links": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
 
     legacy_rows = page_rows(session, SPOOL, LEGACY_TAB, "E")
@@ -403,10 +451,13 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
             digest = hashlib.sha256(row[3].encode("ascii")).hexdigest()[:16]
             pending.append(dict(number=number, data=data, state=state,
                                 digest=digest, mark_tab=LEGACY_TAB, mark_column="E"))
-        except (ValueError, KeyError, TypeError, UnicodeError):
+        except (ValueError, KeyError, TypeError, UnicodeError) as exc:
             counts["invalid"] += 1
-            if len(row) > 4 and isinstance(row[4], str) and row[4].startswith('INVALID:'):
+            state = row[4] if len(row) > 4 and isinstance(row[4], str) else ""
+            if state.startswith('INVALID:'):
                 counts['preexisting_invalid'] += 1
+            elif not state and (reason := _terminal_reason(exc, row[0])):
+                invalid_to_mark.append((LEGACY_TAB, "E", number, "INVALID:" + reason))
             if isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
 
@@ -426,10 +477,24 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
             counts["plain"] += 1
             pending.append(dict(number=number, data=data, state=state,
                                 digest=digest_for(data), mark_tab=PLAIN_TAB, mark_column="O"))
-        except (ValueError, KeyError, TypeError, UnicodeError):
+        except (ValueError, KeyError, TypeError, UnicodeError) as exc:
             counts["invalid"] += 1
-            if len(row) > 14 and isinstance(row[14], str) and row[14].startswith('INVALID:'):
+            state = row[14] if len(row) > 14 and isinstance(row[14], str) else ""
+            if state.startswith('INVALID:'):
                 counts['preexisting_invalid'] += 1
+            elif not state and (reason := _terminal_reason(exc, row[0] if row else "")):
+                invalid_to_mark.append((PLAIN_TAB, "O", number, "INVALID:" + reason))
+            elif not state and isinstance(exc, ValueError) and (
+                    (str(exc) == "MISMATCHED_ROW_ID" and len(row) > 3
+                     and row[3] == "RESULTADOS" and KEY.fullmatch(row[0])) or
+                    (str(exc) in ("PLAIN_METADATA_MISSING", "MISSING_TIME")
+                     and row and KEY.fullmatch(row[0])) or
+                    (str(exc) == "INVALID_TAB_OR_ID" and row
+                     and KEY.fullmatch(row[0]))):
+                # Mutable producer contract: preserve the proposal, leave
+                # state empty, and permit an explicit corrected re-emission.
+                # MURAL identity mismatch remains a hard failure.
+                counts["contract_pending"] += 1
             if row and isinstance(row[0], str) and KEY.fullmatch(row[0]):
                 invalid_ids.add(row[0])
                 if (len(row) >= 4 and row[3] in TABS
@@ -440,6 +505,7 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     # neither has been applied, quarantine BOTH sources without choosing one.
     # This changes only spool state cells; neither payload is rewritten and
     # no scientific append occurs. All other collisions stay fail-closed.
+    schema_marked = set()
     if apply:
         for number, stable_id, tab in malformed_plain:
             if sum(other_id == stable_id for _, other_id, _ in malformed_plain) != 1:
@@ -454,12 +520,35 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
             if twins[0]["mark_tab"] != PLAIN_TAB or twins[0]["mark_column"] != "O":
                 continue
             mark(session, PLAIN_TAB, "O", number, "INVALID:SCHEMA_ID_COLLISION")
+            schema_marked.add((PLAIN_TAB, number))
             mark(session, PLAIN_TAB, "O", twins[0]["number"],
                  "INVALID:UNRESOLVED_SOURCE_COLLISION")
             twins[0]["state"] = "INVALID:UNRESOLVED_SOURCE_COLLISION"
             invalid_ids.discard(stable_id)
             counts["preexisting_invalid"] += 1
             counts["isolated_schema_collisions"] += 1
+
+    # Persist deterministic malformed rows as terminal receipts. Never
+    # overwrite a nonempty state (it may hold the only source document URL).
+    # Readback is mandatory; transport ambiguity stops the run.
+    if apply and invalid_to_mark:
+        # Keep identity collisions actionable: do not auto-ack a malformed
+        # source that shares an ID with a valid spool/target identity.
+        colliding_malformed = {
+            (PLAIN_TAB, number)
+            for number, stable_id, tab in malformed_plain
+            if stable_id in stored[tab] or any(
+                item["data"]["tab"] == tab and
+                item["data"]["stable_id"] == stable_id for item in pending)
+        }
+        updates = [(tab, col, number, reason)
+                   for tab, col, number, reason in invalid_to_mark
+                   if (tab, number) not in schema_marked
+                   and (tab, number) not in colliding_malformed]
+        if updates:
+            mark_applied_batch(session, updates)
+            counts["preexisting_invalid"] += len(updates)
+            counts["terminal_invalid_new"] += len(updates)
 
     # Validate all identities before the first side effect. Otherwise the first
     # colliding proposal could be applied before the second exposes the conflict.
@@ -503,8 +592,14 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
                                       "APPLIED:"+item["digest"]) for item in items):
             counts["quarantined"] += len(items)
             counts['preexisting_quarantined'] += sum(
-                isinstance(item['state'], str) and
-                item['state'].startswith(('INVALID:', 'PENDING_SYNC')) for item in items)
+                isinstance(item['state'], str) and (
+                    item['state'].startswith(('INVALID:', 'PENDING_SYNC')) or
+                    _historical_state_link(item)) for item in items)
+            counts["legacy_state_links"] += sum(
+                _historical_state_link(item) for item in items)
+            counts["new_state_links"] += sum(
+                _legacy_state_document_link(item["state"]) and
+                not _historical_state_link(item) for item in items)
             continue
         # Resolve the strongest existing receipt first within this identity.
         # This never reorders distinct identities for scientific bookkeeping.
@@ -540,7 +635,8 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
     # Separate genuinely new problems from pre-existing, explicitly marked
     # historical debt. Both remain visible; neither is silently discarded.
     counts['new_failures'] = (
-        counts['invalid'] - counts['preexisting_invalid'] +
+        counts['invalid'] - counts['preexisting_invalid'] -
+        counts['contract_pending'] +
         counts['quarantined'] - counts['preexisting_quarantined'] +
         counts['unresolved'] + counts['conflict'] + counts['target_conflicts'] +
         sum(counts.get('curation_' + key, 0) for key in ('invalid', 'unresolved', 'conflict')))
@@ -563,7 +659,8 @@ def result_status(counts, apply):
     quarantined = counts.get("quarantined", 0)
     if old_invalid > invalid or old_quarantined > quarantined:
         return "PARTIAL_RECONCILIATION"
-    active = (invalid - old_invalid + quarantined - old_quarantined +
+    active = (invalid - old_invalid - counts.get("contract_pending", 0) +
+              quarantined - old_quarantined +
               sum(counts.get(key, 0) for key in (
                   "unresolved", "conflict", "target_conflicts",
                   "curation_invalid", "curation_unresolved", "curation_conflict")))
@@ -640,6 +737,10 @@ def step_summary(counts, metrics, duration, status):
         ("quarantined", safe_counts.get("quarantined", 0)),
         ("lease_quarantine_total", safe_counts.get("lease_quarantine_total", 0)),
         ("lease_quarantine_new", safe_counts.get("lease_quarantine_new", 0)),
+        ("legacy_state_links", safe_counts.get("legacy_state_links", 0)),
+        ("new_state_links", safe_counts.get("new_state_links", 0)),
+        ("contract_pending", safe_counts.get("contract_pending", 0)),
+        ("terminal_invalid_new", safe_counts.get("terminal_invalid_new", 0)),
         ("sheets_get", metrics.get("get", 0)),
         ("sheets_post", metrics.get("post", 0)),
         ("sheets_put", metrics.get("put", 0)),
@@ -701,6 +802,22 @@ def main():
                           "error_code": code}), file=sys.stderr)
         return 1
     status = result_status(result, flag)
+    if flag:
+        output = os.environ.get("GITHUB_OUTPUT")
+        if output:
+            try:
+                with open(output, "a", encoding="utf-8") as stream:
+                    stream.write("invalid_quarantine_alert=" +
+                        ("true" if result.get("terminal_invalid_new", 0) or
+                         result.get("legacy_state_links", 0) or
+                         result.get("contract_pending", 0) or
+                         result.get("new_state_links", 0) else "false") + "\n")
+                    stream.write(
+                        "writer_alert_counts=" + ",".join(str(result.get(key, 0))
+                        for key in ("contract_pending", "legacy_state_links",
+                                    "new_state_links", "terminal_invalid_new")) + "\n")
+            except OSError:
+                pass
     step_summary(result, meter.metrics if meter else {}, time.monotonic()-started, status)
     print(json.dumps({"status": status, "operations":operations, **result}))
     return 1 if status == 'PARTIAL_RECONCILIATION' or operations.startswith('FAILED_') else 0

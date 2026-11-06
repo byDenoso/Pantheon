@@ -157,9 +157,90 @@ class Recovery(IsolatedSummaryTestCase):
                  w.LEGACY_TAB:[(1,['stable_id','created_at','role','envelope_b64url'])]+(legacy or [])}
         with patch.object(w,'page_rows',side_effect=lambda s,sh,tab,col,first=1:iter(sources[tab])), \
              patch.object(w,'target_index',side_effect=lambda s,tab:dict(s.records[tab])), \
-             patch.object(w,'mark',side_effect=lambda s,tab,col,n,value:s.marks.append((n,value))):
+             patch.object(w,'mark',side_effect=lambda s,tab,col,n,value:s.marks.append((n,value))), \
+             patch.object(w,'mark_applied_batch',side_effect=lambda s,entries:
+                 s.marks.extend((number,state) for tab,col,number,state in entries)):
             result=w.run(session,apply=apply)
         return result, session
+
+    def test_contract_title_violation_stays_recoverable(self):
+        bad=plain("RESULTADOS")
+        bad[7]="An overly long declaration, not a question, " + "x"*150
+        counts,session=self.invoke([bad])
+        self.assertEqual(counts["invalid"],1)
+        self.assertEqual(counts["preexisting_invalid"],0)
+        self.assertEqual(counts["contract_pending"],1)
+        self.assertEqual(counts["terminal_invalid_new"],0)
+        self.assertEqual(counts["new_failures"],0)
+        self.assertEqual(session.marks,[])
+        self.assertEqual(session.posts,[])
+        self.assertEqual(w.result_status(counts, True),"READBACK_VERIFIED")
+        repeated,second=self.invoke([bad])
+        self.assertEqual(repeated["contract_pending"],1)
+        self.assertEqual(second.marks,[])
+
+    def test_preserves_legacy_document_state_url(self):
+        row=plain("RESULTADOS")
+        url="https://docs.google.com/document/d/Abc123_-xyz/edit"
+        row[14]=url
+        historical_id = w.hashlib.sha256(ID.encode("utf-8")).hexdigest()
+        with patch.object(w, "_HISTORICAL_LINK_IDENTITIES", {historical_id}):
+            counts,session=self.invoke([row])
+        self.assertEqual(counts["quarantined"],1)
+        self.assertEqual(counts["preexisting_quarantined"],1)
+        self.assertEqual(counts["legacy_state_links"],1)
+        self.assertEqual(counts["new_state_links"],0)
+        self.assertEqual(counts["new_failures"],0)
+        self.assertEqual(session.marks,[])
+        self.assertEqual(session.posts,[])
+        self.assertEqual(w.result_status(counts, True),"READBACK_VERIFIED")
+
+    def test_future_document_state_is_active_failure(self):
+        row=plain("RESULTADOS")
+        row[14]="https://docs.google.com/document/d/FutureProducerInvalid123/edit"
+        counts,session=self.invoke([row])
+        self.assertEqual(counts["legacy_state_links"],0)
+        self.assertEqual(counts["new_state_links"],1)
+        self.assertEqual(counts["quarantined"],1)
+        self.assertEqual(counts["preexisting_quarantined"],0)
+        self.assertEqual(counts["new_failures"],1)
+        self.assertEqual(session.marks,[])
+        self.assertEqual(w.result_status(counts,True),"PARTIAL_RECONCILIATION")
+
+    def test_mural_identity_mismatch_cannot_be_contract_pending(self):
+        row=plain("MURAL")
+        row[11]="different-id"
+        counts,session=self.invoke([row])
+        self.assertEqual(counts["contract_pending"],0)
+        self.assertEqual(counts["new_failures"],1)
+        self.assertEqual(session.marks,[])
+        self.assertEqual(w.result_status(counts,True),"PARTIAL_RECONCILIATION")
+
+    def test_structural_error_still_terminal_after_readback(self):
+        row=plain("MURAL")
+        row[12]="unexpected trailing payload"
+        counts,session=self.invoke([row])
+        self.assertEqual(counts["terminal_invalid_new"],1)
+        self.assertEqual(counts["contract_pending"],0)
+        self.assertEqual(session.marks,[(2,"INVALID:PLAIN_TRAILING_VALUES")])
+
+    def test_unknown_state_remains_failure(self):
+        row=plain("RESULTADOS")
+        row[14]="BAD_TRANSPORT_STATE"
+        counts,session=self.invoke([row])
+        self.assertEqual(counts["quarantined"],1)
+        self.assertEqual(counts["preexisting_quarantined"],0)
+        self.assertEqual(w.result_status(counts, True),"PARTIAL_RECONCILIATION")
+        self.assertEqual(session.marks,[])
+
+    def test_malformed_preflight_keeps_spool_readonly(self):
+        row=plain("RESULTADOS")
+        row[7]="not a question"
+        counts,session=self.invoke([row],apply=False)
+        self.assertEqual(counts["terminal_invalid_new"],0)
+        self.assertEqual(counts["invalid"],1)
+        self.assertEqual(session.marks,[])
+        self.assertEqual(session.posts,[])
 
     def test_human_title_resultado_written_and_reconciled(self):
         source=plain("RESULTADOS")
@@ -382,7 +463,8 @@ class Recovery(IsolatedSummaryTestCase):
         invalid=_recovery_plain(_recovery_data()); invalid[12]='stray'
         counts,s=self.invoke([invalid,_recovery_plain(_recovery_data('event-good'))])
         self.assertEqual(counts['invalid'],1); self.assertEqual(counts['written'],1)
-        self.assertEqual(w.result_status(counts,True),'PARTIAL_RECONCILIATION')
+        self.assertEqual(counts['terminal_invalid_new'],1)
+        self.assertEqual(w.result_status(counts,True),'READBACK_VERIFIED')
 
     def test_extra_columns_are_rejected(self):
         with self.assertRaises(ValueError): w.decode_plain(_recovery_plain(_recovery_data())+['unseen'])
