@@ -9,7 +9,8 @@ import json
 import re
 
 VERSION = 'TOWER_OPERATIONS_V1'
-VIEW_TITLES = ('AUTONOMIA', 'INCIDENTES', 'EXECUCOES', 'MANUTENCAO', 'CHECKPOINTS')
+VIEW_TITLES = ('AUTONOMIA', 'INCIDENTES', 'EXECUCOES', 'MANUTENCAO')
+# CHECKPOINTS is Task-owned mutable state. Never include it in disposable views.
 RECENT_LIMIT = 500
 MAINTENANCE = (
     ('daily-health', 'DAILY', 'P', 'Reconciliar agendador, Writer e incidentes ativos; atuar somente na causa observada.'),
@@ -88,7 +89,8 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
         raise ValueError('TIMEZONE_REQUIRED')
     stamp = now.isoformat(timespec='seconds')
     mural = list(stored.get('MURAL', {}).values())
-    results = list(stored.get('RESULTADOS', {}).values())
+    result_items = list(stored.get('RESULTADOS', {}).items())
+    results = [row for _, row in result_items]
     roster = roster or {}
     incidents = [['id', 'estado', 'origem', 'dono', 'causa', 'acao', 'observado_em', 'escopo']]
     active = counts.get('new_failures', 0)
@@ -106,7 +108,7 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
                     'Reconciliar recibo e destino; nunca despachar de novo por timeout.', stamp, 'TRANSPORT'])
     executions = [['id', 'data', 'produtor_declarado', 'item', 'classe_declarada', 'proveniencia', 'artefato_declarado', 'fonte']]
     missing_artifacts = identity_conflicts = receipt_complete = 0
-    for row in results:
+    for event_id, row in result_items:
         padded = list(row) + [''] * (10-len(row))
         source_role = padded[1]
         task_ids = re.findall(r'(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])', source_role)
@@ -114,7 +116,7 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
         conflict = bool(declared and any(t in roster and roster[t] != declared[1] for t in task_ids))
         if conflict:
             identity_conflicts += 1
-            incidents.append([padded[3], 'PROVENANCE_CONFLICT', 'RESULTADOS', 'P',
+            incidents.append([event_id, 'PROVENANCE_CONFLICT', 'RESULTADOS', 'P',
                 'ROLE_TASK_MISMATCH', 'Conferir execução/artefato; corrigir por evento vinculado, sem sobrescrever.', stamp, 'IDENTITY'])
         artifact = padded[9]
         missing = not artifact or 'LOCAL_ONLY' in artifact
@@ -122,11 +124,11 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
         valid_receipt = executor_receipt(padded)
         receipt_complete += int(valid_receipt)
         classification = re.search(r'(?<![A-Za-z0-9])(E[012]|QA|TECH_CHECK|REVIEW)(?![A-Za-z0-9])', ' '.join(padded[2:6]))
-        executions.append([padded[3], padded[0], source_role, padded[2],
+        executions.append([event_id, padded[0], source_role, padded[2],
             classification[1] if classification else 'UNCLASSIFIED',
             'CONFLICT' if conflict else ('EXECUTOR_RECEIPT_SHAPE_VALID_NOT_REPLAYED' if valid_receipt else 'DECLARED_NOT_INDEPENDENTLY_VERIFIED'),
             'LOCAL_OR_MISSING' if missing else 'POINTER_PRESENT_NOT_REVALIDATED',
-            f'RESULTADOS · id={padded[3]}'])
+            f'RESULTADOS · id={event_id}'])
     # A bounded navigation view; full evidence remains in RESULTADOS.
     executions = executions[:1] + executions[1:][-RECENT_LIMIT:]
     status = 'ATTENTION' if active or identity_conflicts else 'READBACK_VERIFIED'
@@ -152,32 +154,12 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
         metric('rows_'+tab, 'CAPACITY_REVIEW' if last >= 50000 else 'OBSERVED', last, tab,
                '50 mil linhas: avaliar particionamento com paridade; jamais excluir automaticamente.')
     metric('remote_dispatch', 'NOT_CERTIFIED_BY_WRITER', 'read-only intake ≠ execução', 'Backend receipt required', 'Usar somente backend autorizado e comprovado; cálculo local segue independente.')
-    checkpoints = {}
-    for row in mural:
-        if len(row) != 8 or row[5] != 'CHECKPOINT' or not row[3].startswith('NEXO_CHECKPOINT_V1 '):
-            continue
-        try:
-            cp = json.loads(row[3].split(' ',1)[1])
-            task = cp.get('task_id')
-            if (task not in roster or row[1] != roster[task] or not row[7].startswith(task+'-')
-                    or not isinstance(cp.get('run_id'),str) or not cp['run_id']
-                    or any(type(cp.get(k)) is not int or cp[k]<1 for k in ('mural_row','result_row'))
-                    or not isinstance(cp.get('pending_ids'),list)
-                    or not all(isinstance(x,str) and x for x in cp['pending_ids'])
-                    or not isinstance(cp.get('next_action'),str)):
-                continue
-            checkpoints[task]=[task,cp['run_id'],row[0],str(cp['mural_row']),str(cp['result_row']),
-                               json.dumps(cp['pending_ids'],ensure_ascii=False),cp['next_action'],row[7]]
-        except (ValueError,TypeError,AttributeError):
-            continue
-    cp_rows=[['task_id','run_id_declarado','data','cursor_mural','cursor_resultados','pending_ids','proxima_acao','recibo']]
-    cp_rows.extend(checkpoints.values())
     incidents = incidents[:1] + incidents[1:][-RECENT_LIMIT:]
     return {'AUTONOMIA':summary, 'INCIDENTES':incidents, 'EXECUCOES':executions,
-            'MANUTENCAO':maintenance_rows(mural, now), 'CHECKPOINTS':cp_rows}
+            'MANUTENCAO':maintenance_rows(mural, now)}
 
 def publish_views(session, views, writer):
-    """Replace only named derived views; exact readback, no POST retry."""
+    """Replace derived views only; never write Task-owned CHECKPOINTS. Exact readback."""
     meta = writer.safe_get(session, f'{writer.API}/{writer.SHADOW}',
         params={'fields':'sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))'}, timeout=60).json()
     sheets = {s['properties']['title']:s['properties'] for s in meta.get('sheets',[])}
