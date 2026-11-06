@@ -86,7 +86,7 @@ html:root .atlas-app[data-area="public"] .nexo-research-shortcut strong {font-si
 html:root .atlas-app[data-area="public"] .nexo-research-shortcut small {font-size:11px;line-height:1.5}
 html:root .atlas-app[data-area="public"] .nexo-research-shortcut:hover {border-color:var(--cyan);background:color-mix(in srgb,var(--cyan) 5%,var(--bg-2));transform:none;box-shadow:none}
 html:root .atlas-app[data-area="public"] .nexo-research-shortcut::before {display:none}
-html:root .atlas-app[data-area="public"] .nexo-reactive {transform:none!important;translate:none!important}
+html:root .atlas-app[data-area="public"] .nexo-reactive {transform:none!important}
 html:root .atlas-app[data-area="public"] .atlas-public-content {padding:0;max-width:none;background:none}
 html:root .atlas-app[data-area="public"] .atlas-public-main .atlas-section {padding:52px 0 60px;margin:0;border-top:1px solid var(--line)}
 html:root .atlas-app[data-area="public"] .atlas-section>h2,
@@ -101,11 +101,6 @@ html:root .atlas-app[data-area="public"] .nexo-research-lines {margin-top:32px}
 html:root .atlas-app[data-area="public"] .atlas-research-lines li {padding:26px 0;border-color:var(--line)}
 html:root .atlas-app[data-area="public"] .atlas-research-lines h3 {font:400 23px/1.3 var(--font-heading)}
 html:root .atlas-app[data-area="public"] .atlas-research-lines p {font-size:15px;line-height:1.7}
-.nexo-publication-entry {display:flex;align-items:center;justify-content:space-between;gap:32px;margin-top:36px;padding:28px 30px;border:1px solid var(--line);border-left:2px solid var(--cyan);border-radius:3px;background:var(--bg-2);color:var(--fg);text-decoration:none}
-html:root .atlas-app[data-area="public"] .nexo-publication-entry h3 {font:400 27px/1.3 var(--font-heading);margin:6px 0 10px}
-html:root .atlas-app[data-area="public"] .nexo-publication-entry p {font-size:14px;margin:0}
-.nexo-publication-entry>svg {width:24px;height:24px;color:var(--cyan);flex:none}
-.nexo-publication-entry:hover {border-color:var(--cyan)}
 html:root .atlas-app[data-area="public"] .atlas-footer {margin-top:0;border-top:1px solid var(--line);background:var(--bg-2)}
 html:root .atlas-app[data-area="public"] .atlas-footer-in {max-width:1440px;margin:auto;padding:36px clamp(20px,4vw,68px);font-size:13px}
 html:root .atlas-app[data-area="public"] .nexo-footer-brand strong {font:500 25px/1 var(--font-body);letter-spacing:.08em}
@@ -152,8 +147,6 @@ html:root .atlas-app[data-area="public"] .atlas-section.nexo-page-top {padding-t
   html:root .atlas-app[data-area="public"] .atlas-public-main .atlas-section {padding:40px 0}
   html:root .atlas-app[data-area="public"] .nexo-section-heading {gap:16px;display:block}
   html:root .atlas-app[data-area="public"] .nexo-section-lead {margin-top:14px}
-  .nexo-publication-entry {padding:22px 20px;gap:20px}
-  html:root .atlas-app[data-area="public"] .nexo-publication-entry h3 {font-size:25px}
 }
 @media(prefers-reduced-motion:reduce) {html:root .atlas-app[data-area="public"] * {animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media(forced-colors:active) {html:root .atlas-app[data-area="public"] {--fg:CanvasText;--fg-2:CanvasText;--bg:Canvas;--bg-2:Canvas;--line:CanvasText;--cyan:LinkText;--focus:Highlight;--action:ButtonFace;--on-action:ButtonText}.atlas-mark {border-color:CanvasText}}

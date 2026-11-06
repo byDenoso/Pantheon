@@ -1,0 +1,163 @@
+/* NEXO Research: legibility, dark-theme tones and motion. Loaded after nexo-research.css.
+   Motion runs only with prefers-reduced-motion:no-preference and while the visitor has not paused it. */
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url(/assets/nexo-atkinson-next.woff2) format("woff2");font-style:normal;font-weight:200 800;font-display:swap}
+
+/* ---------- Tones ---------- */
+html:root .atlas-app[data-area="public"],
+html:root[data-theme="dark"] .atlas-app[data-area="public"] {
+  --bg:#060a13;--bg-2:#0d1422;--bg-3:#152035;--fg:#eef3fb;--fg-2:#b9c5d9;--line:#34435f;
+  --cyan:#9fbdff;--orange:#9fbdff;--focus:#c3d6ff;--on-cyan:#03122e;
+  --action:#9fbdff;--on-action:#03122e;--control-line:#8a9cbd;
+  --accent-2:#6f9bff;--accent-3:#d6e4ff;--glow:#5f8dff;
+  --evo-shadow:0 18px 44px -22px rgb(0 0 0 / .9),0 0 0 1px rgb(159 189 255 / .08);
+  --nexo-surface:var(--bg-2);--nexo-soft-surface:var(--bg-2);
+}
+html:root[data-theme="light"] .atlas-app[data-area="public"] {
+  --bg:#ffffff;--bg-2:#f5f7fb;--bg-3:#e9eff9;--fg:#121722;--fg-2:#3b4656;--line:#c5cedb;
+  --cyan:#003087;--orange:#003087;--focus:#003087;--on-cyan:#ffffff;
+  --action:#003087;--on-action:#ffffff;--control-line:#6b7a90;
+  --accent-2:#0a4bc4;--accent-3:#003087;--glow:#003087;
+  --evo-shadow:0 18px 40px -24px rgb(0 48 135 / .38),0 0 0 1px rgb(0 48 135 / .06);
+}
+
+/* ---------- Reading ---------- */
+html:root .atlas-app[data-area="public"],
+html:root[data-theme] .atlas-app[data-area="public"] {
+  --font-body:"Atkinson Hyperlegible Next","IBM Plex Sans",system-ui,sans-serif;
+  --font-heading:"Atkinson Hyperlegible Next","IBM Plex Sans",system-ui,sans-serif;
+  font:400 17px/1.7 var(--font-body);font-optical-sizing:auto;text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;scrollbar-color:var(--control-line) var(--bg);
+  isolation:isolate;position:relative;
+}
+html:root .atlas-app[data-area="public"] ::selection {background:var(--cyan);color:var(--on-cyan)}
+html:root .atlas-app[data-area="public"] .atlas-brand small {font-size:13.5px;line-height:1.45;max-width:175px}
+html:root .atlas-app[data-area="public"] .nexo-wordmark>span {font-size:10px;letter-spacing:.3em}
+html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a) {font-size:15.5px;font-weight:500;color:var(--fg)}
+html:root .atlas-app[data-area="public"] .atlas-preferences>summary {font-size:14px;font-weight:500}
+html:root .atlas-app[data-area="public"] .atlas-eyebrow {font-size:12.5px;letter-spacing:.1em}
+html:root .atlas-app[data-area="public"] .atlas-hero-copy .atlas-eyebrow {font-size:12px;letter-spacing:.11em}
+html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 {font-weight:700;letter-spacing:-.035em;line-height:1.05}
+html:root .atlas-app[data-area="public"] .atlas-hero-lead {font-size:19px;line-height:1.7;max-width:52ch;color:var(--fg-2)}
+html:root .atlas-app[data-area="public"] :is(.atlas-btn,.atlas-text-action) {font-size:16px;font-weight:600}
+html:root .atlas-app[data-area="public"] .atlas-section>h2,
+html:root .atlas-app[data-area="public"] .atlas-section .nexo-section-heading h2,
+html:root .atlas-app[data-area="public"] .atlas-method-intro h2,
+html:root .atlas-app[data-area="public"] .nexo-contact-heading h2 {font-weight:600;letter-spacing:-.022em;line-height:1.16}
+html:root .atlas-app[data-area="public"] .nexo-section-lead {font-size:17.5px;line-height:1.7;max-width:48ch}
+html:root .atlas-app[data-area="public"] .atlas-research-lines h3 {font-size:25px;font-weight:600;letter-spacing:-.012em}
+html:root .atlas-app[data-area="public"] .atlas-research-lines p {font-size:17px;line-height:1.7;max-width:62ch}
+html:root .atlas-app[data-area="public"] .nexo-featured-evidence>h2 {font-weight:600}
+html:root .atlas-app[data-area="public"] .nexo-featured-evidence :is(.nexo-stat-label,.nexo-stat-context) {font-size:14.5px;line-height:1.6}
+html:root .atlas-app[data-area="public"] .nexo-featured-evidence .nexo-technical-plot>summary {font-size:14.5px}
+html:root .atlas-app[data-area="public"] .nexo-featured-caption {font-size:15.5px;line-height:1.7}
+html:root .atlas-app[data-area="public"] .nexo-featured-limits {font-size:14.5px}
+html:root .atlas-app[data-area="public"] .nexo-evidence-source {font-size:15px}
+html:root .atlas-app[data-area="public"] .nexo-launch-records p {font-size:14.5px}
+html:root .atlas-app[data-area="public"] .nexo-launch-search :is(label,input,button) {font-size:16px}
+html:root .atlas-app[data-area="public"] .nexo-launch-search input {border:1px solid var(--control-line);color:var(--fg)}
+html:root .atlas-app[data-area="public"] .nexo-research-shortcut strong {font-size:16px;font-weight:600}
+html:root .atlas-app[data-area="public"] .nexo-research-shortcut small {font-size:14px;line-height:1.5;color:var(--fg-2)}
+html:root .atlas-app[data-area="public"] .atlas-footer-in {font-size:15px}
+html:root .atlas-app[data-area="public"] .atlas-public-main :is(small,figcaption,time) {font-size:max(.82em,13.5px)}
+html:root .atlas-app[data-area="public"] .atlas-public-main :is(p,li,dd) {text-wrap:pretty}
+html:root .atlas-app[data-area="public"] .atlas-public-main :is(h1,h2,h3) {text-wrap:balance}
+html:root .atlas-app[data-area="public"] :is(button,a,summary):focus-visible {outline:3px solid var(--focus);outline-offset:4px;border-radius:4px}
+
+/* ---------- Surfaces ---------- */
+html:root .atlas-app[data-area="public"] .atlas-header {
+  background:color-mix(in srgb,var(--bg) 84%,transparent);
+  -webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px);
+}
+html:root .atlas-app[data-area="public"] :is(.nexo-featured-evidence,.nexo-research-shortcut,.nexo-research-hub) {border-radius:10px}
+html:root .atlas-app[data-area="public"] .nexo-featured-evidence {background:linear-gradient(180deg,var(--bg-2),color-mix(in srgb,var(--bg-3) 55%,var(--bg-2)));box-shadow:var(--evo-shadow)}
+html:root .atlas-app[data-area="public"] :is(.atlas-btn,.atlas-text-action,.nexo-launch-search input,.atlas-preferences>summary) {border-radius:8px}
+html:root .atlas-app[data-area="public"] .atlas-controls {background:var(--bg-3);border-radius:10px;box-shadow:var(--evo-shadow)}
+html:root .atlas-app[data-area="public"] .atlas-footer {background:linear-gradient(180deg,var(--bg-2),var(--bg))}
+/* Fixed ambient light behind the page; it never intercepts input. */
+html:root .atlas-app[data-area="public"]::before {
+  content:"";position:fixed;inset:-20vh -10vw;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(42vw 36vh at 82% 12%,color-mix(in srgb,var(--glow) 14%,transparent),transparent 70%),
+    radial-gradient(38vw 34vh at 8% 78%,color-mix(in srgb,var(--accent-2) 10%,transparent),transparent 72%);
+}
+html:root[data-theme="light"] .atlas-app[data-area="public"]::before {
+  background:
+    radial-gradient(42vw 36vh at 82% 12%,color-mix(in srgb,var(--glow) 6%,transparent),transparent 70%),
+    radial-gradient(38vw 34vh at 8% 78%,color-mix(in srgb,var(--accent-2) 5%,transparent),transparent 72%);
+}
+/* Underline that grows from the left, used by the navigation and the research lines. */
+html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a) {
+  background:linear-gradient(var(--cyan),var(--cyan)) 0 calc(100% - 7px)/0 2px no-repeat;
+}
+html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a):is(:hover,:focus-visible,[aria-current]) {background-size:100% 2px;color:var(--cyan)}
+html:root .atlas-app[data-area="public"] .atlas-research-lines li {
+  background:linear-gradient(var(--cyan),var(--cyan)) 0 0/3px 0 no-repeat;
+}
+html:root .atlas-app[data-area="public"] .atlas-research-lines li:is(:hover,:focus-within) {background-size:3px 100%;padding-left:20px}
+html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 span:last-child {
+  background:linear-gradient(100deg,var(--cyan) 0%,var(--accent-2) 45%,var(--accent-3) 60%,var(--cyan) 100%) 0 0/240% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+}
+html:root .atlas-app[data-area="public"] :is(.nexo-research-shortcut,.atlas-btn,.atlas-text-action,.nexo-evidence-source,.atlas-mail,.nexo-method-link):is(:hover,:focus-visible) :is(svg,.nexo-shortcut-arrow,.nexo-share-arrow) {translate:3px -3px}
+html:root .atlas-app[data-area="public"] .nexo-research-shortcut:is(:hover,:focus-visible) {border-color:var(--cyan);background:color-mix(in srgb,var(--cyan) 7%,var(--bg-2));box-shadow:var(--evo-shadow);translate:0 -3px}
+html:root .atlas-app[data-area="public"] .atlas-btn:is(:hover,:focus-visible) {box-shadow:0 14px 30px -14px color-mix(in srgb,var(--glow) 75%,transparent);translate:0 -2px}
+html:root .atlas-app[data-area="public"] .atlas-text-action:is(:hover,:focus-visible) {border-color:var(--cyan);color:var(--cyan);translate:0 -2px}
+html:root .atlas-app[data-area="public"] :is(.atlas-btn,.atlas-text-action,.nexo-research-shortcut):active {translate:0 0;scale:.985}
+html:root .atlas-app[data-area="public"] .nexo-entry-tag:hover {border-color:var(--cyan);color:var(--cyan)}
+
+/* ---------- Motion ---------- */
+@media(prefers-reduced-motion:no-preference) {
+  html:root:has(.atlas-app[data-area="public"]:not([data-cinema-paused="true"])) {scroll-behavior:smooth}
+  html:root .atlas-app[data-area="public"] :is(.atlas-header,.atlas-footer,.atlas-controls,.nexo-featured-evidence,.nexo-research-hub) {transition:background-color .35s ease,border-color .35s ease,box-shadow .35s ease}
+  html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a) {transition:background-size .32s cubic-bezier(.2,.7,.2,1),color .2s ease}
+  html:root .atlas-app[data-area="public"] .atlas-research-lines li {transition:background-size .45s cubic-bezier(.2,.7,.2,1),padding-left .45s cubic-bezier(.2,.7,.2,1)}
+  html:root .atlas-app[data-area="public"] :is(.atlas-btn,.atlas-text-action,.nexo-research-shortcut,.nexo-entry-tag,.atlas-preferences>summary) {transition:translate .28s cubic-bezier(.2,.7,.2,1),scale .16s ease,box-shadow .28s ease,border-color .2s ease,background-color .2s ease,color .2s ease}
+  html:root .atlas-app[data-area="public"] :is(.nexo-research-shortcut,.atlas-btn,.atlas-text-action,.nexo-evidence-source,.atlas-mail,.nexo-method-link) :is(svg,.nexo-shortcut-arrow,.nexo-share-arrow) {transition:translate .28s cubic-bezier(.2,.7,.2,1)}
+
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"])::before {animation:nexo-evo-drift 26s ease-in-out infinite alternate}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-header {animation:nexo-evo-drop .7s cubic-bezier(.16,1,.3,1) backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-mark::after {animation:nexo-evo-orbit 16s linear infinite}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-public-main {animation:nexo-evo-page .5s ease backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-hero-copy>* {animation:nexo-evo-rise .8s cubic-bezier(.16,1,.3,1) backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-hero-copy>:nth-child(2) {animation-delay:.08s}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-hero-copy>:nth-child(3) {animation-delay:.2s}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-hero-copy>:nth-child(4) {animation-delay:.32s}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-hero-copy h1 span {animation:nexo-evo-rise .8s cubic-bezier(.16,1,.3,1) backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-hero-copy h1 span:last-child {animation:nexo-evo-rise .8s cubic-bezier(.16,1,.3,1) .12s backwards,nexo-evo-sheen 9s linear 1s infinite}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .nexo-featured-evidence {animation:nexo-evo-rise .9s cubic-bezier(.16,1,.3,1) .28s backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .nexo-research-launch {animation:nexo-evo-rise .9s cubic-bezier(.16,1,.3,1) .42s backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .nexo-research-shortcut:nth-child(2) {animation-delay:.07s}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .nexo-research-shortcut:nth-child(3) {animation-delay:.14s}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .nexo-featured-evidence .nexo-stat-number strong {animation:nexo-evo-glow 5s ease-in-out infinite}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) details[open]>:not(summary) {animation:nexo-evo-unfold .35s cubic-bezier(.16,1,.3,1) backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-header-menu.is-open {animation:nexo-evo-unfold .3s cubic-bezier(.16,1,.3,1) backwards}
+  /* Arrival on scroll. The script marks data-in-view; content stays visible without it. */
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) :is(.nexo-reactive,.nexo-reveal)[data-in-view="true"] {animation:nexo-evo-rise .75s cubic-bezier(.16,1,.3,1) backwards}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-research-lines li[data-in-view="true"]:nth-child(2) {animation-delay:.08s}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-research-lines li[data-in-view="true"]:nth-child(3) {animation-delay:.16s}
+  html:root .atlas-app[data-area="public"]:not([data-cinema-paused="true"]) .atlas-research-lines li[data-in-view="true"] .atlas-line-number {animation:nexo-evo-pop .6s cubic-bezier(.3,1.5,.5,1) .15s backwards}
+  /* Static pages have no script observer: use the scroll timeline where the browser offers it. */
+  @supports (animation-timeline:view()) {
+    html:root .atlas-app[data-area="public"]:not([data-cinema-paused]) .atlas-public-main .atlas-section>* {animation:nexo-evo-rise linear both;animation-timeline:view();animation-range:entry 0% entry 38%}
+    html:root .atlas-app[data-area="public"]:not([data-cinema-paused]) .atlas-footer-in {animation:nexo-evo-rise linear both;animation-timeline:view();animation-range:entry 0% entry 60%}
+  }
+}
+@keyframes nexo-evo-rise {from{opacity:0;translate:0 22px}to{opacity:1;translate:0 0}}
+@keyframes nexo-evo-drop {from{opacity:0;translate:0 -14px}to{opacity:1;translate:0 0}}
+@keyframes nexo-evo-page {from{opacity:.4}to{opacity:1}}
+@keyframes nexo-evo-unfold {from{opacity:0;translate:0 -8px}to{opacity:1;translate:0 0}}
+@keyframes nexo-evo-pop {from{opacity:0;scale:.6}to{opacity:1;scale:1}}
+@keyframes nexo-evo-orbit {from{transform:rotate(-42deg)}to{transform:rotate(318deg)}}
+@keyframes nexo-evo-sheen {from{background-position:0 0}to{background-position:-240% 0}}
+@keyframes nexo-evo-drift {from{translate:-2vw -1vh;scale:1}to{translate:3vw 3vh;scale:1.08}}
+@keyframes nexo-evo-glow {0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 26px color-mix(in srgb,var(--glow) 55%,transparent)}}
+@media(forced-colors:active) {
+  html:root .atlas-app[data-area="public"]::before {display:none}
+  html:root .atlas-app[data-area="public"] .atlas-hero-copy h1 span:last-child {background:none;color:LinkText;-webkit-text-fill-color:LinkText}
+}
+@media(max-width:600px) {
+  html:root .atlas-app[data-area="public"] {font-size:16.5px}
+  html:root .atlas-app[data-area="public"] .atlas-hero-lead {font-size:17.5px}
+  html:root .atlas-app[data-area="public"] .atlas-toc :is(button,a) {font-size:17px}
+  html:root .atlas-app[data-area="public"] .atlas-research-lines h3 {font-size:22px}
+}

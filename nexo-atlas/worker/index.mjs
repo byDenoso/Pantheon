@@ -313,7 +313,7 @@ export function createWorker({readSource = readPrivate, readMemory = readMemoryS
       for (const [key, value] of Object.entries({...SECURITY, 'X-Frame-Options': 'SAMEORIGIN', 'Content-Security-Policy': PRIVATE_CSP + "; frame-src 'self'; object-src 'none'"})) headers.set(key, value);
       return new Response(response.body, {status: response.status, headers});
     }
-    const extraPublic = new Set(['/metodo.html', '/publicacoes.html', '/site-config.json', '/publications.json', '/robots.txt', '/sitemap.xml', '/assets/fonts/nexo-barlow-medium.ttf', '/assets/fonts/nexo-barlow-regular.ttf', '/assets/fonts/nexo-nunito-black.ttf', '/assets/fonts/FONT-LICENSES.txt']);
+    const extraPublic = new Set(['/metodo.html', '/site-config.json', '/robots.txt', '/sitemap.xml', '/assets/fonts/nexo-barlow-medium.ttf', '/assets/fonts/nexo-barlow-regular.ttf', '/assets/fonts/nexo-nunito-black.ttf', '/assets/fonts/FONT-LICENSES.txt']);
     if (extraPublic.has(path)) return env.ASSETS.fetch(request);
     if (/^\/assets\/[A-Za-z0-9_.-]+$/.test(path)) return env.ASSETS.fetch(request);
     return new Response('Not found', {status: 404, headers: SECURITY});

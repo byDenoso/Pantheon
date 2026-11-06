@@ -17,5 +17,6 @@ class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={f
 import './styles/interactive-motion.css';
 import './experience/experience.css';
 import '../public-extra/assets/nexo-research.css';
+import '../public-extra/assets/nexo-evolution.css';
 initializeTheme();
 createRoot(document.getElementById('root')!).render(<Boundary><LocaleProvider><App/></LocaleProvider></Boundary>);

@@ -1,7 +1,8 @@
 Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
 Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors (https://github.com/googlefonts/atkinson-hyperlegible-next)
 
-Nunito and Barlow are distributed under the following license.
+Nunito, Barlow and Atkinson Hyperlegible Next are distributed under the following license.
 
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
 -----------------------------------------------------------
