@@ -1,0 +1,8 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "purpose": "Verify task-owned CHECKPOINTS survive one existing serial Writer projection after checkpoint isolation fix",
+  "contains_private_data": false,
+  "scientific_dispatch_enabled": false,
+  "expected": "12 identity reservations unchanged; no fabricated checkpoint receipts",
+  "source_commit": "39287889a4590e996ff5bfd40246f01b7f4a64f9"
+}
