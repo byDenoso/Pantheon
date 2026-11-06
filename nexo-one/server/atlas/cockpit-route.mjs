@@ -73,7 +73,7 @@ export async function cockpitView({env = process.env, store = atlasStore(env), f
   const availableRows=(name,n)=>src.availability[name]==='available' ? tail(board?.[name],n) : [];
   return {
     contract: 'NEXO_COCKPIT_V1', generatedAt: now.toISOString(),
-    shadow: board ? {available: true, modifiedAt: board.modified_at ?? null, counts: board.counts ?? {}, availability:src.availability,
+    shadow: board ? {available: true, modifiedAt: board.modified_at ?? null, counts: board.counts ?? {}, availability:src.availability, cache: board.cache ?? null,
       equipe: availableRows('equipe',300), roadmap: availableRows('roadmap',300), resultados: availableRows('resultados',60), resumo: availableRows('resumo',20), mural: availableRows('mural',60)}
       : {available: false, reason: src.shadowError},
     catalog: src.catalog ? {available: true, url: src.catalog.url, rows: src.catalog.rows} : {available: false, reason: src.catalogError},
