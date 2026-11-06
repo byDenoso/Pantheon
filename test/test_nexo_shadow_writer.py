@@ -81,6 +81,52 @@ class TestWriter(IsolatedSummaryTestCase):
         self.assertEqual(d["tab"],"MURAL")
         self.assertEqual(state,"CLAIMED:abcd")
 
+    def test_shifted_result_recovery_validates_metadata_and_identity(self):
+        row = [ID, "2026-10-20T15:30:40-03:00", "S7", "RESULTADOS",
+               "S7|class=T0", "S7_R85_LEGACY", "What does the signal show?",
+               "Physical conclusion", "Method and data", "Numeric result",
+               "Uncertainty and scope", "Prior art", "", "", ""]
+        before = list(row)
+        data, state = w.decode_plain(row)
+        self.assertEqual(row, before)
+        self.assertEqual(state, "")
+        self.assertTrue(data["legacy_shifted_result"])
+        self.assertEqual(data["values"][0], row[1])
+        self.assertEqual(data["values"][3], row[6])
+        self.assertEqual(data["target_values"][2], "S7_R85_LEGACY" + w.RESULT_ITEM_ID_SEPARATOR + ID)
+        self.assertEqual(data["target_values"][7], "Uncertainty and scope")
+        row[1] = "not-a-date"
+        with self.assertRaises(ValueError):
+            w.decode_plain(row)
+
+    def test_shifted_result_unverified_question_is_not_recovered(self):
+        row = [ID, "2026-10-20T15:30:40-03:00", "S7", "RESULTADOS",
+               "S7|class=T0", "S7_R85_LEGACY", "Not a question or identity",
+               "Physical conclusion", "Method and data", "Numeric result",
+               "Uncertainty and scope", "Prior art", "", "", ""]
+        with self.assertRaises(ValueError):
+            w.decode_plain(row)
+
+    def test_legacy_url_preserves_provenance_inside_receipt_and_target(self):
+        url = "https://docs.google.com/document/d/abc123/edit"
+        row = plain("RESULTADOS", state=url)
+        data, state = w.decode_plain(row)
+        self.assertEqual(state, "")
+        self.assertTrue(data["target_values"][9].endswith(url))
+        marker = w.receipt_marker(data, "CLAIMED:" + w.digest_for(data))
+        self.assertTrue(marker.endswith(w.LEGACY_URL_SEPARATOR + url))
+        row[14] = marker
+        reopened, status = w.decode_plain(row)
+        self.assertEqual(status, "CLAIMED:" + w.digest_for(data))
+        self.assertEqual(reopened["target_values"], data["target_values"])
+
+    def test_direct_result_c_id_prevents_duplicate(self):
+        stable = "S5-20261106T1425-JADESDR5-REDSHIFT-E0-01"
+        self.assertEqual(w.target_row_id("RESULTADOS",
+            ["2026-11-06", "S5|E0", stable, "Is this a detection?"]), stable)
+        self.assertEqual(w.target_row_id("RESULTADOS",
+            ["2026-11-06", "S5|E0", "S5_R84_HUMAN_ITEM", ID]), ID)
+
     def test_plain_trailing_rejected(self):
         row=plain()
         row[12]="unexpected"
@@ -176,6 +222,43 @@ class Recovery(IsolatedSummaryTestCase):
         self.assertEqual(again["written"],0)
         self.assertEqual(again["eligible"],0)
         self.assertEqual(session2.posts,[])
+
+    def test_url_state_roundtrip_applies_and_does_not_replay(self):
+        url = "https://docs.google.com/document/d/abc123/edit"
+        row = plain("RESULTADOS", state=url)
+        counts, s = self.invoke([row])
+        self.assertEqual(counts["written"], 1)
+        self.assertEqual(counts["legacy_url_recovered"], 1)
+        self.assertEqual(counts["new_failures"], 0)
+        self.assertEqual(len(s.posts), 1)
+        self.assertTrue(s.records["RESULTADOS"][ID][9].endswith(url))
+        self.assertTrue(all(m.endswith(w.LEGACY_URL_SEPARATOR + url) for _, m in s.marks))
+        row[14] = s.marks[-1][1]
+        again, later = self.invoke([row], records=s.records)
+        self.assertEqual(again["written"], 0)
+        self.assertEqual(again["new_failures"], 0)
+        self.assertEqual(later.posts, [])
+
+    def test_shifted_result_roundtrip_has_readback_without_replay(self):
+        row = [ID, "2026-10-20T15:30:40-03:00", "S7", "RESULTADOS",
+               "S7|class=T0", "S7_R85_LEGACY", "Does it work?",
+               "Physical conclusion", "Method and data", "Numeric result",
+               "Uncertainty and scope", "Prior art", "", "", ""]
+        counts, s = self.invoke([row])
+        self.assertEqual(counts["written"], 1)
+        self.assertEqual(counts["legacy_shifted_recovered"], 1)
+        self.assertEqual(counts["new_failures"], 0)
+        row[14] = s.marks[-1][1]
+        again, later = self.invoke([row], records=s.records)
+        self.assertEqual(again["written"], 0)
+        self.assertEqual(later.posts, [])
+
+    def test_unknown_state_url_remains_quarantined(self):
+        row = plain("RESULTADOS", state="https://example.org/not-authorized")
+        counts, s = self.invoke([row])
+        self.assertEqual(counts["quarantined"], 1)
+        self.assertEqual(s.posts, [])
+        self.assertEqual(s.marks, [])
 
     def test_fresh_event_written_and_marked(self):
         d=_recovery_data(); counts,s=self.invoke([_recovery_plain(d)])

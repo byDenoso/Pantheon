@@ -26,6 +26,25 @@ API = "https://sheets.googleapis.com/v4/spreadsheets"
 TABS = {"MURAL": (1148777660, 8, "H"), "RESULTADOS": (247327396, 10, "D")}
 KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{5,127}$")
 RESULT_ITEM_ID_SEPARATOR = " | nexo_id="
+LEGACY_URL_SEPARATOR = " | source_url="
+LEGACY_DOC_URL = re.compile(r"https://docs\.google\.com/document/d/[A-Za-z0-9_-]+/(?:edit|view)(?:\?[^#\s]*)?")
+DIRECT_RESULT_ID = re.compile(r"(?:S(?:[1-9]|10|11)|P|LUMIA)-20\d{6}(?:T\d{4,6})?-[A-Za-z0-9_.:\-]+")
+
+def receipt_marker(data, marker):
+    """Preserve historical document links across CLAIMED/APPLIED receipts."""
+    url = data.get("legacy_source_url")
+    return marker + (LEGACY_URL_SEPARATOR + url if url else "")
+
+def legacy_state(state):
+    """A bounded older producer accidentally wrote its document URL into state."""
+    if LEGACY_DOC_URL.fullmatch(state):
+        return "", state
+    if LEGACY_URL_SEPARATOR in state:
+        marker, url = state.rsplit(LEGACY_URL_SEPARATOR, 1)
+        if not marker.startswith(("CLAIMED:", "APPLIED:")) or not LEGACY_DOC_URL.fullmatch(url):
+            raise ValueError("INVALID_LEGACY_SOURCE_STATE")
+        return marker, url
+    return state, None
 PAGE_SIZE = 1000
 MAX_GRID_ROWS = 1000000  # metadata safety bound; capacity review starts well before this
 READBACK_BATCH_SIZE = 8  # batch safe verification reads; independent appends
@@ -107,8 +126,24 @@ def decode_plain(row):
     values_ = padded[4:4 + width]
     if any(padded[4 + width:14]):
         raise ValueError("PLAIN_TRAILING_VALUES")
-    data = _validate_data(stable_id, tab, values_)
-    return data, padded[14]
+    try:
+        data = _validate_data(stable_id, tab, values_)
+    except ValueError as exc:
+        # Older RESULTADOS producer omitted v1 (date), shifting nine fields
+        # left. Rebuild only if the original metadata and repaired identity
+        # pass the canonical schema. Source cells are never modified.
+        if not (str(exc) == "MISMATCHED_ROW_ID" and tab == "RESULTADOS"
+                and not values_[9] and re.match(r"^\d{4}-\d{2}-\d{2}T", created_at)
+                and re.match(r"^(?:S\d+|P|LUMIA)\|", values_[0])):
+            raise
+        data = _validate_data(stable_id, tab, [created_at] + values_[:9])
+        data["legacy_shifted_result"] = True
+    state, url = legacy_state(padded[14])
+    if url:
+        data["legacy_source_url"] = url
+        if url not in data["target_values"][9]:
+            data["target_values"][9] += "\nSource document (historical state): " + url
+    return data, state
 
 def append_request(data):
     cells = [{"userEnteredValue": {"stringValue": value}} for value in data.get("target_values", data["values"])]
@@ -171,6 +206,9 @@ def target_row_id(tab, row):
         label, stable_id = row[2].rsplit(RESULT_ITEM_ID_SEPARATOR, 1)
         if label and KEY.fullmatch(stable_id):
             return stable_id
+    # Direct Sheets writes use immutable C IDs; Writer rows use D or nexo_id.
+    if len(row) > 2 and DIRECT_RESULT_ID.fullmatch(row[2]):
+        return row[2]
     return row[3] if len(row) > 3 else ""
 
 
@@ -270,7 +308,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
         # acknowledge it from the in-memory payload or replay an uncertain write.
         if (apply and state in ("", "CLAIMED:" + digest)
                 and match_target(stored[data["tab"]], data)):
-            mark(session, mark_tab, mark_column, number, "APPLIED:" + digest)
+            mark(session, mark_tab, mark_column, number, receipt_marker(data, "APPLIED:" + digest))
             counts["reconciled"] += 1
         return
     seen[key] = fingerprint
@@ -289,7 +327,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
     if present:
         counts["duplicate"] += 1
         if apply:
-            mark(session, mark_tab, mark_column, number, applied)
+            mark(session, mark_tab, mark_column, number, receipt_marker(data, applied))
             counts["reconciled"] += 1
         return
     if state == claimed:
@@ -300,7 +338,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
     counts["eligible"] += 1
     if not apply:
         return
-    mark(session, mark_tab, mark_column, number, claimed)
+    mark(session, mark_tab, mark_column, number, receipt_marker(data, claimed))
     response = session.post(f"{API}/{SHADOW}:batchUpdate",
                             json={"requests": append_request(data)["requests"]}, timeout=60)
     response.raise_for_status()
@@ -313,7 +351,7 @@ def _process(session, stored, seen, counts, *, number, data, state, digest, mark
     if not match_target(refreshed, data):
         raise RuntimeError("WRITE_READBACK_UNKNOWN")
     stored[data["tab"]] = refreshed
-    mark(session, mark_tab, mark_column, number, applied)
+    mark(session, mark_tab, mark_column, number, receipt_marker(data, applied))
     counts["written"] += 1
 
 def flush_verified_appends(session, stored, counts, queued, *, batch_applied=False):
@@ -357,13 +395,13 @@ def flush_verified_appends(session, stored, counts, queued, *, batch_applied=Fal
             raise RuntimeError("WRITE_READBACK_UNKNOWN")
     if batch_applied and len(queued) > 1:
         mark_applied_batch(session, [
-            (mark_tab, mark_column, number, "APPLIED:" + digest)
-            for _, digest, mark_tab, mark_column, number in queued
+            (mark_tab, mark_column, number, receipt_marker(data, "APPLIED:" + digest))
+            for data, digest, mark_tab, mark_column, number in queued
         ])
         counts["batch_acknowledged"] += len(queued)
     else:
         for data, digest, mark_tab, mark_column, number in queued:
-            mark(session, mark_tab, mark_column, number, "APPLIED:" + digest)
+            mark(session, mark_tab, mark_column, number, receipt_marker(data, "APPLIED:" + digest))
     counts["written"] += len(queued)
     stored.update(refreshed)
     counts["readback_batches"] += 1
@@ -381,6 +419,7 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
               "readback_batches": 0, "batch_acknowledged": 0, "tail_readback_tabs": 0,
               "tail_readback_fallbacks": 0,
               "preexisting_invalid": 0, "preexisting_quarantined": 0,
+              "legacy_shifted_recovered": 0, "legacy_url_recovered": 0,
               "new_failures": 0, "isolated_schema_collisions": 0,
               "target_conflicts": sum(len(getattr(index, "conflicts", ())) for index in stored.values())}
 
@@ -424,6 +463,8 @@ def run(session, *, apply=False, snapshot=None, batch_applied=False):
                 continue
             data, state = decoded
             counts["plain"] += 1
+            counts["legacy_shifted_recovered"] += int(bool(data.get("legacy_shifted_result")))
+            counts["legacy_url_recovered"] += int(bool(data.get("legacy_source_url")))
             pending.append(dict(number=number, data=data, state=state,
                                 digest=digest_for(data), mark_tab=PLAIN_TAB, mark_column="O"))
         except (ValueError, KeyError, TypeError, UnicodeError):
@@ -638,6 +679,8 @@ def step_summary(counts, metrics, duration, status):
         ("applied_verified", applied),
         ("claimed_pending", safe_counts.get("unresolved", 0)),
         ("quarantined", safe_counts.get("quarantined", 0)),
+        ("legacy_shifted_recovered", safe_counts.get("legacy_shifted_recovered", 0)),
+        ("legacy_url_recovered", safe_counts.get("legacy_url_recovered", 0)),
         ("lease_quarantine_total", safe_counts.get("lease_quarantine_total", 0)),
         ("lease_quarantine_new", safe_counts.get("lease_quarantine_new", 0)),
         ("sheets_get", metrics.get("get", 0)),
