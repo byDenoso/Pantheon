@@ -98,9 +98,16 @@ export async function readAtlasPrivateShadow(env = process.env, fetcher = fetch,
     ? await shadowServiceAccountToken(serviceAccount, fetcher, signal)
     : await tokenProvider(env, signal, {scopes:[DRIVE_READ_SCOPE], reuseDriveRead:true});
   if (!token) throw new Error('SHADOW_READ_CREDENTIAL_REQUIRED');
-  const board = await boardReader({
-    token, fetchImpl: fetcher, signal: AbortSignal.timeout(20000),
-    allowMissingDriveMetadata: Boolean(serviceAccount),
-  });
-  return projectPrivateShadowBoard(board);
+  try {
+    const board = await boardReader({
+      token, fetchImpl: fetcher, signal: AbortSignal.timeout(20000),
+      allowMissingDriveMetadata: Boolean(serviceAccount),
+    });
+    return projectPrivateShadowBoard(board);
+  } catch (error) {
+    if (serviceAccount && error?.message === 'SHADOW_AUTH_REQUIRED' && cachedServiceToken?.token === token) {
+      cachedServiceToken = undefined;
+    }
+    throw error;
+  }
 }

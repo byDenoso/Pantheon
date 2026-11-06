@@ -120,3 +120,19 @@ test('a warm reader reuses a valid OAuth token only for the same key',async()=>{
   await run({...config,private_key_id:'key-2'});
   assert.equal(exchanges,2);
 });
+
+test('a rejected OAuth token is discarded before the next board read',async()=>{
+  const {privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+  const key={type:'service_account',client_email:'shadow-reader@example.iam.gserviceaccount.com',
+    private_key_id:'auth-rejected',private_key:privateKey.export({type:'pkcs8',format:'pem'})};
+  const env={NEXO_ATLAS_SHADOW_SERVICE_ACCOUNT_JSON:JSON.stringify(key)};
+  let exchanges=0;
+  const fetcher=async()=>Response.json({access_token:'token-'+ ++exchanges,expires_in:3600});
+  await assert.rejects(readAtlasPrivateShadow(env,fetcher,{boardReader:async()=>{
+    throw new Error('SHADOW_AUTH_REQUIRED');
+  }}),/SHADOW_AUTH_REQUIRED/);
+  await readAtlasPrivateShadow(env,fetcher,{boardReader:async({token})=>{
+    assert.equal(token,'token-2');
+    return board();
+  }});
+});

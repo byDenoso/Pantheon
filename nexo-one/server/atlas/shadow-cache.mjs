@@ -68,7 +68,8 @@ export function cachedShadowReader({store, readShadow, secret, now = () => Date.
   return async function read() {
     if (!secret) return annotate(await readShadow(), now(), false, null);
     const readState = async () => {
-      const [sealed, cooldown] = await safe('MGET', SHADOW_CACHE_KEY, cooldownKey) ?? [];
+      const state = await safe('MGET', SHADOW_CACHE_KEY, cooldownKey);
+      const [sealed, cooldown] = Array.isArray(state) ? state : [];
       let snapshot = null;
       if (typeof sealed === 'string') {
         try {
