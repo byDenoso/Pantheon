@@ -2,6 +2,8 @@ import {encodePrivateResponse} from './atlas/private-response.mjs';
 import {readPrivateUiAsset} from './atlas/private-assets.mjs';
 import {readAtlasPrivatePublication} from './atlas/private-source.mjs';
 import {readAtlasPrivateShadow} from './atlas/private-shadow-source.mjs';
+import {cachedShadowReader} from './atlas/shadow-cache.mjs';
+import {atlasStore} from './auth/atlas-session.mjs';
 import {cockpitView,saveCockpitSelection} from './atlas/cockpit-route.mjs';
 import {atlasBoundary} from './atlas/boundary.mjs';
 import {inboxDrop,inboxRobot} from './inbox-gateway.mjs';
@@ -205,7 +207,7 @@ export default async function handler(req,res) {
     }
     // Private cockpit: owner session already verified by atlasBoundary (writes also same-origin).
     if(route==='atlas-cockpit'||route==='atlas-cockpit-selection'){
-      const readShadow=()=>readAtlasPrivateShadow(googleRuntimeEnvironment(env,req.headers));
+      const readShadow=cachedShadowReader({store:atlasStore(env),secret:env.NEXO_ATLAS_PIN_HASH,readShadow:()=>readAtlasPrivateShadow(googleRuntimeEnvironment(env,req.headers))});
       if(route==='atlas-cockpit'){
         if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
         try{return send(await cockpitView({env,readShadow}));}catch{return send({error:'COCKPIT_UNAVAILABLE'},503);}

@@ -14,7 +14,7 @@ export const DEFAULT_CATALOG_URL = 'https://nexoresearch.org/atlas-public.json';
 export const SAVE_SCRIPT = "local cur=redis.call('GET',KEYS[1]) local v=0 if cur then local ok,doc=pcall(cjson.decode,cur) if not ok then return {0,-1} end v=tonumber(doc['version']) or -1 end if v~=tonumber(ARGV[1]) then return {0,v} end redis.call('SET',KEYS[1],ARGV[2]) redis.call('LPUSH',KEYS[2],ARGV[3]) redis.call('LTRIM',KEYS[2],0,99) return {1,v+1}";
 
 const shadowEnabled = env => env.NEXO_ATLAS_SHADOW_SOURCE_ENABLED === 'true';
-const shadowErrors = new Set(['SHADOW_SOURCE_DISABLED','SHADOW_READ_CREDENTIAL_REQUIRED','SHADOW_AUTH_REQUIRED','SHADOW_METADATA_UNAVAILABLE','SHADOW_METADATA_INVALID','SHADOW_REQUIRED_TAB_MISSING','SHADOW_BATCH_TOO_LARGE','SHADOW_BATCH_IDENTITY_INVALID','SHADOW_CANONICAL_UNAVAILABLE']);
+const shadowErrors = new Set(['SHADOW_SOURCE_DISABLED','SHADOW_REFRESH_IN_PROGRESS','SHADOW_READ_CREDENTIAL_REQUIRED','SHADOW_AUTH_REQUIRED','SHADOW_METADATA_UNAVAILABLE','SHADOW_METADATA_INVALID','SHADOW_REQUIRED_TAB_MISSING','SHADOW_BATCH_TOO_LARGE','SHADOW_BATCH_IDENTITY_INVALID','SHADOW_CANONICAL_UNAVAILABLE']);
 function safeShadowError(error) {
   if (shadowErrors.has(error?.message)) return error.message;
   if (GOOGLE_AUTH_DIAGNOSTICS.includes(error?.googleDiagnostic)) return `SHADOW_${error.googleDiagnostic}`;
@@ -73,7 +73,7 @@ export async function cockpitView({env = process.env, store = atlasStore(env), f
   const availableRows=(name,n)=>src.availability[name]==='available' ? tail(board?.[name],n) : [];
   return {
     contract: 'NEXO_COCKPIT_V1', generatedAt: now.toISOString(),
-    shadow: board ? {available: true, modifiedAt: board.modified_at ?? null, counts: board.counts ?? {}, availability:src.availability,
+    shadow: board ? {available: true, modifiedAt: board.modified_at ?? null, counts: board.counts ?? {}, availability:src.availability, cache: board.cache ?? null,
       equipe: availableRows('equipe',300), roadmap: availableRows('roadmap',300), resultados: availableRows('resultados',60), resumo: availableRows('resumo',20), mural: availableRows('mural',60)}
       : {available: false, reason: src.shadowError},
     catalog: src.catalog ? {available: true, url: src.catalog.url, rows: src.catalog.rows} : {available: false, reason: src.catalogError},
