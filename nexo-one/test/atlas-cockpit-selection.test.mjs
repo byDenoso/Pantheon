@@ -169,11 +169,22 @@ test('an unavailable results tab does not report missing approvals or permit new
   assert.equal(add.body.errors[0].code,'SOURCE_UNAVAILABLE');
 });
 
-test('unexpected private source errors are not copied into cockpit output',async()=>{
+test('cockpit exposes only fixed diagnostic codes for failed private source reads',async()=>{
   const {store}=memoryStore();
-  const view=await cockpitView(deps(store,{readShadow:async()=>{throw new Error('synthetic-sensitive-detail');}}));
-  assert.deepEqual(view.shadow,{available:false,reason:'SHADOW_SOURCE_UNAVAILABLE'});
-  assert.doesNotMatch(JSON.stringify(view),/synthetic-sensitive-detail/);
+  const detail='synthetic-sensitive-detail';
+  const failures=[
+    [Object.assign(new Error(detail),{googleDiagnostic:'CONNECT_USER_AUTHORIZATION_REQUIRED'}),'SHADOW_CONNECT_USER_AUTHORIZATION_REQUIRED'],
+    [Object.assign(new Error(detail),{googleDiagnostic:'OIDC_MISSING'}),'SHADOW_OIDC_MISSING'],
+    [Object.assign(new Error(detail),{code:'AUTH_REQUIRED'}),'SHADOW_AUTH_REQUIRED'],
+    [new DOMException(detail,'TimeoutError'),'SHADOW_SOURCE_TIMEOUT'],
+    [Object.assign(new Error(detail),{googleDiagnostic:detail}),'SHADOW_SOURCE_UNAVAILABLE'],
+  ];
+  for(const [error,reason] of failures){
+    const view=await cockpitView(deps(store,{readShadow:async()=>{throw error;}}));
+    assert.deepEqual(view.shadow,{available:false,reason});
+    assert.equal(view.catalog.available,true);
+    assert.doesNotMatch(JSON.stringify(view),/synthetic-sensitive-detail/);
+  }
 });
 
 test('unknown tab coverage is sanitized and never creates fresh source candidates',async()=>{

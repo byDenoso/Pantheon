@@ -1,4 +1,5 @@
 import {atlasStore} from '../auth/atlas-session.mjs';
+import {GOOGLE_AUTH_DIAGNOSTICS} from '../adapters/connect.mjs';
 import {
   LIMITS, auditEntry, buildSelection, campaignCandidates, catalogCandidates, publicSelection,
   readSelection, selectionDrift, towerCandidates,
@@ -14,7 +15,13 @@ export const SAVE_SCRIPT = "local cur=redis.call('GET',KEYS[1]) local v=0 if cur
 
 const shadowEnabled = env => env.NEXO_ATLAS_SHADOW_SOURCE_ENABLED === 'true';
 const shadowErrors = new Set(['SHADOW_SOURCE_DISABLED','SHADOW_READ_CREDENTIAL_REQUIRED','SHADOW_AUTH_REQUIRED','SHADOW_METADATA_UNAVAILABLE','SHADOW_METADATA_INVALID','SHADOW_REQUIRED_TAB_MISSING','SHADOW_BATCH_TOO_LARGE','SHADOW_BATCH_IDENTITY_INVALID','SHADOW_CANONICAL_UNAVAILABLE']);
-const safeShadowError = error => shadowErrors.has(error?.message) ? error.message : 'SHADOW_SOURCE_UNAVAILABLE';
+function safeShadowError(error) {
+  if (shadowErrors.has(error?.message)) return error.message;
+  if (GOOGLE_AUTH_DIAGNOSTICS.includes(error?.googleDiagnostic)) return `SHADOW_${error.googleDiagnostic}`;
+  if (error?.name === 'TimeoutError') return 'SHADOW_SOURCE_TIMEOUT';
+  if (error?.code === 'AUTH_REQUIRED') return 'SHADOW_AUTH_REQUIRED';
+  return 'SHADOW_SOURCE_UNAVAILABLE';
+}
 const tabAvailability = board => Object.fromEntries(['roadmap','mural','resumo','resultados','equipe'].map(name=>{
   const value=board?.availability?.[name];
   return [name,value==='available'||value==='unavailable'?value:'unknown'];
