@@ -51,10 +51,10 @@ export default function CockpitLive({mural, resultados, resumo, equipe, activity
     <ol className="ck-feed" aria-live="polite">{shown.slice(0, limit).map(e => <li key={e.key} className="ck-feed-item" data-kind={e.kind} data-alert={isComplaint(e) || undefined} data-fresh={fresh.has(e.key) || undefined} style={{'--agent-hue': hue(e.agent)} as CSSProperties}>
       <span className="ck-avatar" aria-hidden="true">{initials(e.agent)}</span>
       <div>
-        <p className="ck-feed-head"><strong>{e.agent}</strong>{e.to && <> para <strong>{e.to}</strong></>}<span className="ck-chip">{LABEL[e.kind]}{e.tag ? ` · ${e.tag}` : ''}</span><time title={e.raw}>{ago(e.when, now)}</time></p>
-        {e.title && <h3>{e.title}</h3>}
+        <p className="ck-feed-head"><strong>{e.agent}</strong>{e.to && <><span className="ck-to">para</span><strong>{e.to}</strong></>}<span className="ck-chip">{LABEL[e.kind]}{e.tag ? ` · ${e.tag}` : ''}</span><time title={e.raw}>{ago(e.when, now)}</time></p>
+        {(e.title || (e.kind === 'mural' && e.extra)) && <h3>{e.title || e.extra}</h3>}
         {e.body && <p>{e.body}</p>}
-        {e.extra && <p className="ck-muted">{e.extra}</p>}
+        {e.extra && !(e.kind === 'mural' && !e.title) && <p className="ck-muted">{e.extra}</p>}
         {e.technical && <details className="live-tech"><summary>Detalhes técnicos</summary><pre>{e.technical}</pre></details>}
         {e.link && /^https:\/\//.test(e.link) && <a href={e.link} target="_blank" rel="noreferrer noopener">Abrir</a>}
       </div>
