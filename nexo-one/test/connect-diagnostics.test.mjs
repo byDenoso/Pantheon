@@ -54,6 +54,19 @@ test('invalid success payload is classified',async()=>mock(Response.json({token:
 test('unknown provider diagnostic is suppressed',async()=>mock(Response.json({error:{code:'secret-user@example.test'}},{status:403}),async()=>{
   await assert.rejects(()=>googleConnectToken(env),{code:'AUTH_REQUIRED',googleDiagnostic:'CONNECT_FORBIDDEN'});
 }));
+test('a long Retry-After is capped and only rate-limit headers reach the log',async()=>{
+  const reply=Response.json({token:'secret-body-token'},{status:429,headers:{'Retry-After':'86400','x-ratelimit-limit':'200','x-ratelimit-remaining':'0'}});
+  const warn=console.warn,lines=[];
+  console.warn=(...args)=>lines.push(args.join(' '));
+  try{
+    await mock(reply,async()=>{
+      await assert.rejects(()=>googleConnectToken(env,undefined,{scopes}),error=>error.code==='RATE_LIMITED'&&error.retryDelayMs===300000);
+    });
+  }finally{console.warn=warn;}
+  assert.equal(lines.length,1);
+  assert.match(lines[0],/"retryAfter":"86400".*"limit":"200".*"remaining":"0"/);
+  assert.doesNotMatch(lines[0],/secret-body-token|synthetic-oidc|owner/);
+});
 test('diagnostic registry is a frozen allowlist',()=>{
   assert.equal(Object.isFrozen(GOOGLE_AUTH_DIAGNOSTICS),true);
   assert.ok(GOOGLE_AUTH_DIAGNOSTICS.every(v=>/^[A-Z_]+$/.test(v)));
