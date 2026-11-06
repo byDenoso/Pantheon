@@ -88,8 +88,9 @@ test('dedicated read-only identity can populate the private board while Connect 
   };
   const result = await readAtlasPrivateShadow(env, fetcher, {
     tokenProvider: async () => { throw Object.assign(new Error('RATE_LIMITED'), {googleDiagnostic: 'CONNECT_RATE_LIMITED'}); },
-    boardReader: async ({token}) => {
+    boardReader: async ({token, allowMissingDriveMetadata}) => {
       assert.equal(token, 'reader-token');
+      assert.equal(allowMissingDriveMetadata, true);
       return board();
     }
   });
