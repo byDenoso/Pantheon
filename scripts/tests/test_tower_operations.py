@@ -92,7 +92,7 @@ class OperationsTests(unittest.TestCase):
             def post(self, url, *, json, timeout):
                 captured.extend(json['requests'])
                 return Resp()
-        with patch.object(w,'safe_get',return_value=Resp({'sheets':sheets})), \\
+        with patch.object(w,'safe_get',return_value=Resp({'sheets':sheets})), \
              patch.object(w,'values',side_effect=lambda sess, sheet, a1: views[a1.split("'")[1]]):
             self.assertEqual(o.publish_views(Session(), views, w), 'READBACK_VERIFIED')
         self.assertTrue(captured)
