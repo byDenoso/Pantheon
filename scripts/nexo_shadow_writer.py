@@ -27,8 +27,8 @@ TABS = {"MURAL": (1148777660, 8, "H"), "RESULTADOS": (247327396, 10, "D")}
 KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{5,127}$")
 RESULT_ITEM_ID_SEPARATOR = " | nexo_id="
 LEGACY_URL_SEPARATOR = " | source_url="
-LEGACY_DOC_URL = re.compile(r"https://docs\\.google\\.com/document/d/[A-Za-z0-9_-]+/(?:edit|view)(?:\\?[^#\\s]*)?")
-DIRECT_RESULT_ID = re.compile(r"(?:S(?:[1-9]|10|11)|P|LUMIA)-20\\d{6}(?:T\\d{4,6})?-[A-Za-z0-9_.:\\-]+")
+LEGACY_DOC_URL = re.compile(r"https://docs\.google\.com/document/d/[A-Za-z0-9_-]+/(?:edit|view)(?:\?[^#\s]*)?")
+DIRECT_RESULT_ID = re.compile(r"(?:S(?:[1-9]|10|11)|P|LUMIA)-20\d{6}(?:T\d{4,6})?-[A-Za-z0-9_.:\-]+")
 
 def receipt_marker(data, marker):
     """Preserve historical document links across CLAIMED/APPLIED receipts."""
@@ -133,8 +133,8 @@ def decode_plain(row):
         # left. Rebuild only if the original metadata and repaired identity
         # pass the canonical schema. Source cells are never modified.
         if not (str(exc) == "MISMATCHED_ROW_ID" and tab == "RESULTADOS"
-                and not values_[9] and re.match(r"^\\d{4}-\\d{2}-\\d{2}T", created_at)
-                and re.match(r"^(?:S\\d+|P|LUMIA)\\|", values_[0])):
+                and not values_[9] and re.match(r"^\d{4}-\d{2}-\d{2}T", created_at)
+                and re.match(r"^(?:S\d+|P|LUMIA)\|", values_[0])):
             raise
         data = _validate_data(stable_id, tab, [created_at] + values_[:9])
         data["legacy_shifted_result"] = True
@@ -142,7 +142,7 @@ def decode_plain(row):
     if url:
         data["legacy_source_url"] = url
         if url not in data["target_values"][9]:
-            data["target_values"][9] += "\\nSource document (historical state): " + url
+            data["target_values"][9] += "\nSource document (historical state): " + url
     return data, state
 
 def append_request(data):
