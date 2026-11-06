@@ -149,15 +149,17 @@ export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.
   if(!token)throw new Error('EXISTING_GOOGLE_AUTH_REQUIRED');
   signal?.throwIfAborted();
   const options={token,fetchImpl,signal,allowMissingDriveMetadata};
-  // Only schema metadata runs alongside canonical identity validation. No auth cache.
+  const metadataUrl = `https://www.googleapis.com/drive/v3/files/${SHADOW_ID}?fields=id,modifiedTime&supportsAllDrives=true`;
+  const metadataSignal = allowMissingDriveMetadata ? AbortSignal.any([signal, AbortSignal.timeout(4000)].filter(Boolean)) : signal;
+  const metadata = fetchImpl(metadataUrl, READ_OPTIONS(token,metadataSignal));
   const [meta,titlesResult]=await Promise.all([
-    fetchImpl(`https://www.googleapis.com/drive/v3/files/${SHADOW_ID}?fields=id,modifiedTime&supportsAllDrives=true`,READ_OPTIONS(token,signal)),
+    allowMissingDriveMetadata ? metadata.catch(() => null) : metadata,
     availableTabs(options).then(titles=>({titles}),error=>({error})),
   ]);
-  if(!meta.ok && !allowMissingDriveMetadata)throw new Error('SHADOW_METADATA_UNAVAILABLE');
-  const info=meta.ok ? await meta.json() : null;
-  if(meta.ok && info?.id!==SHADOW_ID)throw new Error('SHADOW_METADATA_INVALID');
-  if(!meta.ok)console.warn(JSON.stringify({component:'NEXO_SHADOW', endpoint:'drive-metadata', status:meta.status}));
+  if(!meta?.ok && !allowMissingDriveMetadata)throw new Error('SHADOW_METADATA_UNAVAILABLE');
+  const info=meta?.ok ? await meta.json() : null;
+  if(meta?.ok && info?.id!==SHADOW_ID)throw new Error('SHADOW_METADATA_INVALID');
+  if(!meta?.ok)console.warn(JSON.stringify({component:'NEXO_SHADOW', endpoint:'drive-metadata', status:meta?.status ?? null}));
   signal?.throwIfAborted();
   let reading;
   try{

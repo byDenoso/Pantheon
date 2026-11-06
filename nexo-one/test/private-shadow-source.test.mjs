@@ -104,3 +104,19 @@ test('invalid dedicated credentials fail closed without trying Connect', async (
     tokenProvider: async () => { throw new Error('UNEXPECTED_CONNECT'); }
   }), /SHADOW_SERVICE_ACCOUNT_INVALID/);
 });
+
+test('a warm reader reuses a valid OAuth token only for the same key',async()=>{
+  const {privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+  const config={type:'service_account',client_email:'shadow-reader@example.iam.gserviceaccount.com',
+    private_key_id:'key-1',private_key:privateKey.export({type:'pkcs8',format:'pem'})};
+  let exchanges=0;
+  const fetcher=async()=>Response.json({access_token:'token-'+ ++exchanges,expires_in:3600});
+  const run=async key=>readAtlasPrivateShadow({NEXO_ATLAS_SHADOW_SERVICE_ACCOUNT_JSON:JSON.stringify(key)},fetcher,{
+    boardReader:async()=>board()
+  });
+  await run(config);
+  await run(config);
+  assert.equal(exchanges,1);
+  await run({...config,private_key_id:'key-2'});
+  assert.equal(exchanges,2);
+});

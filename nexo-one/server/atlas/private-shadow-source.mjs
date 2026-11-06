@@ -1,6 +1,6 @@
 // Independent read-only SHADOW projection for the authenticated Atlas route.
 // No LIVE Tower dependency; no public route or browser-supplied upstream.
-import {sign} from 'node:crypto';
+import {createHash, sign} from 'node:crypto';
 import {googleToken} from '../adapters/google.mjs';
 import {readShadowBoard, SHADOW_ID} from './shadow-board.mjs';
 
@@ -52,7 +52,13 @@ const DRIVE_READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const encodeJwtPart = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 
+// Short-lived bearer tokens stay within the worker, scoped to this key and reader.
+let cachedServiceToken;
 async function shadowServiceAccountToken(raw, fetcher, signal) {
+  const fingerprint = createHash('sha256').update(raw).digest('hex');
+  const started = Date.now();
+  if (cachedServiceToken?.fingerprint === fingerprint && cachedServiceToken.fetcher === fetcher &&
+      cachedServiceToken.until > started) return cachedServiceToken.token;
   let assertion;
   try {
     const key = JSON.parse(raw);
@@ -76,6 +82,8 @@ async function shadowServiceAccountToken(raw, fetcher, signal) {
     if (!response.ok) throw new Error('TOKEN_EXCHANGE_FAILED');
     const data = await response.json();
     if (typeof data.access_token !== 'string' || !data.access_token) throw new Error('INVALID_TOKEN_RESPONSE');
+    const usableSeconds = Math.min(Number(data.expires_in), 3600) - 120;
+    if (usableSeconds > 0) cachedServiceToken = {fingerprint, fetcher, token:data.access_token, until:started + usableSeconds * 1000};
     return data.access_token;
   } catch {
     throw new Error('SHADOW_SERVICE_ACCOUNT_UNAVAILABLE');

@@ -44,19 +44,20 @@ export async function readPublishedCatalog(env, fetcher = fetch) {
   return {url: url.href, rows: catalogCandidates(JSON.parse(text))};
 }
 
-async function sources({env, fetcher, readShadow}) {
+async function sources({env, fetcher, readShadow, requireCurrentShadow = false}) {
   const [shadow, catalog] = await Promise.allSettled([
     shadowEnabled(env) ? readShadow() : Promise.reject(new Error('SHADOW_SOURCE_DISABLED')),
     readPublishedCatalog(env, fetcher),
   ]);
   const board = shadow.status === 'fulfilled' ? shadow.value : null;
   const availability=tabAvailability(board);
+  const usableBoard = requireCurrentShadow && board?.cache?.stale ? null : board;
   return {
     board, availability, shadowError: board ? null : safeShadowError(shadow.reason),
     catalog: catalog.status === 'fulfilled' ? catalog.value : null,
     catalogError: catalog.status === 'fulfilled' ? null : String(catalog.reason?.message || 'PUBLIC_CATALOG_UNAVAILABLE').slice(0, 80),
-    tower: board && availability.resultados === 'available' ? towerCandidates(board) : null,
-    campaigns: board && availability.roadmap === 'available' ? campaignCandidates(board) : null,
+    tower: usableBoard && availability.resultados === 'available' ? towerCandidates(usableBoard) : null,
+    campaigns: usableBoard && availability.roadmap === 'available' ? campaignCandidates(usableBoard) : null,
   };
 }
 
@@ -93,7 +94,7 @@ export async function saveCockpitSelection(body, {env = process.env, store = atl
   try { previous = await readStoredSelection(store); } catch { return {status: 503, body: {error: 'SELECTION_STORE_UNAVAILABLE'}}; }
   const currentVersion = previous?.version ?? 0;
   if (currentVersion !== body.expectedVersion) return {status: 409, body: {error: 'VERSION_CONFLICT', currentVersion}};
-  const src = await sources({env, fetcher, readShadow});
+  const src = await sources({env, fetcher, readShadow, requireCurrentShadow: true});
   const {selection, errors} = buildSelection(body, {previous, catalog: src.catalog?.rows ?? [], tower: src.tower, campaigns: src.campaigns, now});
   if (!selection) return {status: 422, body: {error: 'SELECTION_INVALID', errors: errors.slice(0, 50)}};
   readSelection(selection); // the stored document must pass its own strict reader
