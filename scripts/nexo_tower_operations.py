@@ -102,7 +102,7 @@ def build_views(stored, pending, counts, *, now=None, roster=None, revision='unk
                 'Preservar original; corrigir apenas com nova versão e evidência; não replay.', stamp, 'TRANSPORT'])
         elif state.startswith('CLAIMED:'):
             data = item['data']
-            if stored.get(data['tab'], {}).get(data['stable_id']) != tuple(data['values']):
+            if stored.get(data['tab'], {}).get(data['stable_id']) != tuple(data.get('target_values', data['values'])):
                 incidents.append([data['stable_id'], 'PENDING_RECONCILIATION',
                     f"{item['mark_tab']}!A{item['number']}", 'P', 'CLAIMED_WITHOUT_EXACT_TARGET',
                     'Reconciliar recibo e destino; nunca despachar de novo por timeout.', stamp, 'TRANSPORT'])
