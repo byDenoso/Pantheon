@@ -71,6 +71,44 @@ class OperationsTests(unittest.TestCase):
         d['values'][3]='x'*10000
         w.validate_new_event(d)
 
+    def test_writer_never_replaces_task_owned_checkpoints(self):
+        views = self.views()
+        self.assertNotIn('CHECKPOINTS', o.VIEW_TITLES)
+        self.assertNotIn('CHECKPOINTS', views)
+        existing_checkpoint = ['task_id','run_id','2026-11-06','cursor1','cursor2','','','']
+        # Simulate the real metadata, including an occupied Task-owned tab.
+        tab_id = 202610284
+        sheets = [{'properties':{'title':title, 'sheetId':i+100,
+                    'gridProperties':{'rowCount':1000,'columnCount':8}}}
+                  for i,title in enumerate(o.VIEW_TITLES)]
+        sheets.append({'properties':{'title':'CHECKPOINTS','sheetId':tab_id,
+                       'gridProperties':{'rowCount':100,'columnCount':8}}})
+        captured = []
+        class Resp:
+            def __init__(self, payload=None): self.payload=payload
+            def json(self): return self.payload
+            def raise_for_status(self): return None
+        class Session:
+            def post(self, url, *, json, timeout):
+                captured.extend(json['requests'])
+                return Resp()
+        with patch.object(w,'safe_get',return_value=Resp({'sheets':sheets})), \
+             patch.object(w,'values',side_effect=lambda sess, sheet, a1: views[a1.split("'")[1]]):
+            self.assertEqual(o.publish_views(Session(), views, w), 'READBACK_VERIFIED')
+        self.assertTrue(captured)
+        self.assertTrue(all(req.get('updateCells',{}).get('range',{}).get('sheetId') != tab_id
+                            for req in captured))
+        self.assertEqual(existing_checkpoint[0], 'task_id')
+
+    def test_execution_projection_uses_stable_identity_not_question(self):
+        stable = 'S5-20261106T1425-JADESDR5-REDSHIFT-E0-01'
+        row = ['date','S5|E0',stable,'Does this result change the conclusion?',
+               'E0','method','42','scope','literature','artifact']
+        views = self.views(results={stable:row})
+        self.assertEqual(views['EXECUCOES'][1][0], stable)
+        self.assertIn(stable, views['EXECUCOES'][1][7])
+        self.assertNotEqual(views['EXECUCOES'][1][0], row[3])
+
     def test_projection_missing_is_no_write(self):
         class Resp:
             def json(self):return {'sheets':[]}
