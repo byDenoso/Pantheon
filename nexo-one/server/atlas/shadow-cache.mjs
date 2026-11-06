@@ -11,7 +11,8 @@ export const SHADOW_COOLDOWN_KEY = 'atlas:shadow-board:cooldown:v1';
 export const SHADOW_LOCK_KEY = 'atlas:shadow-board:lock:v1';
 export const SHADOW_FRESH_SECONDS = 240;
 export const SHADOW_MAX_AGE_SECONDS = 7 * 24 * 3600;
-export const SHADOW_LOCK_SECONDS = 30;
+export const SHADOW_LOCK_SECONDS = 40;
+const RELEASE_LOCK = "if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0";
 const MAX_SEALED_BYTES = 900 * 1024;
 
 const keyFrom = secret => createHash('sha256').update(`nexo-shadow-cache:${secret}`).digest();
@@ -44,30 +45,40 @@ export function cachedShadowReader({store, readShadow, secret, now = () => Date.
     cache: {fetchedAt: new Date(fetchedAt).toISOString(), ageSeconds: Math.max(0, Math.round((now() - fetchedAt) / 1000)), stale, reason: reason ?? null},
   });
   const safe = async (...command) => {
-    try { return await store(...command); } catch { return null; }
+    try { return await store(...command); } catch { return undefined; }
   };
   return async function read() {
     if (!secret) return annotate(await readShadow(), now(), false, null);
-    let cached = null;
-    const sealed = await safe('GET', SHADOW_CACHE_KEY);
-    if (typeof sealed === 'string') {
+    const readCached = async () => {
+      const sealed = await safe('GET', SHADOW_CACHE_KEY);
+      if (typeof sealed !== 'string') return null;
       try {
         const opened = openBoard(sealed, secret);
-        if (Number.isFinite(opened?.fetchedAt) && now() - opened.fetchedAt <= SHADOW_MAX_AGE_SECONDS * 1000) cached = opened;
-      } catch { /* A rotated credential or a corrupt value simply forces a new read. */ }
-    }
-    const age = cached ? (now() - cached.fetchedAt) / 1000 : Infinity;
-    if (age <= SHADOW_FRESH_SECONDS) return annotate(cached.board, cached.fetchedAt, false, null);
-
-    const cooling = await safe('GET', SHADOW_COOLDOWN_KEY);
-    if (cooling) {
+        if (Number.isFinite(opened?.fetchedAt) && now() - opened.fetchedAt <= SHADOW_MAX_AGE_SECONDS * 1000) return opened;
+      } catch { /* Corrupt values and values sealed before PIN rotation are ignored. */ }
+      return null;
+    };
+    let cached = await readCached();
+    const fresh = () => cached && now() - cached.fetchedAt <= SHADOW_FRESH_SECONDS * 1000;
+    const cooled = () => {
       if (cached) return annotate(cached.board, cached.fetchedAt, true, 'CONNECT_RATE_LIMITED');
       throw Object.assign(new Error('RATE_LIMITED'), {code: 'RATE_LIMITED', googleDiagnostic: 'CONNECT_RATE_LIMITED'});
+    };
+    if (fresh()) return annotate(cached.board, cached.fetchedAt, false, null);
+    if (await safe('GET', SHADOW_COOLDOWN_KEY)) return cooled();
+
+    const owner = randomBytes(16).toString('hex');
+    const lock = await safe('SET', SHADOW_LOCK_KEY, owner, 'NX', 'EX', SHADOW_LOCK_SECONDS);
+    if (lock === null) {
+      if (cached) return annotate(cached.board, cached.fetchedAt, true, 'REFRESH_IN_PROGRESS');
+      throw new Error('SHADOW_REFRESH_IN_PROGRESS');
     }
-    // One refresher across workers. Without a cached copy a second reader still tries.
-    const lock = await safe('SET', SHADOW_LOCK_KEY, '1', 'NX', 'EX', SHADOW_LOCK_SECONDS);
-    if (lock === null && cached) return annotate(cached.board, cached.fetchedAt, true, 'REFRESH_IN_PROGRESS');
     try {
+      if (lock === 'OK') {
+        cached = await readCached() ?? cached;
+        if (fresh()) return annotate(cached.board, cached.fetchedAt, false, null);
+        if (await safe('GET', SHADOW_COOLDOWN_KEY)) return cooled();
+      }
       const board = await readShadow();
       const fetchedAt = now();
       const value = sealBoard({fetchedAt, board}, secret);
@@ -75,14 +86,14 @@ export function cachedShadowReader({store, readShadow, secret, now = () => Date.
       await safe('DEL', SHADOW_COOLDOWN_KEY);
       return annotate(board, fetchedAt, false, null);
     } catch (error) {
-      if (isRateLimited(error)) {
+      if (isRateLimited(error) && error.retryDelayMs !== undefined) {
         const seconds = Math.ceil(Math.max(60000, Number(error.retryDelayMs) || 60000) / 1000) + jitter();
         await safe('SET', SHADOW_COOLDOWN_KEY, '1', 'EX', seconds);
       }
       if (cached) return annotate(cached.board, cached.fetchedAt, true, diagnostic(error));
       throw error;
     } finally {
-      await safe('DEL', SHADOW_LOCK_KEY);
+      if (lock === 'OK') await safe('EVAL', RELEASE_LOCK, 1, SHADOW_LOCK_KEY, owner);
     }
   };
 }
