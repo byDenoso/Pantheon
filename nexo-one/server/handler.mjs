@@ -207,7 +207,11 @@ export default async function handler(req,res) {
     }
     // Private cockpit: owner session already verified by atlasBoundary (writes also same-origin).
     if(route==='atlas-cockpit'||route==='atlas-cockpit-selection'){
-      const readShadow=cachedShadowReader({store:atlasStore(env),secret:env.NEXO_ATLAS_PIN_HASH,readShadow:()=>readAtlasPrivateShadow(googleRuntimeEnvironment(env,req.headers))});
+      const readShadow=cachedShadowReader({
+        store:atlasStore(env), secret:env.NEXO_ATLAS_PIN_HASH,
+        serviceAccount:Boolean(env.NEXO_ATLAS_SHADOW_SERVICE_ACCOUNT_JSON),
+        readShadow:()=>readAtlasPrivateShadow(googleRuntimeEnvironment(env,req.headers)),
+      });
       if(route==='atlas-cockpit'){
         if(req.method!=='GET')return send({error:'METHOD_NOT_ALLOWED'},405);
         try{return send(await cockpitView({env,readShadow}));}catch{return send({error:'COCKPIT_UNAVAILABLE'},503);}

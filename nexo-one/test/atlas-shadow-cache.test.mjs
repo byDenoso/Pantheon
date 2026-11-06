@@ -126,3 +126,11 @@ test('finishing after the lease expires cannot delete a successor lease', async 
   await read();
   assert.equal(data.get(SHADOW_LOCK_KEY), 'successor');
 });
+
+test('a Connect cooldown cannot block the newly configured service account', async () => {
+  const {store, data} = memory();
+  data.set(SHADOW_COOLDOWN_KEY, '1');
+  const read = cachedShadowReader({store, secret: 's', serviceAccount: true, readShadow: async () => BOARD});
+  assert.deepEqual((await read()).mural, BOARD.mural);
+  assert.equal(data.get(SHADOW_COOLDOWN_KEY), '1');
+});

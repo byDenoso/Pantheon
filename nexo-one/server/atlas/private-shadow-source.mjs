@@ -1,5 +1,6 @@
 // Independent read-only SHADOW projection for the authenticated Atlas route.
 // No LIVE Tower dependency; no public route or browser-supplied upstream.
+import {sign} from 'node:crypto';
 import {googleToken} from '../adapters/google.mjs';
 import {readShadowBoard, SHADOW_ID} from './shadow-board.mjs';
 
@@ -47,10 +48,47 @@ export function projectPrivateShadowBoard(board) {
   return result;
 }
 
+const DRIVE_READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const encodeJwtPart = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+
+async function shadowServiceAccountToken(raw, fetcher, signal) {
+  let assertion;
+  try {
+    const key = JSON.parse(raw);
+    if (key.type !== 'service_account' || !/^[^@\s]+@[^@\s]+\.iam\.gserviceaccount\.com$/.test(key.client_email ?? '') ||
+        typeof key.private_key !== 'string' || typeof key.private_key_id !== 'string' || !key.private_key_id) {
+      throw new Error('INVALID_KEY');
+    }
+    const iat = Math.floor(Date.now() / 1000);
+    const header = encodeJwtPart({alg:'RS256', typ:'JWT', kid:key.private_key_id});
+    const claims = encodeJwtPart({iss:key.client_email, scope:DRIVE_READ_SCOPE, aud:GOOGLE_TOKEN_URL, iat, exp:iat + 3600});
+    const unsigned = header + '.' + claims;
+    assertion = unsigned + '.' + sign('RSA-SHA256', Buffer.from(unsigned), key.private_key).toString('base64url');
+  } catch {
+    throw new Error('SHADOW_SERVICE_ACCOUNT_INVALID');
+  }
+  try {
+    const response = await fetcher(GOOGLE_TOKEN_URL, {
+      method:'POST', redirect:'error', signal,
+      body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion}),
+    });
+    if (!response.ok) throw new Error('TOKEN_EXCHANGE_FAILED');
+    const data = await response.json();
+    if (typeof data.access_token !== 'string' || !data.access_token) throw new Error('INVALID_TOKEN_RESPONSE');
+    return data.access_token;
+  } catch {
+    throw new Error('SHADOW_SERVICE_ACCOUNT_UNAVAILABLE');
+  }
+}
+
 export async function readAtlasPrivateShadow(env = process.env, fetcher = fetch,
     {tokenProvider = googleToken, boardReader = readShadowBoard} = {}) {
-  const token = await tokenProvider(env, AbortSignal.timeout(8000),
-                                   {scopes: ['https://www.googleapis.com/auth/drive.readonly'], reuseDriveRead: true});
+  const signal = AbortSignal.timeout(8000);
+  const serviceAccount = env.NEXO_ATLAS_SHADOW_SERVICE_ACCOUNT_JSON;
+  const token = serviceAccount
+    ? await shadowServiceAccountToken(serviceAccount, fetcher, signal)
+    : await tokenProvider(env, signal, {scopes:[DRIVE_READ_SCOPE], reuseDriveRead:true});
   if (!token) throw new Error('SHADOW_READ_CREDENTIAL_REQUIRED');
   const board = await boardReader({token, fetchImpl: fetcher, signal: AbortSignal.timeout(20000)});
   return projectPrivateShadowBoard(board);

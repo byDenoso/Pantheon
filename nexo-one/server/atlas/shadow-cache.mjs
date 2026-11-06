@@ -39,7 +39,9 @@ const isRateLimited = error => error?.code === 'RATE_LIMITED' || error?.googleDi
  * their age, and why a refresh did not happen. A store failure degrades to a
  * direct read, so the cache can never make the Cockpit less available.
  */
-export function cachedShadowReader({store, readShadow, secret, now = () => Date.now(), jitter = () => 0}) {
+export function cachedShadowReader({store, readShadow, secret, now = () => Date.now(), jitter = () => 0, serviceAccount = false}) {
+  // A cooldown from the Connect broker cannot block a different credential source.
+  const cooldownKey = serviceAccount ? SHADOW_COOLDOWN_KEY + ':service-account' : SHADOW_COOLDOWN_KEY;
   const annotate = (board, fetchedAt, stale, reason) => ({
     ...board,
     cache: {fetchedAt: new Date(fetchedAt).toISOString(), ageSeconds: Math.max(0, Math.round((now() - fetchedAt) / 1000)), stale, reason: reason ?? null},
@@ -65,7 +67,7 @@ export function cachedShadowReader({store, readShadow, secret, now = () => Date.
       throw Object.assign(new Error('RATE_LIMITED'), {code: 'RATE_LIMITED', googleDiagnostic: 'CONNECT_RATE_LIMITED'});
     };
     if (fresh()) return annotate(cached.board, cached.fetchedAt, false, null);
-    if (await safe('GET', SHADOW_COOLDOWN_KEY)) return cooled();
+    if (await safe('GET', cooldownKey)) return cooled();
 
     const owner = randomBytes(16).toString('hex');
     const lock = await safe('SET', SHADOW_LOCK_KEY, owner, 'NX', 'EX', SHADOW_LOCK_SECONDS);
@@ -77,18 +79,18 @@ export function cachedShadowReader({store, readShadow, secret, now = () => Date.
       if (lock === 'OK') {
         cached = await readCached() ?? cached;
         if (fresh()) return annotate(cached.board, cached.fetchedAt, false, null);
-        if (await safe('GET', SHADOW_COOLDOWN_KEY)) return cooled();
+        if (await safe('GET', cooldownKey)) return cooled();
       }
       const board = await readShadow();
       const fetchedAt = now();
       const value = sealBoard({fetchedAt, board}, secret);
       if (value.length <= MAX_SEALED_BYTES) await safe('SET', SHADOW_CACHE_KEY, value, 'EX', SHADOW_MAX_AGE_SECONDS);
-      await safe('DEL', SHADOW_COOLDOWN_KEY);
+      await safe('DEL', cooldownKey);
       return annotate(board, fetchedAt, false, null);
     } catch (error) {
       if (isRateLimited(error) && error.retryDelayMs !== undefined) {
         const seconds = Math.ceil(Math.max(60000, Number(error.retryDelayMs) || 60000) / 1000) + jitter();
-        await safe('SET', SHADOW_COOLDOWN_KEY, '1', 'EX', seconds);
+        await safe('SET', cooldownKey, '1', 'EX', seconds);
       }
       if (cached) return annotate(cached.board, cached.fetchedAt, true, diagnostic(error));
       throw error;
