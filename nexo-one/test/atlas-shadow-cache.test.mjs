@@ -7,6 +7,12 @@ function memory() {
   const data = new Map();
   const store = async (command, key, value, ...rest) => {
     if (command === 'GET') return data.get(key) ?? null;
+    if (command === 'EVAL') {
+      const [lockKey, owner] = rest;
+      if (data.get(lockKey) !== owner) return 0;
+      data.delete(lockKey);
+      return 1;
+    }
     if (command === 'DEL') { data.delete(key); return 1; }
     if (command === 'SET') {
       if (rest.includes('NX') && data.has(key)) return null;
@@ -86,4 +92,37 @@ test('a copy sealed under a rotated credential is ignored', async () => {
   const read = cachedShadowReader({store, secret: 'new', now: () => 1000001, readShadow: async () => { reads++; return BOARD; }});
   assert.deepEqual((await read()).mural, BOARD.mural);
   assert.equal(reads, 1);
+});
+
+test('concurrent cold starts acquire one token and preserve the active lease', async () => {
+  const {store, data} = memory();
+  let release, started;
+  const pending = new Promise(resolve => { release = resolve; });
+  const ready = new Promise(resolve => { started = resolve; });
+  let reads = 0;
+  const worker = () => cachedShadowReader({store, secret: 's', readShadow: async () => {
+    reads++;
+    started();
+    await pending;
+    return BOARD;
+  }});
+  const first = worker()();
+  await ready;
+  const lease = data.get(SHADOW_LOCK_KEY);
+  await assert.rejects(worker()(), /SHADOW_REFRESH_IN_PROGRESS/);
+  assert.equal(data.get(SHADOW_LOCK_KEY), lease);
+  release();
+  await first;
+  assert.equal(reads, 1);
+  assert.equal(data.has(SHADOW_LOCK_KEY), false);
+});
+
+test('finishing after the lease expires cannot delete a successor lease', async () => {
+  const {store, data} = memory();
+  const read = cachedShadowReader({store, secret: 's', readShadow: async () => {
+    data.set(SHADOW_LOCK_KEY, 'successor');
+    return BOARD;
+  }});
+  await read();
+  assert.equal(data.get(SHADOW_LOCK_KEY), 'successor');
 });
