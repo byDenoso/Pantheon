@@ -92,7 +92,6 @@ export default function PublicApp() {
           <ol className="atlas-research-lines">{t.lines.items.map((line, i) => (
             <li key={line.id} data-line={line.id}><span className="atlas-line-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><h3>{line.title}</h3><p>{line.body}</p></li>
           ))}</ol>
-          <a className="nexo-publication-entry" href="/publicacoes.html"><div><span className="atlas-eyebrow">{locale==='en'?'Scientific communication':'Comunicação científica'}</span><h3>{locale==='en'?'Publications & reports':'Publicações e relatórios'}</h3><p>{locale==='en'?'Consult the publication catalog, references and available research materials.':'Consulte o catálogo de publicações, referências e materiais de pesquisa disponíveis.'}</p></div><ArrowIcon/></a>
         </section>
 
         <section className="atlas-section atlas-method-section" id="s-methods" tabIndex={-1} aria-labelledby="h-methods">

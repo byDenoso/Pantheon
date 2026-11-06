@@ -1,7 +1,7 @@
 (() => {
   const LABELS = {
-    'pt-BR': { nav: 'Mais páginas', method: 'Método', publications: 'Publicações' },
-    en: { nav: 'More pages', method: 'Method', publications: 'Publications' },
+    'pt-BR': { nav: 'Mais páginas', method: 'Método' },
+    en: { nav: 'More pages', method: 'Method' },
   };
   const ORCID = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
   let config = null;

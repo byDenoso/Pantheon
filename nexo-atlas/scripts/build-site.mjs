@@ -37,7 +37,7 @@ await cp('.openai/hosting.json', 'dist/.openai/hosting.json');
 await cp('drizzle', 'dist/.openai/drizzle', {recursive: true});
 // Keep private output only inside the server Worker module, never dist/client.
 const publicNames = (await readdir('dist/client')).sort();
-if (publicNames.some(n => !['index.html', 'assets', 'metodo.html', 'publicacoes.html', 'privado', 'site-config.json', 'publications.json', 'robots.txt', 'sitemap.xml'].includes(n))) throw new Error('UNEXPECTED_PUBLIC_OUTPUT');
+if (publicNames.some(n => !['index.html', 'assets', 'metodo.html', 'privado', 'site-config.json', 'robots.txt', 'sitemap.xml'].includes(n))) throw new Error('UNEXPECTED_PUBLIC_OUTPUT');
 const privateShortcut = await readdir('dist/client/privado', {withFileTypes: true});
 if (privateShortcut.length !== 1 || privateShortcut[0].name !== 'index.html' || !privateShortcut[0].isFile()) throw new Error('UNEXPECTED_PRIVATE_SHORTCUT_OUTPUT');
 console.log(`Sites Worker built; ${Object.keys(assets).length} guarded assets; public output: ${publicNames.join(', ')}`);
