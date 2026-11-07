@@ -206,6 +206,12 @@ def target_row_id(tab, row):
         label, stable_id = row[2].rsplit(RESULT_ITEM_ID_SEPARATOR, 1)
         if label and KEY.fullmatch(stable_id):
             return stable_id
+    # An earlier MURAL event can be the item (C) of its own RESULTADOS row.
+    # Its immutable RESULTADOS identity is then the title (D), not the item.
+    if (len(row) > 3 and len(row) > 2 and
+            DIRECT_RESULT_ID.fullmatch(row[2]) and
+            row[3] == row[2] + "-RESULTADOS"):
+        return row[3]
     # Direct Sheets writes use immutable C IDs; Writer rows use D or nexo_id.
     if len(row) > 2 and DIRECT_RESULT_ID.fullmatch(row[2]):
         return row[2]
