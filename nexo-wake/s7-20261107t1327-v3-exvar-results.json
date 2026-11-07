@@ -1,0 +1,11 @@
+{
+  "schema": "nexo.writer_wake.v1",
+  "run_id": "6b33510c-1790-8328-b7dd-851315bd7462",
+  "spool": "SHADOW_V2",
+  "rows": 2,
+  "reason": "apply_existing_S7_V3_science_results",
+  "source_stable_ids": [
+    "S7-20261107T1323-V3-EXVAR-GAMMA-RESULT-01",
+    "S7-20261107T1323-V3-EXVAR-GAMMA-SCI-01"
+  ]
+}
