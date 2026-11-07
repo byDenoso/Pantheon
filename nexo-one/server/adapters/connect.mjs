@@ -76,11 +76,20 @@ async function boundedJson(response){
 
 // At most one Drive read in flight per worker. Never cache completed credentials.
 let driveRead;
+const MAX_RETRY_DELAY_MS=300000;
 
 function retryDelay(response){
   const value=response.headers.get('Retry-After');
   const seconds=value&&/^\d+$/.test(value)?Number(value)*1000:Date.parse(value)-Date.now();
-  return Number.isFinite(seconds)?Math.max(60000,seconds):60000;
+  // A long Retry-After must not hold every worker's cooldown closed for hours on one reply.
+  return Number.isFinite(seconds)?Math.min(MAX_RETRY_DELAY_MS,Math.max(60000,seconds)):60000;
+}
+
+// Only rate-limit headers: this line must stay free of tokens and identities.
+function logRateLimit(response){
+  const header=name=>response.headers.get(name);
+  console.warn('connect_rate_limited',JSON.stringify({status:response.status,retryAfter:header('Retry-After'),
+    limit:header('x-ratelimit-limit'),remaining:header('x-ratelimit-remaining'),reset:header('x-ratelimit-reset')}));
 }
 
 export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES,reuseDriveRead=false}={}){
@@ -145,7 +154,10 @@ async function requestGoogleToken(url,oidc,body,signal){
     const detail=typeof providerCode==='string'&&Object.hasOwn(known,providerCode)?known[providerCode]:null;
     const diagnostic=limited?'CONNECT_RATE_LIMITED':detail??(response.status===401?'CONNECT_UNAUTHORIZED':response.status===403?'CONNECT_FORBIDDEN':'CONNECT_UNAVAILABLE');
     const error=authError(code,diagnostic);
-    if(limited)error.retryDelayMs=retryDelay(response);
+    if(limited){
+      logRateLimit(response);
+      error.retryDelayMs=retryDelay(response);
+    }
     throw error;
   }
   if(typeof data?.token!=='string'||!data.token)throw authError('AUTH_REQUIRED','CONNECT_INVALID_RESPONSE');
