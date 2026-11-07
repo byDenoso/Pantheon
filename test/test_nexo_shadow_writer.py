@@ -127,6 +127,24 @@ class TestWriter(IsolatedSummaryTestCase):
         self.assertEqual(w.target_row_id("RESULTADOS",
             ["2026-11-06", "S5|E0", "S5_R84_HUMAN_ITEM", ID]), ID)
 
+    def test_writer_result_title_id_beats_related_mural_item_id(self):
+        mural_id = "S8-20261106T1540-HOYT-ANGULAR-VELOCITY-E0-01"
+        result_id = mural_id + "-RESULTADOS"
+        source = plain("RESULTADOS", text="E0 scientific record")
+        source[0] = result_id
+        source[6] = mural_id
+        source[7] = result_id
+        data, state = w.decode_plain(source)
+        self.assertEqual(state, "")
+        self.assertEqual(data["target_values"][2], mural_id)
+        self.assertEqual(data["target_values"][3], result_id)
+        self.assertEqual(w.target_row_id("RESULTADOS", data["target_values"]), result_id)
+        observed = w.TargetIndex()
+        observed[w.target_row_id("RESULTADOS", data["target_values"])] = tuple(data["target_values"])
+        self.assertTrue(w.match_target(observed, data))
+        self.assertEqual(w.target_row_id("RESULTADOS",
+            ["2026-11-06", "S8|E0", mural_id, "É um resultado novo?"]), mural_id)
+
     def test_plain_trailing_rejected(self):
         row=plain()
         row[12]="unexpected"
