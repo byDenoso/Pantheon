@@ -1,0 +1,8 @@
+{
+  "schema": "nexo.writer_wake.v1",
+  "run_id": "6b33510c-1790-8328-b7dd-851315bd7462",
+  "spool": "SHADOW_V2",
+  "rows": 1,
+  "reason": "reconcile_existing_S7_G0",
+  "source_stable_id": "S7-20261107-V3-EXVAR-GAMMA-G0-01"
+}
