@@ -1,0 +1,13 @@
+{
+  "contract": "NEXO_WRITER_WAKE_V1",
+  "source": "OPERATOR_AUTHORIZED_CHATGPT",
+  "purpose": "Conferir um ciclo real do Writer singleton para canario operacional enfileirado em SHADOW_V2!3991; nao despachar ciencia ou repetir gravacao ambigua.",
+  "requested_at": "2026-11-07T01:28:15.802Z",
+  "spool": "SHADOW_V2",
+  "spool_row": 3991,
+  "stable_ids": [
+    "NEXO-OPS-WRITER-ROUTE-20261106-E2E-01"
+  ],
+  "target": "MURAL",
+  "scientific_dispatch": false
+}
