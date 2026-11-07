@@ -108,3 +108,41 @@ test('MURAL aceita colunas opcionais e mantém as linhas mais recentes',async()=
   assert.equal(kept.length,300);
   assert.equal(kept.at(-1).data,'349');
 });
+
+test('dedicated reader accepts a verified Sheets batch when Drive metadata is denied',async()=>{
+  const fetchImpl=async url=>{
+    if(url.includes('/drive/v3/'))return Response.json({}, {status:403});
+    if(url.includes('values:batchGet'))return Response.json({spreadsheetId:SHADOW_ID,valueRanges:[
+      {range:'ROADMAP!A:I',values:[[...ROADMAP_COLUMNS],['R1','teste','OPEN','S1','1','','','','']]},
+      {range:'MURAL!A:H',values:[[...MURAL_COLUMNS]]},
+    ]});
+    return Response.json({sheets:['ROADMAP','MURAL'].map(title=>({properties:{title}}))});
+  };
+  const result=await readShadowBoard({token:'synthetic',fetchImpl,allowMissingDriveMetadata:true});
+  assert.equal(result.modified_at,null);
+  assert.equal(result.roadmap[0].item,'R1');
+  assert.equal(result.availability.mural,'available');
+});
+
+test('without Drive metadata a wrong Sheets identity fails closed',async()=>{
+  const fetchImpl=async url=>{
+    if(url.includes('/drive/v3/'))return Response.json({}, {status:404});
+    if(url.includes('values:batchGet'))return Response.json({spreadsheetId:'different-sheet'});
+    return Response.json({sheets:['ROADMAP','MURAL'].map(title=>({properties:{title}}))});
+  };
+  await assert.rejects(readShadowBoard({token:'synthetic',fetchImpl,allowMissingDriveMetadata:true}),/SHADOW_BATCH_IDENTITY_INVALID/);
+});
+
+test('a Drive transport failure does not discard a verified Sheets batch',async()=>{
+  const fetchImpl=async url=>{
+    if(url.includes('/drive/v3/'))throw new TypeError('synthetic upstream network failure');
+    if(url.includes('values:batchGet'))return Response.json({spreadsheetId:SHADOW_ID,valueRanges:[
+      {range:'ROADMAP!A:I',values:[[...ROADMAP_COLUMNS]]},
+      {range:'MURAL!A:H',values:[[...MURAL_COLUMNS]]},
+    ]});
+    return Response.json({sheets:['ROADMAP','MURAL'].map(title=>({properties:{title}}))});
+  };
+  const result=await readShadowBoard({token:'synthetic',fetchImpl,allowMissingDriveMetadata:true});
+  assert.equal(result.modified_at,null);
+  assert.equal(result.availability.roadmap,'available');
+});

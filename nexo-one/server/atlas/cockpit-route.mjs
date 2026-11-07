@@ -14,7 +14,7 @@ export const DEFAULT_CATALOG_URL = 'https://nexoresearch.org/atlas-public.json';
 export const SAVE_SCRIPT = "local cur=redis.call('GET',KEYS[1]) local v=0 if cur then local ok,doc=pcall(cjson.decode,cur) if not ok then return {0,-1} end v=tonumber(doc['version']) or -1 end if v~=tonumber(ARGV[1]) then return {0,v} end redis.call('SET',KEYS[1],ARGV[2]) redis.call('LPUSH',KEYS[2],ARGV[3]) redis.call('LTRIM',KEYS[2],0,99) return {1,v+1}";
 
 const shadowEnabled = env => env.NEXO_ATLAS_SHADOW_SOURCE_ENABLED === 'true';
-const shadowErrors = new Set(['SHADOW_SOURCE_DISABLED','SHADOW_REFRESH_IN_PROGRESS','SHADOW_READ_CREDENTIAL_REQUIRED','SHADOW_AUTH_REQUIRED','SHADOW_METADATA_UNAVAILABLE','SHADOW_METADATA_INVALID','SHADOW_REQUIRED_TAB_MISSING','SHADOW_BATCH_TOO_LARGE','SHADOW_BATCH_IDENTITY_INVALID','SHADOW_CANONICAL_UNAVAILABLE']);
+const shadowErrors = new Set(['SHADOW_SOURCE_DISABLED','SHADOW_REFRESH_IN_PROGRESS','SHADOW_SERVICE_ACCOUNT_INVALID','SHADOW_SERVICE_ACCOUNT_UNAVAILABLE','SHADOW_READ_CREDENTIAL_REQUIRED','SHADOW_AUTH_REQUIRED','SHADOW_METADATA_UNAVAILABLE','SHADOW_METADATA_INVALID','SHADOW_REQUIRED_TAB_MISSING','SHADOW_BATCH_TOO_LARGE','SHADOW_BATCH_IDENTITY_INVALID','SHADOW_CANONICAL_UNAVAILABLE']);
 function safeShadowError(error) {
   if (shadowErrors.has(error?.message)) return error.message;
   if (GOOGLE_AUTH_DIAGNOSTICS.includes(error?.googleDiagnostic)) return `SHADOW_${error.googleDiagnostic}`;
@@ -44,19 +44,20 @@ export async function readPublishedCatalog(env, fetcher = fetch) {
   return {url: url.href, rows: catalogCandidates(JSON.parse(text))};
 }
 
-async function sources({env, fetcher, readShadow}) {
+async function sources({env, fetcher, readShadow, requireCurrentShadow = false}) {
   const [shadow, catalog] = await Promise.allSettled([
     shadowEnabled(env) ? readShadow() : Promise.reject(new Error('SHADOW_SOURCE_DISABLED')),
     readPublishedCatalog(env, fetcher),
   ]);
   const board = shadow.status === 'fulfilled' ? shadow.value : null;
   const availability=tabAvailability(board);
+  const usableBoard = requireCurrentShadow && board?.cache?.stale ? null : board;
   return {
     board, availability, shadowError: board ? null : safeShadowError(shadow.reason),
     catalog: catalog.status === 'fulfilled' ? catalog.value : null,
     catalogError: catalog.status === 'fulfilled' ? null : String(catalog.reason?.message || 'PUBLIC_CATALOG_UNAVAILABLE').slice(0, 80),
-    tower: board && availability.resultados === 'available' ? towerCandidates(board) : null,
-    campaigns: board && availability.roadmap === 'available' ? campaignCandidates(board) : null,
+    tower: usableBoard && availability.resultados === 'available' ? towerCandidates(usableBoard) : null,
+    campaigns: usableBoard && availability.roadmap === 'available' ? campaignCandidates(usableBoard) : null,
   };
 }
 
@@ -93,7 +94,7 @@ export async function saveCockpitSelection(body, {env = process.env, store = atl
   try { previous = await readStoredSelection(store); } catch { return {status: 503, body: {error: 'SELECTION_STORE_UNAVAILABLE'}}; }
   const currentVersion = previous?.version ?? 0;
   if (currentVersion !== body.expectedVersion) return {status: 409, body: {error: 'VERSION_CONFLICT', currentVersion}};
-  const src = await sources({env, fetcher, readShadow});
+  const src = await sources({env, fetcher, readShadow, requireCurrentShadow: true});
   const {selection, errors} = buildSelection(body, {previous, catalog: src.catalog?.rows ?? [], tower: src.tower, campaigns: src.campaigns, now});
   if (!selection) return {status: 422, body: {error: 'SELECTION_INVALID', errors: errors.slice(0, 50)}};
   readSelection(selection); // the stored document must pass its own strict reader

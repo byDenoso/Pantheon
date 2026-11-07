@@ -241,3 +241,17 @@ test('real handler: anonymous cockpit calls are refused before any upstream read
     assert.equal(reads, 0);
   } finally { globalThis.fetch = oldFetch; }
 });
+
+test('a stale SHADOW copy remains visible but cannot authorize a new publication',async()=>{
+  const {store}=memoryStore();
+  const readShadow=async()=>({...BOARD,cache:{stale:true}});
+  const options=deps(store,{readShadow});
+  const view=await cockpitView(options);
+  assert.equal(view.shadow.available,true);
+  assert.equal(view.shadow.cache.stale,true);
+  assert.equal(view.shadow.resultados.length,2);
+  const body={expectedVersion:0,catalog:[],tower:[towerItem(BOARD.resultados[0])],campaigns:[]};
+  const rejected=await saveCockpitSelection(body,options);
+  assert.equal(rejected.status,422);
+  assert.equal(rejected.body.errors[0].code,'SOURCE_UNAVAILABLE');
+});

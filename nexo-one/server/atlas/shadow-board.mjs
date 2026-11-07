@@ -87,6 +87,9 @@ const fatalReadError=error=>error?.name==='AbortError'||error?.code==='SHADOW_AU
 async function readSheetJson(url,options,maxBytes){
   options.signal?.throwIfAborted();
   const response=await options.fetchImpl(url,READ_OPTIONS(options.token,options.signal));
+  if(!response.ok && options.allowMissingDriveMetadata) {
+    console.warn(JSON.stringify({component:'NEXO_SHADOW', endpoint:'sheets', status:response.status}));
+  }
   if(response.status===401||response.status===403){
     const error=new Error('SHADOW_AUTH_REQUIRED');error.code='SHADOW_AUTH_REQUIRED';throw error;
   }
@@ -142,18 +145,21 @@ async function readFallbackTabs(options){
     availability:Object.fromEntries(TABS.map((tab,i)=>[tab.name.toLowerCase(),values[i].status]))};
 }
 
-export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.timeout(15000)}){
+export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.timeout(15000),allowMissingDriveMetadata=false}){
   if(!token)throw new Error('EXISTING_GOOGLE_AUTH_REQUIRED');
   signal?.throwIfAborted();
-  const options={token,fetchImpl,signal};
-  // Only schema metadata runs alongside canonical identity validation. No auth cache.
+  const options={token,fetchImpl,signal,allowMissingDriveMetadata};
+  const metadataUrl = `https://www.googleapis.com/drive/v3/files/${SHADOW_ID}?fields=id,modifiedTime&supportsAllDrives=true`;
+  const metadataSignal = allowMissingDriveMetadata ? AbortSignal.any([signal, AbortSignal.timeout(4000)].filter(Boolean)) : signal;
+  const metadata = fetchImpl(metadataUrl, READ_OPTIONS(token,metadataSignal));
   const [meta,titlesResult]=await Promise.all([
-    fetchImpl(`https://www.googleapis.com/drive/v3/files/${SHADOW_ID}?fields=id,modifiedTime&supportsAllDrives=true`,READ_OPTIONS(token,signal)),
+    allowMissingDriveMetadata ? metadata.catch(() => null) : metadata,
     availableTabs(options).then(titles=>({titles}),error=>({error})),
   ]);
-  if(!meta.ok)throw new Error('SHADOW_METADATA_UNAVAILABLE');
-  const info=await meta.json();
-  if(info.id!==SHADOW_ID)throw new Error('SHADOW_METADATA_INVALID');
+  if(!meta?.ok && !allowMissingDriveMetadata)throw new Error('SHADOW_METADATA_UNAVAILABLE');
+  const info=meta?.ok ? await meta.json() : null;
+  if(meta?.ok && info?.id!==SHADOW_ID)throw new Error('SHADOW_METADATA_INVALID');
+  if(!meta?.ok)console.warn(JSON.stringify({component:'NEXO_SHADOW', endpoint:'drive-metadata', status:meta?.status ?? null}));
   signal?.throwIfAborted();
   let reading;
   try{
@@ -161,14 +167,15 @@ export async function readShadowBoard({token,fetchImpl=fetch,signal=AbortSignal.
     reading=await readBatchedTabs(titlesResult.titles,options);
   }catch(error){
     // Fail closed for denial/cancellation or authoritative missing required tabs.
-    if(signal?.aborted||fatalReadError(error)||error?.message==='SHADOW_REQUIRED_TAB_MISSING')throw error;
+    // Without the Drive identity, only a batch that echoes the canonical ID can succeed.
+    if(!info||signal?.aborted||fatalReadError(error)||error?.message==='SHADOW_REQUIRED_TAB_MISSING')throw error;
     reading=await readFallbackTabs(options);
   }
   const {tables,availability}=reading;
   const {roadmap,mural,resumo,equipe}=tables;
   const resultados=tables.resultados.slice(-100).map(row=>({...row,numeros:row.numeros.slice(0,600),limites:row.limites.slice(0,600)}));
   return {contract:'NEXO_SHADOW_BOARD_V1',access:'PRIVATE',source_id:SHADOW_ID,source_ref:`https://docs.google.com/spreadsheets/d/${SHADOW_ID}/edit`,
-    modified_at:typeof info.modifiedTime==='string'?info.modifiedTime:null,availability,roadmap,mural,resumo,resultados,equipe,
+    modified_at:typeof info?.modifiedTime==='string'?info.modifiedTime:null,availability,roadmap,mural,resumo,resultados,equipe,
     counts:{roadmap:roadmap.length,mural:mural.length,resumo:resumo.length,resultados:resultados.length,equipe:equipe.length}};
 }
 

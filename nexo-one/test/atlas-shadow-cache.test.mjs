@@ -4,23 +4,29 @@ import {cachedShadowReader, openBoard, sealBoard, SHADOW_CACHE_KEY, SHADOW_COOLD
 
 const BOARD = {contract: 'NEXO_SHADOW_BOARD_V1', mural: [{data: '2026-11-06', texto: 'linha'}]};
 function memory() {
-  const data = new Map();
+  const data = new Map(), calls = [];
   const store = async (command, key, value, ...rest) => {
-    if (command === 'GET') return data.get(key) ?? null;
+    calls.push(command);
+    if (command === 'MGET') return [data.get(key) ?? null, data.get(value) ?? null];
     if (command === 'EVAL') {
-      const [lockKey, owner] = rest;
+      const [lockKey, cacheKey, cooldownKey, owner, action, payload] = rest;
       if (data.get(lockKey) !== owner) return 0;
+      if (action === 'ready') {
+        if (payload) data.set(cacheKey, payload);
+        data.delete(cooldownKey);
+      } else if (action === 'limited') {
+        data.set(cooldownKey, '1');
+      }
       data.delete(lockKey);
       return 1;
     }
-    if (command === 'DEL') { data.delete(key); return 1; }
     if (command === 'SET') {
       if (rest.includes('NX') && data.has(key)) return null;
       data.set(key, value); return 'OK';
     }
     throw new Error(`unexpected ${command}`);
   };
-  return {store, data};
+  return {store, data, calls};
 }
 const limited = (ms = 120000) => Object.assign(new Error('RATE_LIMITED'), {code: 'RATE_LIMITED', googleDiagnostic: 'CONNECT_RATE_LIMITED', retryDelayMs: ms});
 
@@ -125,4 +131,49 @@ test('finishing after the lease expires cannot delete a successor lease', async 
   }});
   await read();
   assert.equal(data.get(SHADOW_LOCK_KEY), 'successor');
+});
+
+test('a Connect cooldown cannot block the newly configured service account', async () => {
+  const {store, data} = memory();
+  data.set(SHADOW_COOLDOWN_KEY, '1');
+  const read = cachedShadowReader({store, secret: 's', serviceAccount: true, readShadow: async () => BOARD});
+  assert.deepEqual((await read()).mural, BOARD.mural);
+  assert.equal(data.get(SHADOW_COOLDOWN_KEY), '1');
+});
+
+test('a worker that lost its lease cannot overwrite the newer snapshot', async () => {
+  const {store, data} = memory();
+  const now = () => 1000000;
+  const newer = {...BOARD, mural:[{texto:'mais recente'}]};
+  const read = cachedShadowReader({store, secret:'s', now, readShadow:async()=>{
+    data.set(SHADOW_CACHE_KEY, sealBoard({fetchedAt:now(), board:newer}, 's'));
+    data.set(SHADOW_LOCK_KEY, 'successor');
+    return BOARD;
+  }});
+  assert.deepEqual((await read()).mural, newer.mural);
+  assert.deepEqual(openBoard(data.get(SHADOW_CACHE_KEY),'s').board,newer);
+});
+
+test('stale fallback does not expose unexpected errors from upstream', async () => {
+  const {store} = memory();
+  let t = 1000000, fail = false;
+  const read = cachedShadowReader({store, secret:'s', now:()=>t, readShadow:async()=>{
+    if(fail) throw new Error('upstream leaked a private resource name');
+    return BOARD;
+  }});
+  await read();
+  fail = true;
+  t += 300000;
+  const result=await read();
+  assert.equal(result.cache.reason,'SHADOW_SOURCE_UNAVAILABLE');
+});
+
+
+test('a cold refresh uses four Redis calls and a cache hit uses one',async()=>{
+  const {store,calls}=memory();
+  const read=cachedShadowReader({store,secret:'s',readShadow:async()=>BOARD});
+  await read();
+  assert.deepEqual(calls,['MGET','SET','MGET','EVAL']);
+  await read();
+  assert.deepEqual(calls.slice(4),['MGET']);
 });
