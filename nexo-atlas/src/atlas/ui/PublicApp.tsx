@@ -8,6 +8,7 @@ import '../canonical-campaigns.css';
 import {Component,lazy,Suspense,useEffect,useState,type ReactNode} from 'react';
 import usePublicResearch from './usePublicResearch.ts';
 import ResearchLaunch from './ResearchLaunch.tsx';
+import {ResearchResources, NullResults} from './PublicResearchResources.tsx';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import Shell from './Shell.tsx';
@@ -105,6 +106,9 @@ export default function PublicApp() {
             <li key={line.id} data-line={line.id}><span className="atlas-line-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><h3>{line.title}</h3><p>{line.body}</p></li>
           ))}</ol>
         </section>
+
+        <ResearchResources locale={locale}/>
+        <NullResults locale={locale}/>
 
         <section className="atlas-section atlas-contact-section" id="s-contact" tabIndex={-1} aria-labelledby="h-contact">
           <div className="nexo-contact-heading">
