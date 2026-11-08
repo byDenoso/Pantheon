@@ -24,15 +24,15 @@ export const useLocale = (): Locale => useCtx().state.locale;
 export const useMessages = (): Messages => MESSAGES[useCtx().state.locale];
 
 const NAMES: Record<Locale, string> = {'pt-BR': 'PT-BR', en: 'EN'};
-export function LocaleSwitch() {
+export function LocaleSwitch({compact = false}: {compact?: boolean} = {}) {
   const {state, ctl} = useCtx();
   const m = MESSAGES[state.locale];
   return (
-    <div className="atlas-seg" role="group" aria-label={m.langLabel}>
+    <div className={compact ? "atlas-seg nexo-language-quick" : "atlas-seg"} role="group" aria-label={m.langLabel}>
       {LOCALES.map(l => (
-        <button key={l} type="button" aria-pressed={state.mode === 'manual' && state.locale === l} onClick={() => ctl.choose(l)}>{NAMES[l]}</button>
+        <button key={l} type="button" aria-pressed={state.locale === l} onClick={() => ctl.choose(l)}>{compact && l === 'pt-BR' ? 'PT' : NAMES[l]}</button>
       ))}
-      <button type="button" aria-pressed={state.mode === 'auto'} onClick={() => { void ctl.setAuto(); }}>{m.langAuto}</button>
+      {!compact && <button type="button" aria-pressed={state.mode === 'auto'} onClick={() => { void ctl.setAuto(); }}>{m.langAuto}</button>}
     </div>
   );
 }

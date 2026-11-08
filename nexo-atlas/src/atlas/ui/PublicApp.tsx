@@ -8,7 +8,6 @@ import '../canonical-campaigns.css';
 import {Component,lazy,Suspense,useEffect,useState,type ReactNode} from 'react';
 import usePublicResearch from './usePublicResearch.ts';
 import ResearchLaunch from './ResearchLaunch.tsx';
-import FeaturedEvidence from './FeaturedEvidence.tsx';
 import {CONTACT_EMAIL, PRESENTATION} from '../../i18n/presentation.ts';
 import {useLocale, useMessages} from './LocaleProvider.tsx';
 import Shell from './Shell.tsx';
@@ -63,14 +62,27 @@ export default function PublicApp() {
               <button type="button" className="atlas-text-action" onClick={() => goToPublicSection('methods')}>{t.hero.methods}<ArrowIcon direction="right"/></button>
             </div>
           </div>
-          <FeaturedEvidence pub={pub} locale={locale}/>
           <ResearchLaunch pub={pub} locale={locale} explore={explore}/>
         </section>
 
         <div className="atlas-public-content">
+        <section className="nexo-author-line" aria-label={locale==='en'?'About the researcher':'Sobre o pesquisador'}>
+          <strong>Dener Pereira</strong><span>{locale==='en'?'Physics undergraduate · UFRJ':'Graduando em Física · UFRJ'}</span>
+          <a href="https://orcid.org/0009-0005-0076-9797" rel="noopener noreferrer">ORCID</a>
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+        </section>
+        <section className="atlas-section atlas-method-section" id="s-methods" tabIndex={-1} aria-labelledby="h-methods">
+          <div className="atlas-method-intro">
+            <p className="atlas-eyebrow"><span aria-hidden="true">01 / </span>{t.methods.label}</p>
+            <h2 id="h-methods">{t.methods.title}</h2>
+            <p className="atlas-lead">{t.methods.lead}</p><a className="nexo-method-link" href="/metodo.html">{locale==='en'?'Read the full methodology':'Ler a metodologia completa'} <ArrowIcon direction="right"/></a>
+          </div>
+          <ol className="atlas-steps">{t.methods.steps.map((step, i) => <li key={step.title}><span className="atlas-line-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
+        </section>
+
         <section className="atlas-section" id="s-works" tabIndex={-1} aria-labelledby="h-works">
           <div className="nexo-section-heading"><div>
-          <p className="atlas-eyebrow"><span aria-hidden="true">01 / </span>{t.works.label}</p>
+          <p className="atlas-eyebrow"><span aria-hidden="true">02 / </span>{t.works.label}</p>
           <h2 id="h-works">{t.works.title}</h2>
           </div><p className="nexo-section-lead">{t.works.lead}</p></div>
           {pub.status==='ready'&&<HubBoundary en={locale==='en'} onFailure={()=>setHubReady(true)}><Suspense fallback={<p role="status">{locale==='en'?'Loading the research catalog…':'Carregando o catálogo de pesquisa…'}</p>}><HubReady setReady={setHubReady}/><PublicResearchHub pub={pub} locale={locale} checking={checking} pending={pending} checkedAt={checkedAt} refresh={refresh} activeTab={researchTab} onTabChange={setResearchTab}/></Suspense></HubBoundary>}
@@ -87,20 +99,11 @@ export default function PublicApp() {
         </section>
 
         <section className="atlas-section" id="s-lines" tabIndex={-1} aria-labelledby="h-lines">
-          <p className="atlas-eyebrow"><span aria-hidden="true">02 / </span>{t.lines.label}</p>
+          <p className="atlas-eyebrow"><span aria-hidden="true">03 / </span>{t.lines.label}</p>
           <h2 id="h-lines">{t.lines.title}</h2>
           <ol className="atlas-research-lines">{t.lines.items.map((line, i) => (
             <li key={line.id} data-line={line.id}><span className="atlas-line-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><h3>{line.title}</h3><p>{line.body}</p></li>
           ))}</ol>
-        </section>
-
-        <section className="atlas-section atlas-method-section" id="s-methods" tabIndex={-1} aria-labelledby="h-methods">
-          <div className="atlas-method-intro">
-            <p className="atlas-eyebrow"><span aria-hidden="true">03 / </span>{t.methods.label}</p>
-            <h2 id="h-methods">{t.methods.title}</h2>
-            <p className="atlas-lead">{t.methods.lead}</p><a className="nexo-method-link" href="/metodo.html">{locale==='en'?'Read the full methodology':'Ler a metodologia completa'} <ArrowIcon direction="right"/></a>
-          </div>
-          <ol className="atlas-steps">{t.methods.steps.map((step, i) => <li key={step.title}><span className="atlas-line-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
         </section>
 
         <section className="atlas-section atlas-contact-section" id="s-contact" tabIndex={-1} aria-labelledby="h-contact">

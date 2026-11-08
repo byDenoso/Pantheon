@@ -93,3 +93,13 @@
 .atlas-app[data-area=public] .atlas-public-main.nexo-study-page{max-width:1240px;padding-top:32px}.nexo-study-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:14px;margin:10px 0 38px;color:var(--fg-2)}.nexo-study-breadcrumb a,.nexo-study-footer a{color:var(--cyan);min-height:44px;display:inline-flex;align-items:center}.nexo-study-heading{max-width:1000px;margin-bottom:30px}.atlas-public-main .nexo-study-heading h1{font:600 clamp(28px,4vw,52px)/1.15 var(--font-body);letter-spacing:-.03em;overflow-wrap:anywhere;margin:16px 0 22px}.nexo-study-heading h1:focus-visible{outline:2px solid var(--cyan);outline-offset:8px;border-radius:6px}.nexo-study-page .atlas-campaign-reading{grid-template-columns:repeat(2,minmax(0,1fr))!important}.atlas-public-main .nexo-study-page h2,.nexo-study-page .atlas-question-group h2{font-size:20px;line-height:1.35;margin:0 0 12px}.nexo-study-footer{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin:36px 0 48px;padding-top:20px;border-top:1px solid var(--line)}
 @media(max-width:700px){.atlas-app[data-area=public] .atlas-public-main.nexo-study-page{padding-top:16px}.nexo-study-breadcrumb{margin-bottom:22px}.nexo-study-page .atlas-campaign-reading{grid-template-columns:1fr!important}.atlas-public-main .nexo-study-heading h1{font-size:30px}}
 .atlas-app .nexo-map-index button[aria-pressed=true] .nexo-map-list-number{color:var(--fg);font-weight:600}
+
+/* Landing information stays in the reading order and uses the verified public feed. */
+.atlas-app[data-area=public] .atlas-public-main .atlas-hero{grid-template-columns:minmax(0,1fr);min-height:0}
+.atlas-app[data-area=public] .atlas-hero-copy{max-width:760px}
+.nexo-author-line{display:flex;align-items:center;flex-wrap:wrap;gap:10px 22px;padding:18px 0 25px;border-bottom:1px solid var(--line);font-size:15px;line-height:1.5}
+.nexo-author-line strong{font-weight:700}.nexo-author-line span{color:var(--fg-2)}.nexo-author-line a{color:var(--cyan);overflow-wrap:anywhere}
+.atlas-app[data-area=public] .nexo-language-quick{display:flex;flex:none;gap:2px;margin-left:auto}
+.atlas-app[data-area=public] .nexo-language-quick button{min-width:38px;min-height:44px;padding:8px 10px;font-size:13px}
+@media(max-width:900px){.atlas-app[data-area=public] .nexo-language-quick{margin-left:auto}.nexo-author-line{gap:8px 16px}}
+:root[data-theme=light] .atlas-app[data-area=public]{--cyan:#003faf;--action:#003faf;--focus:#003faf}
