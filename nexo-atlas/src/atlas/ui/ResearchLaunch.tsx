@@ -4,6 +4,7 @@ import {useMemo,useState} from 'react';
 import type {Locale} from '../api.ts';
 import type {PublicState} from '../publicItems.ts';
 import {researchEntries} from '../researchExplorer.ts';
+import {groupPublicVisuals} from '../publicVisualGroups.ts';
 
 /** Fired with the typed query; the question list listens and filters itself. */
 export const SEARCH_EVENT='nexo:search';
@@ -19,7 +20,7 @@ export default function ResearchLaunch({pub,locale,explore}:{pub:PublicState;loc
   const links=[{id:'map',title:en?'Questions':'Perguntas',body:en?'Search, filter and open each result':'Busque, filtre e abra cada resultado',icon:'map'}, {id:'figures',title:en?'Figures and plots':'Figuras e gráficos',body:en?'Read the published values':'Leia os valores publicados',icon:'plot'}, {id:'updates',title:en?'Latest updates':'Atualizações',body:en?'What was published most recently':'O que foi publicado mais recentemente',icon:'updates'}];
   const search=(event:React.FormEvent)=>{event.preventDefault();pendingSearch=query.trim();window.dispatchEvent(new CustomEvent(SEARCH_EVENT,{detail:pendingSearch}));explore('map');};
   return <div className="nexo-research-launch">
-    <div className="nexo-launch-records"><p className="atlas-eyebrow">{en?'Public research':'Pesquisa pública'}</p>{pub.status==='ready'?<p><strong>{publicCount(pub,entries.length,en)}</strong> {en?'questions':'perguntas'}<span aria-hidden="true"> / </span><strong>{publicCount(pub,records,en,true)}</strong> {en?'analyses':'análises'}</p>:<p>{pub.status==='loading'?(en?'Loading the public catalog…':'Carregando o catálogo público…'):(en?'Open the research catalog':'Abra o catálogo de pesquisa')}</p>}</div>
+    <div className="nexo-launch-records"><p className="atlas-eyebrow">{en?'Public research':'Pesquisa pública'}</p>{pub.status==='ready'?<p><strong>{publicCount(pub,entries.length,en)}</strong> {en?'questions':'perguntas'}<span aria-hidden="true"> / </span><strong>{publicCount(pub,records,en,true)}</strong> {en?'analyses':'análises'}{pub.visuals!==undefined&&<><span aria-hidden="true"> / </span><strong>{publicCount(pub,groupPublicVisuals(pub.visuals).length,en)}</strong> {en?'figures':'figuras'}</>}</p>:<p>{pub.status==='loading'?(en?'Loading the public catalog…':'Carregando o catálogo público…'):(en?'Open the research catalog':'Abra o catálogo de pesquisa')}</p>}</div>
     <div>
       <form className="nexo-launch-search" role="search" onSubmit={search}>
         <label htmlFor="nexo-launch-query">{en?'Find a question':'Buscar uma pergunta'}<input id="nexo-launch-query" type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={en?'dark energy, supernovae, BAO…':'energia escura, supernovas, BAO…'} autoComplete="off"/></label>

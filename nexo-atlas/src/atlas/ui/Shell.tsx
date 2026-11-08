@@ -61,6 +61,7 @@ export default function Shell({area, children}: {area: 'public' | 'private'; chi
       {menuOpen && <button type="button" className="atlas-menu-backdrop" tabIndex={-1} aria-label={t.nav.close} onClick={() => { setMenuOpen(false); menuButton.current?.focus(); }}/>}
       <header className="atlas-header" ref={header} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setMenuOpen(false); }}>
         <a className="atlas-brand" href="/#/" onClick={() => setMenuOpen(false)}><span className="atlas-mark" aria-hidden="true"/><span className="nexo-wordmark">{m.brand}<span>RESEARCH</span></span><small>{m.tagline}</small></a>
+        {area === 'public' && <LocaleSwitch compact/>}
         <button ref={menuButton} type="button" className="atlas-menu-toggle" aria-expanded={menuOpen} aria-controls="atlas-header-menu" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? t.nav.close : area === 'private' ? (locale === 'en' ? 'Options' : 'Opções') : t.nav.menu}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d={menuOpen?'M6 6l12 12M6 18 18 6':'M4 8h16M4 16h16'}/></svg></button>
         <div id="atlas-header-menu" className={`atlas-header-menu${menuOpen ? ' is-open' : ''}`}>
           <nav aria-label={m.navLabel} className="atlas-nav">
