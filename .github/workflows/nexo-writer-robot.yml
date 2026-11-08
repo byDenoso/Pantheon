@@ -11,10 +11,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  actions: write
-  id-token: write
-  issues: write
+  contents: read
 
 concurrency:
   group: nexo-writer-robot
