@@ -2,7 +2,7 @@ import {studyHref,testAnchors,testHref} from './publicStudyRoutes.ts';
 import {pick, type Bilingual, type PublicState} from './publicItems.ts';
 import type {Locale} from './api.ts';
 import {groupPublicQuestions, publicRecency} from './publicQuestionGroups.ts';
-import {campaignBrief,campaignConditions,type Activity} from './publicCampaigns.ts';
+import {campaignBrief,type Activity} from './publicCampaigns.ts';
 import {plainSummary} from './publicPlain.ts';
 import {visualsForTest,type PublicVisual} from './publicVisuals.ts';
 
@@ -34,10 +34,7 @@ export function researchEntries(pub:PublicState):ResearchEntry[] {
   if(pub.campaigns!==undefined&&pub.selection!=='LIVE')return fronts;
   return [...fronts,...groupPublicQuestions(pub.tests).map((g):ResearchEntry=>{
     const brief=campaignBrief(g), latest=Math.max(...g.members.map(m=>publicRecency(m.test)));
-    const inputs=campaignConditions(g).filter(c=>c.key==='compilations'||c.key==='bao-release');
-    const describe=(locale:Locale)=>inputs.map(c=>`${pick(c.label,locale)} — ${pick(c.value,locale)}`).join(' · ');
-    const data=inputs.length?{'pt-BR':describe('pt-BR'),en:describe('en')}:undefined;
-    return {id:g.id,question:g.title,data,method:brief?.basis??null,summary:brief?.summary??null,plain:plainSummary(g.id),activity:brief?.activity??null,limits:brief?[brief.limits]:[],nextStep:null,href:questionHref(g.id),state:'published',stage:null,tests:g.total,complete:true,reviewed:null,topics:mentionedTopics([g.title['pt-BR'],...g.members.map(m=>m.test.method['pt-BR'])].join(' '),SOFTWARE_QUESTIONS.has(g.id.replace(/^question-/,''))),updatedAt:Number.isFinite(latest)?new Date(latest).toISOString():null};
+    return {id:g.id,question:g.title,data:brief?.data,method:brief?.basis??null,summary:brief?.summary??null,plain:plainSummary(g.id),activity:brief?.activity??null,limits:brief?[brief.limits]:[],nextStep:null,href:questionHref(g.id),state:'published',stage:null,tests:g.total,complete:true,reviewed:null,topics:mentionedTopics([g.title['pt-BR'],...g.members.map(m=>m.test.method['pt-BR'])].join(' '),SOFTWARE_QUESTIONS.has(g.id.replace(/^question-/,''))),updatedAt:Number.isFinite(latest)?new Date(latest).toISOString():null};
   })];
 }
 export function visualLinks(visuals:PublicVisual[],pub:PublicState){const groups=groupPublicQuestions(pub.tests),anchors=new Map(groups.map(g=>[g.id,testAnchors(g.members.map(m=>m.test))]));return Object.fromEntries(visuals.flatMap(v=>{const s=v.subject;if(s.kind==='campaign-test'){const c=pub.campaigns?.find(c=>c.id===s.campaignId),t=c?.tests.find(t=>t.id===s.testId);return t?[[v.id,{question:t.question,href:`/?campanha=${encodeURIComponent(s.campaignId)}#/`}]]:[];}const test=pub.tests.find(t=>visualsForTest([v],t).length),group=groups.find(g=>g.members.some(m=>m.test.id===test?.id));return test&&group?[[v.id,{question:test.question,href:group.total>1?testHref(group.id,anchors.get(group.id)?.get(test.id)):questionHref(group.id)}]]:[];}));}

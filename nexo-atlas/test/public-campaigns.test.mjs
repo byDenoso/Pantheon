@@ -23,8 +23,10 @@ test('editorial catalog contains only reviewed public text and no source, lineag
   const forbidden = /https?:\/\/|FAM-|CAMP-|CONTEST-|WORK-|HYP-|T-SCI-|T-META-|ROADMAP-|REQ-|INBOX-|appgprj_|actions\/runs|[a-f0-9]{24,}|\bolymp\w*|\bOLY\w*|(?<![\p{L}\p{N}])p[. _-]*e[. _-]*e?[. _-]*r(?![\p{L}\p{N}])|\bPCDM\b|\bpNGB\b|Miqueias|2026-\d\d-\d\d/iu;
   assert.doesNotMatch(JSON.stringify(catalog),forbidden);
   for(const brief of Object.values(catalog)) {
-    assert.deepEqual(Object.keys(brief).sort(),['activity','basis','limits','summary']);
-    for (const field of ['basis','limits','summary']) for(const locale of ['pt-BR','en']) {
+    const fields = ['basis','limits','summary'];
+    if (Object.hasOwn(brief,'data')) fields.push('data');
+    assert.deepEqual(Object.keys(brief).sort(),['activity',...fields].sort());
+    for (const field of fields) for(const locale of ['pt-BR','en']) {
       assert.ok(brief[field][locale].length>20);
       assert.doesNotMatch(brief[field][locale],/indisponível|indisponivel|TBD|a definir|unavailable/i);
     }
