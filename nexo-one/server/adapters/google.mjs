@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {json,requireEnv,item,inferContext,ProviderError} from './http.mjs';
 import {googleConnectToken,GOOGLE_READ_SCOPES,GOOGLE_WRITE_SCOPES} from './connect.mjs';
+import {serviceAccountServes,serviceAccountToken} from './service-account.mjs';
 let legacyTokenCache=null;
 async function legacyGoogleToken(env,signal) {
   requireEnv(env,'GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REFRESH_TOKEN');
@@ -10,6 +11,7 @@ async function legacyGoogleToken(env,signal) {
   legacyTokenCache={value:result.access_token,until:Date.now()+Math.max(0,(result.expires_in||3600)-120)*1000};return result.access_token;
 }
 export async function googleToken(env,signal,{scopes=GOOGLE_READ_SCOPES,reuseDriveRead=false}={}) {
+  if(serviceAccountServes(env,scopes))return serviceAccountToken(env,signal,scopes);
   if(env.GOOGLE_CONNECTOR)return googleConnectToken(env,signal,{scopes,reuseDriveRead});
   return legacyGoogleToken(env,signal);
 }

@@ -7,6 +7,7 @@ const allAvailable=(ids,providers)=>ids.every(id=>providers.some(available(id)))
 const present=(env,...keys)=>keys.every(key=>typeof env?.[key]==='string'&&env[key].trim());
 
 function googleConfigured(env){
+  if(present(env,'GOOGLE_SERVICE_ACCOUNT_JSON')||present(env,'GOOGLE_SERVICE_ACCOUNT_JSON_B64'))return true;
   if(typeof env?.GOOGLE_CONNECTOR==='string'&&env.GOOGLE_CONNECTOR.trim())return present(env,'VERCEL_OIDC_TOKEN');
   return present(env,'GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REFRESH_TOKEN');
 }
