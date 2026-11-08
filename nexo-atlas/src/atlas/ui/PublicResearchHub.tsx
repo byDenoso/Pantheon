@@ -16,6 +16,7 @@ import {useMessages} from './LocaleProvider.tsx';
 import {useReadingMode} from './useReadingMode.ts';
 import {SEARCH_EVENT,takePendingSearch} from './ResearchLaunch.tsx';
 import TopicDistribution from '../../experience/TopicDistribution.tsx';
+import ResultsTable from './ResultsTable.tsx';
 
 function HubIcon({tab}:{tab:string}) {
   const paths:Record<string,string>={updates:'M5 5h14M5 12h14M5 19h9',figures:'M4 4v16h16M7 15l4-5 4 3 5-7',map:'M6 6l12 3-6 10L6 6m0 0 6 13m6-10L6 6',compare:'M5 20V10h5v10m4 0V4h5v16',catalog:'M4 5h16v14H4zM4 10h16M9 10v9'};
@@ -111,7 +112,7 @@ export default function PublicResearchHub({pub,locale,checking,pending,checkedAt
       {tab==='updates'&&<><h3>{en?'Latest public updates':'Últimas atualizações públicas'}</h3>{activity.length?<ol className="nexo-activity-list">{activity.map(e=><li key={e.key}><div><span className="atlas-kind">{e.label}</span><time dateTime={e.date}>{date(e.date)}</time></div><a href={e.href}>{e.title}<ArrowIcon/></a></li>)}</ol>:<p>{en?'No dated research updates are available yet.':'Ainda não há atualizações de pesquisa com data disponível.'}</p>}</>}
       {tab==='figures'&&<><h3>{en?'Figures and plots':'Figuras e gráficos'}</h3><PublicVisualGallery visuals={pub.visuals??[]} locale={locale} links={visualLinks(pub.visuals??[],pub)}/></>}
       {tab==='map'&&<><h3>{en?'Questions':'Perguntas'}</h3><ResearchMap entries={entries} locale={locale}/></>}
-      {tab==='compare'&&<><h3>{en?'Compare published results':'Comparar resultados publicados'}</h3><ResultComparison key={entries.map(e=>e.id).join(':')} entries={entries} locale={locale}/></>}
+      {tab==='compare'&&<><h3>{en?'Compare published results':'Comparar resultados publicados'}</h3><ResultsTable entries={entries} locale={locale}/><ResultComparison key={entries.map(e=>e.id).join(':')} entries={entries} locale={locale}/></>}
       {tab==='catalog'&&<><h3>{en?'All published studies':'Todos os estudos publicados'}</h3><FullCatalog pub={pub} locale={locale}/></>}
     </section>
   </div>;

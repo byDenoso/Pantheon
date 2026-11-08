@@ -23,7 +23,7 @@ export default function PublicTestView({test, locale,visuals=[],standalone=false
         <div><dt>{labels.question}</dt><dd><Explained as="p" className="atlas-original-question" text={pick(test.question, locale)} locale={locale}/></dd></div>
         <div><dt>{en ? 'Method overview' : 'Abordagem'}</dt><dd><Explained text={pick(test.method, locale)} locale={locale}/></dd></div>
         <div className="nexo-reviewed-result"><dt>{labels.result}</dt><dd><Explained text={pick(test.result, locale)} locale={locale}/></dd></div>
-        <div><dt>{en ? 'Scope and limits' : 'Alcance e limites'}</dt><dd><Explained text={pick(test.answers, locale)} locale={locale}/></dd></div>
+        <div className="nexo-test-limit"><dt>{en ? 'Limit' : 'Limite'}</dt><dd><span className="nexo-inline-limit"><strong>{en?'Limit: ':'Limite: '}</strong><Explained text={pick(test.answers, locale)} locale={locale}/></span></dd></div>
       </dl>
       {visuals.length>0&&<PublicVisualGallery visuals={visuals} locale={locale} compact headingLevel={standalone?3:4}/>}
     </article>
