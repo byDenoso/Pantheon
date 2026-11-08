@@ -1,26 +1,14 @@
-name: NEXO Writer robot
+name: NEXO Writer robot (retired, manual archival)
 
-# The only unattended Tower writer: proposals may remain append-only in the public TCC inbox; this job reads only the delta since its Pantheon cursor, applies it with the canonical writer bundle, and signals the ATLAS.
-# Runs in this public repository (no Actions minutes quota). No proposal content is ever printed.
+# Retired 2026-11-08 by owner: Tower writes now use direct Sheets appendCells.
+# Keep the file for historical audit only; never run the legacy writer.
 on:
-  schedule:
-    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'   # 5-minute recovery cadence; existing push wakeups remain unchanged; GitHub schedule is best-effort
   workflow_dispatch:
     inputs:
       autonomy_preparation_revision:
-        description: "Optional SHA40 candidate for read-only autonomy context preparation"
+        description: "Historical input (inactive)"
         required: false
         type: string
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/nexo-writer-robot.yml"
-      - "scripts/nexo_shadow_writer.py"
-      - "scripts/nexo_shadow_curation.py"
-      - "scripts/nexo_tower_operations.py"
-      - "test/test_nexo_shadow_writer.py"
-      - "nexo-wake/*.json"
-      - "nexo-control/execution-assessment-approvals.json"
 
 permissions:
   contents: write
@@ -34,7 +22,8 @@ concurrency:
 
 jobs:
   shadow:
-    # Same existing Writer workflow and credential, isolated from legacy JSON LIVE.
+    if: ${{ false }}
+    # RETIRED: preserved for audit only; must not write Tower or SHADOW_V2.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
