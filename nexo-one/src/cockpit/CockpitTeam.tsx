@@ -40,8 +40,9 @@ export default function CockpitTeam({equipe, mural, resultados, resumo, activity
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const tick = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(tick); }, []);
   const events = useMemo(() => liveEvents(mural as unknown as MuralRow[], resultados as unknown as ResultadoRow[], resumo as unknown as ResumoRow[]), [mural, resultados, resumo]);
-  const members = useMemo(() => crew(equipe, events, now), [equipe, events, now]);
-  if (!members.length) return <p className="ck-note">Nenhuma automação disponível neste recorte da aba EQUIPE.</p>;
+  const everyone = useMemo(() => crew(equipe, events, now), [equipe, events, now]);
+  const members = everyone.filter(m => !m.retired), retired = everyone.filter(m => m.retired);
+  if (!members.length && !retired.length) return <p className="ck-note">Nenhuma automação disponível neste recorte da aba EQUIPE.</p>;
 
   const count = (t: CrewMember['tone']) => members.filter(m => m.tone === t).length;
   const soon = members.filter(m => m.next !== null).sort((a, b) => a.next! - b.next!)[0];
@@ -65,10 +66,10 @@ export default function CockpitTeam({equipe, mural, resultados, resumo, activity
           <dl>
             <div><dt>Cadência</dt><dd>{m.cadence.label}</dd></div>
             <div><dt>Próxima execução</dt><dd>{nextText(m, now)}</dd></div>
-            <div><dt>Último registro</dt><dd>{m.last === null ? 'nenhum nas fontes disponíveis neste recorte' : `${ago(m.last, now)}${on ? ' · registro recente' : ''}`}</dd></div>
+            <div><dt>Último registro</dt><dd>{m.shared ? 'várias automações postam sob o mesmo nome no Mural (como a Lumia); o Mural não separa qual escreveu' : m.last === null ? 'nenhum nas fontes disponíveis neste recorte' : `${ago(m.last, now)}${on ? ' · registro recente' : ''}`}</dd></div>
           </dl>
         </div>
-        {activityComplete ? <div>
+        {m.shared ? null : activityComplete ? <div>
           <div className="ck-crew-pulse" role="img" aria-label={`Atividade nas últimas 24 horas: ${m.activeHours} de 24 horas com registro`}>
             {m.hours.map((n, h) => <span key={h} data-on={n > 0 || undefined} style={{'--h': n / peak} as CSSProperties}/>)}
           </div>
@@ -78,5 +79,6 @@ export default function CockpitTeam({equipe, mural, resultados, resumo, activity
         {m.fronts.length > 0 && <ul className="ck-crew-fronts" aria-label="Frentes">{m.fronts.slice(0, 6).map(f => <li key={f} title={f}>{f}</li>)}{m.fronts.length > 6 && <li>+{m.fronts.length - 6}</li>}</ul>}
       </li>;
     })}</ul>
+    {retired.length > 0 && <details className="ck-crew-retired"><summary>Linhas históricas da aba EQUIPE ({retired.length}), fora da contagem</summary><ul>{retired.map((m, i) => <li key={`${m.papel}:${i}`}><strong>{m.name}</strong> · {m.estado} · {m.cadence.label}{m.fronts[0] ? ` · ${m.fronts[0]}` : ''}</li>)}</ul></details>}
   </div>;
 }

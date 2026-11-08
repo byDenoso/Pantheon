@@ -53,15 +53,24 @@ export function splitFronts(raw = ''): string[] {
 export type CrewMember = {
   name: string; papel: string; estado: string; tone: Tone; cadence: Cadence; next: number | null;
   last: number | null; lastText: string; hours: number[]; activeHours: number; fronts: string[];
+  /** Historic row kept in EQUIPE (CORE4, retired): listed apart, never counted as team. */
+  retired: boolean;
+  /** Several EQUIPE rows post under one Mural name (the Lumia automations): activity cannot be told apart. */
+  shared: boolean;
 };
+
+export const isRetired = (estado = '') => /core4|hist[oó]ric|aposent|arquiv/i.test(estado);
 
 const HOUR = 3_600_000;
 
 /** One entry per EQUIPE row, ordered: alerts first, then the soonest scheduled run, then the rest by name. */
 export function crew(equipe: Row[], events: LiveEvent[], now: number): CrewMember[] {
-  const members = equipe.filter(r => (r.papel ?? '').trim()).map((r): CrewMember => {
-    const name = agentName(r.papel), cadence = parseCadence(r.cadencia), t = tone(r.estado);
-    const own = events.filter(e => e.agent === name && e.kind !== 'resumo' && e.when !== null && e.when <= now);
+  const rows = equipe.filter(r => (r.papel ?? '').trim());
+  const posting = rows.map(r => agentName(r.papel));
+  const members = rows.map((r, k): CrewMember => {
+    const shared = posting.filter(n => n === posting[k]).length > 1;
+    const name = shared ? r.papel.trim() : posting[k]!, cadence = parseCadence(r.cadencia), t = tone(r.estado);
+    const own = shared ? [] : events.filter(e => e.agent === name && e.kind !== 'resumo' && e.when !== null && e.when <= now);
     const hours = Array.from({length: 24}, () => 0);
     for (const e of own) { const ago = Math.floor((now - (e.when as number)) / HOUR); if (ago >= 0 && ago < 24) hours[23 - ago]++; }
     const latest = own.reduce<LiveEvent | null>((a, e) => !a || (e.when as number) > (a.when as number) ? e : a, null);
@@ -70,8 +79,9 @@ export function crew(equipe: Row[], events: LiveEvent[], now: number): CrewMembe
       next: t === 'bad' || t === 'warn' || /conclu|done/i.test(r.estado ?? '') ? null : nextRun(cadence, now),
       last: latest?.when ?? null, lastText: latest ? (latest.title || latest.body) : '',
       hours, activeHours: hours.filter(n => n > 0).length, fronts: splitFronts(r.frentes),
+      retired: isRetired(r.estado), shared,
     };
   });
-  const rank = (m: CrewMember) => m.tone === 'bad' ? 0 : m.tone === 'warn' ? 1 : 2;
+  const rank = (m: CrewMember) => m.retired ? 3 : m.tone === 'bad' ? 0 : m.tone === 'warn' ? 1 : 2;
   return members.sort((a, b) => rank(a) - rank(b) || (a.next ?? Infinity) - (b.next ?? Infinity) || a.name.localeCompare(b.name, 'pt-BR'));
 }

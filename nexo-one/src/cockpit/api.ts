@@ -10,8 +10,16 @@ export type Selection = {
   campaigns: Array<{id: string; digest: string; approvedAt: string; state: 'ongoing' | 'completed'; public: CampaignPublic}>;
 };
 export type Audit = {at: string; version: number; catalog: {count: number; added: number; removed: number}; tower: {count: number; added: number; removed: number}; campaigns: {count: number; added: number; removed: number}};
-export type ShadowTab = 'roadmap' | 'mural' | 'resumo' | 'resultados' | 'equipe';
+export type ShadowTab = 'roadmap' | 'mural' | 'resumo' | 'resultados' | 'equipe' | 'manuscritos';
 export type ShadowAvailability = 'available' | 'unavailable' | 'unknown';
+export type ArchItem = {id: string; task: string; at: string | null; title: string};
+export type Architecture = {
+  contract: 'NEXO_ARCHITECTURE_V1'; generatedAt: string; available: boolean; masterFile: string | null; windowFrom: string | null; windowRows: number;
+  queues: Array<{queue: string; count: number; last: string | null}>; pendingHypotheses: ArchItem[]; openRequests: ArchItem[];
+  placar: {since: string; g3: number; g4: number; g5: number; tests: number};
+  decisions: Array<ArchItem & {text: string; link: string; mentions: number}>;
+  manuscripts: {available: boolean; counts: Record<string, number>; rows: Array<Row & {group: 'rejeitado' | 'em_analise' | 'pronto' | 'outro'; needsDener: boolean}>};
+};
 export type Cockpit = {
   contract: 'NEXO_COCKPIT_V1'; generatedAt: string;
   shadow: {available: true; modifiedAt: string | null; cache?: {fetchedAt: string; ageSeconds: number; stale: boolean; reason: string | null} | null; counts: Record<string, number>; availability?: Partial<Record<ShadowTab,ShadowAvailability>>; equipe: Row[]; roadmap: Row[]; resultados: Row[]; resumo: Row[]; mural: Row[]} | {available: false; reason: string};
@@ -19,6 +27,7 @@ export type Cockpit = {
   candidates: {tower: Array<{id: string; digest: string; source: Row; draft: TowerPublic}>; campaigns: Array<{id: string; digest: string; source: Row; draft: {question: Bi; why: Bi; currentStage: Bi; nextStep: Bi}}>};
   selection: {available: true; value: Selection | null} | {available: false; reason: string};
   drift: Array<{kind: 'tower' | 'campaigns'; id: string; status: 'CHANGED' | 'MISSING'}>;
+  architecture?: Architecture | null;
   audit: Audit[];
 };
 export type SaveBody = {expectedVersion: number; catalog: string[]; tower: Array<{id: string; public: TowerPublic}>; campaigns: Array<{id: string; state: 'ongoing' | 'completed'; public: CampaignPublic}>};

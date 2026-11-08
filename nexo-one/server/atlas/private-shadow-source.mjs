@@ -9,6 +9,7 @@ const FIELDS = Object.freeze({
   resumo: ['data_hora','nivel','item','o_que_mudou','impacto','link'],
   resultados: ['data','task','item','titulo','resultado','numeros','limites','link_dados'],
   equipe: ['papel','task_id','cadencia','frentes','estado'],
+  manuscritos: ['id','titulo','tipo','alvo','estado','referee_ia','dono','proxima_acao','pacote'],
 });
 
 // Conservative denial for the two specifically excluded private programs.
@@ -40,6 +41,8 @@ export function projectPrivateShadowBoard(board) {
     return [name, value==='available'||value==='unavailable' ? value : 'unknown'];
   }));
   for (const [name, fields] of Object.entries(FIELDS)) {
+    // A board read before MANUSCRITOS existed carries no such key; that is "unknown", not invalid.
+    if (name === 'manuscritos' && board[name] === undefined) { result[name] = []; continue; }
     if (!Array.isArray(board[name])) throw new Error('SHADOW_TAB_INVALID');
     result[name] = result.availability[name]==='available' ? board[name].map(row => safeRow(row, fields)).filter(Boolean) : [];
   }

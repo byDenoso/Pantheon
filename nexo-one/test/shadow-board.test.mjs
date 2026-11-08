@@ -31,7 +31,7 @@ test('readShadowBoard devolve roadmap, mural e contagens',async()=>{
   const board=await readShadowBoard({token:'t',fetchImpl:transport()});
   assert.equal(board.contract,'NEXO_SHADOW_BOARD_V1');
   assert.equal(board.access,'PRIVATE');
-  assert.deepEqual(board.counts,{roadmap:2,mural:1,resumo:0,resultados:0,equipe:0});
+  assert.deepEqual(board.counts,{roadmap:2,mural:1,resumo:0,resultados:0,equipe:0,manuscritos:0});
   assert.equal(board.modified_at,'2026-10-19T12:50:29.635Z');
   assert.equal(board.mural[0].de,'I');
 });
@@ -56,7 +56,7 @@ test('se o gviz falhar, a API Sheets (drive.readonly) leva o quadro',async()=>{
     return {ok:false};
   };
   const board=await readShadowBoard({token:'t',fetchImpl});
-  assert.deepEqual(board.counts,{roadmap:1,mural:1,resumo:0,resultados:0,equipe:0});
+  assert.deepEqual(board.counts,{roadmap:1,mural:1,resumo:0,resultados:0,equipe:0,manuscritos:0});
   assert.equal(board.roadmap[0].item,'R1-1.1');
 });
 
@@ -94,7 +94,7 @@ test('leitura em lote marca aba ausente ou inválida e reconhece aba vazia váli
     return reply({sheets:['ROADMAP','MURAL','RESULTADOS','EQUIPE'].map(title=>({properties:{title}}))});
   };
   const result=await readShadowBoard({token:'synthetic',fetchImpl});
-  assert.deepEqual(result.availability,{roadmap:'available',mural:'available',resumo:'unavailable',resultados:'available',equipe:'unavailable'});
+  assert.deepEqual(result.availability,{roadmap:'available',mural:'available',resumo:'unavailable',resultados:'available',equipe:'unavailable',manuscritos:'unavailable'});
   assert.equal(result.resultados.length,0);
 });
 

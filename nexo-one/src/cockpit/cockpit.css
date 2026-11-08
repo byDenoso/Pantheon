@@ -337,3 +337,14 @@ button,input,textarea,select{font:inherit;color:inherit}
 @media(max-width:620px){.ck-crew-grid{grid-template-columns:1fr}.ck-crew-top{grid-template-columns:auto minmax(0,1fr)}.ck-crew-top>.ck-state{grid-column:1/-1}.ck-crew-summary .ck-crew-soon{margin-left:0}}
 @media(prefers-reduced-motion:reduce){.ck-crew-card,.ck-dial .arc{transition:none!important}.ck-crew-card[data-active="true"] .ck-avatar::after{animation:none!important}}
 .ck-crew .ck-state[data-tone="ok"]{color:var(--crew)}
+.ck-arch{display:grid;gap:14px}
+.ck-arch h3{margin:10px 0 0;font-size:18px}
+.ck-arch h4{margin:6px 0 0;font-size:16px}
+.ck-arch .ck-muted{margin:0;color:var(--fg-2);font-size:14px}
+.ck-arch-cards,.ck-arch-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.ck-arch-cards>li{padding:14px 16px}
+.ck-arch-list{gap:6px;font-size:14px}
+.ck-arch-pending{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.ck-arch code{font-family:var(--mono);font-size:.92em}
+.ck-crew-retired{margin-top:16px;color:var(--fg-2);font-size:14px}
+.ck-crew-retired ul{margin:8px 0 0;padding-left:18px}
