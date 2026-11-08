@@ -4,6 +4,7 @@ import {
   LIMITS, auditEntry, buildSelection, campaignCandidates, catalogCandidates, publicSelection,
   readSelection, selectionDrift, towerCandidates,
 } from './public-selection.mjs';
+import {architectureView} from './architecture.mjs';
 
 // One document, one audit list, in the same Redis-compatible store as the Atlas
 // sessions. The public route reads only this document; it never reads Drive.
@@ -22,7 +23,7 @@ function safeShadowError(error) {
   if (error?.code === 'AUTH_REQUIRED') return 'SHADOW_AUTH_REQUIRED';
   return 'SHADOW_SOURCE_UNAVAILABLE';
 }
-const tabAvailability = board => Object.fromEntries(['roadmap','mural','resumo','resultados','equipe'].map(name=>{
+const tabAvailability = board => Object.fromEntries(['roadmap','mural','resumo','resultados','equipe','manuscritos'].map(name=>{
   const value=board?.availability?.[name];
   return [name,value==='available'||value==='unavailable'?value:'unknown'];
 }));
@@ -81,6 +82,7 @@ export async function cockpitView({env = process.env, store = atlasStore(env), f
     selection: stored.error ? {available: false, reason: stored.error} : {available: true, value: stored.value},
     drift: stored.value ? selectionDrift(stored.value, {tower: src.tower, campaigns: src.campaigns}) : [],
     audit,
+    architecture: board ? architectureView(board, src.availability, now) : null,
   };
 }
 

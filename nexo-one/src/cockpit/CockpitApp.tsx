@@ -2,6 +2,7 @@ import {humanizeResult, humanTitle} from '../private-workspace/humanize.ts';
 import {agentName} from '../private-workspace/liveEvents.ts';
 import CockpitLive from './CockpitLive.tsx';
 import CockpitTeam from './CockpitTeam.tsx';
+import CockpitArchitecture from './CockpitArchitecture.tsx';
 import {motion,useReducedMotion} from 'motion/react';
 import './experience.css';
 import MotionToggle from '../atlas/ui/MotionToggle.tsx';
@@ -15,6 +16,7 @@ import {canRefresh, filterCandidates, newestFirst, pageRows, publicationState, r
 type Theme = 'light' | 'dark' | 'system';
 type Draft = {catalog: string[]; tower: Record<string, TowerPublic>; campaigns: Record<string, {state: 'ongoing' | 'completed'; public: CampaignPublic}>};
 const PUBLIC_SITE = 'https://nexoresearch.org/';
+const SECTION_LINKS = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Automações'], ['filas', 'Filas e achados'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
 const empty = (): Bi => ({'pt-BR': '', en: ''});
 const clean = (b: Bi | null | undefined): Bi => ({'pt-BR': b?.['pt-BR'] ?? '', en: b?.en && b.en !== b['pt-BR'] ? b.en : ''});
 const when = (iso: string | null | undefined) => {
@@ -34,7 +36,7 @@ function useTheme(): [Theme, (t: Theme) => void] {
 }
 
 function Header({theme, setTheme, onLogout, active}: {theme: Theme; setTheme: (t: Theme) => void; onLogout?: () => void; active?: string}) {
-  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Automações'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
+  const links = SECTION_LINKS;
   return <header className="ck-header">
     <a className="ck-brand" href="#agora"><strong>NEXO</strong><small>Cosmologia computacional</small><span className="ck-tag">Cockpit</span></a>
     {onLogout && <nav className="ck-nav" aria-label="Seções do cockpit">{links.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={active === id}>{label}</a>)}</nav>}
@@ -47,7 +49,7 @@ function Header({theme, setTheme, onLogout, active}: {theme: Theme; setTheme: (t
   </header>;
 }
 function SubNav({active}: {active: string}) {
-  const links = [['agora', 'Agora'], ['aovivo', 'Ao vivo'], ['equipe', 'Automações'], ['frentes', 'Frentes'], ['resultados', 'Resultados'], ['publico', 'Público']];
+  const links = SECTION_LINKS;
   return <nav className="ck-subnav" aria-label="Seções (celular)">{links.map(([id, label]) => <a key={id} href={`#${id}`} aria-current={active === id}>{label}</a>)}</nav>;
 }
 
@@ -142,7 +144,7 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
   useEffect(() => setResultPage(1), [resultQuery, resultFilter]);
   useEffect(() => setCatalogPage(1), [query]);
   useEffect(() => {
-    const ids = ['agora', 'aovivo', 'equipe', 'frentes', 'resultados', 'publico'];
+    const ids = SECTION_LINKS.map(([id]) => id);
     const io = new IntersectionObserver(entries => { for (const e of entries) if (e.isIntersecting) setActive(e.target.id); }, {rootMargin: '-30% 0px -60% 0px'});
     ids.forEach(id => { const el = document.getElementById(id); if (el) io.observe(el); });
     return () => io.disconnect();
@@ -300,7 +302,11 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         {shadow && readable('equipe') ? <CockpitTeam equipe={equipe} mural={shadow.mural} resultados={shadow.resultados} resumo={shadow.resumo} activityComplete={readable('mural')&&readable('resultados')&&readable('resumo')}/> : <p className="ck-note" data-tone="warn">Aba EQUIPE indisponível ou sem cobertura informada nesta leitura.</p>}
       </Section>
 
-      <Section id="frentes" n="03" title="Frentes e campanhas" lead="Ligue uma frente para mostrá-la no público. Só o texto que você escrever aqui é publicado; o ID e as notas internas ficam no privado.">
+      <Section id="filas" n="03" title="Filas, achados e manuscritos" lead="Filas do Mural da nova arquitetura, placar de achados (G3, G4, G5), cartões para decisão e o estado dos manuscritos.">
+        {shadow ? <CockpitArchitecture architecture={data.architecture}/> : <p className="ck-note" data-tone="warn">Sem leitura da SHADOW.</p>}
+      </Section>
+
+      <Section id="frentes" n="04" title="Frentes e campanhas" lead="Ligue uma frente para mostrá-la no público. Só o texto que você escrever aqui é publicado; o ID e as notas internas ficam no privado.">
         <CandidateControls label="frentes" query={frontQuery} setQuery={setFrontQuery} filter={frontFilter} setFilter={setFrontFilter} states={frontStates} state={frontState} setState={setFrontState}/>
         <div className="ck-panel ck-list">{frontsView.rows.map(c => {
           const on = Boolean(draft.campaigns[c.id]), isOpen = open === `c:${c.id}`;
@@ -315,7 +321,7 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         <Pager {...frontsView} setPage={setFrontPage} label="frentes"/>
       </Section>
 
-      <Section id="resultados" n="04" title="Resultados recentes" lead="As últimas linhas de RESULTADOS. Ao ligar uma, o rascunho vem da própria linha; complete o método e revise antes de publicar.">
+      <Section id="resultados" n="05" title="Resultados recentes" lead="As últimas linhas de RESULTADOS. Ao ligar uma, o rascunho vem da própria linha; complete o método e revise antes de publicar.">
         <CandidateControls label="resultados" query={resultQuery} setQuery={setResultQuery} filter={resultFilter} setFilter={setResultFilter}/>
         <div className="ck-panel ck-list">{resultsView.rows.map(c => {
           const on = Boolean(draft.tower[c.id]), isOpen = open === `t:${c.id}`;
@@ -330,7 +336,7 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         <Pager {...resultsView} setPage={setResultPage} label="resultados"/>
       </Section>
 
-      <Section id="publico" n="05" title="O que o público vê" lead="A seleção vale para nexoresearch.org assim que você publica. Itens não marcados somem do site; nada é apagado da Tower.">
+      <Section id="publico" n="06" title="O que o público vê" lead="A seleção vale para nexoresearch.org assim que você publica. Itens não marcados somem do site; nada é apagado da Tower.">
         {versionConflict && <p className="ck-note" data-tone="warn" role="alert">Outra sessão publicou uma versão nova. Seu rascunho foi preservado; revise as diferenças antes de recomeçar a edição pela seleção atual. A publicação está pausada para evitar sobrescrever essas mudanças.</p>}
         {unset && data.catalog.available && <p className="ck-note" style={{marginBottom: 14}}><strong>O catálogo estático disponível nesta leitura tem {catalogRows.length} itens.</strong> Ao publicar pela primeira vez, o site passa a seguir só o que estiver marcado aqui. O rascunho já começa com todo o catálogo marcado.</p>}
         {data.drift.length > 0 && <p className="ck-note" data-tone="warn" style={{marginBottom: 14}}><strong>{data.drift.length} {data.drift.length === 1 ? 'item apresenta diferença ou não foi localizado' : 'itens apresentam diferença ou não foram localizados'} neste recorte.</strong> Uma ausência pode ocorrer pelo limite da janela ou pelos filtros. O texto aprovado continua no ar até uma decisão do responsável.</p>}

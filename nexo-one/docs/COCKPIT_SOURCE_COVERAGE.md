@@ -11,3 +11,15 @@ O digest legado V1 é calculado sobre a linha projetada, não sobre a linha inte
 Uma revisão futura pode definir um contrato V2 com identidade, conjunto de campos, normalização, limites e versão do digest explicitamente registrados. Antes de qualquer migração, a fonte completa e a autorização para cada campo precisariam ser verificadas; versões antigas teriam de continuar identificadas como V1, sem inferir equivalência ou reaprovação. A busca por uma linha fora da janela exigiria acesso autorizado e cobertura explícita. Não implementar V2 ou backfill até que a política de transição seja revisada.
 
 Os testes usam somente fixtures sintéticas. A fonte e a configuração efetivamente ativas em produção dependem de leitura autenticada autorizada; não foram verificadas aqui.
+
+## Filas, placar e manuscritos (arquitetura de 07/11/2026)
+
+`/api/atlas-cockpit` devolve também `architecture` (`NEXO_ARCHITECTURE_V1`), calculado no servidor a partir das linhas já lidas, sem nova fonte. Contém as nove filas do Mural pela coluna `tipo` (HIPOTESE_PRE, PRIOR_ART_PRE, HIPOTESE_DUPLICADA, VARREDURA_REGISTRO, VARREDURA_RESULTADO, CANDIDATO_ABERTO, PEDIDO_AJUDA, PAPER_CANDIDATO, DECISAO_DENER), hipóteses sem prior art citando o ID, pedidos de ajuda sem linha posterior citando o ID, os cartões DECISAO_DENER e o placar de achados.
+
+O placar conta IDs únicos por fila desde 07/11/2026: G3 = CANDIDATO_ABERTO, G5 = PAPER_CANDIDATO, G4 = candidatos citados por um PRIOR_ART_PRE "não encontrei" da janela. Palavras de grau no texto livre (todo registro cita G0 a G5) não entram na conta. A conferência dos IDs de HIPOTESE_PRE e PRIOR_ART_PRE de cada candidato exige um formato de ID fixo e não é feita.
+
+O leitor guarda as 300 linhas mais recentes do Mural e, além delas, até 120 linhas antigas de CANDIDATO_ABERTO, PAPER_CANDIDATO e DECISAO_DENER posteriores a 07/11/2026, para que cartões não saiam da tela em horas.
+
+O estado dos manuscritos vem da aba opcional MANUSCRITOS da Tower (colunas de `MASTER_CATALOG/manuscritos.csv`; `scripts/manuscritos-para-tower.mjs` gera as linhas). Os dados não ficam neste repositório público; a coluna `pacote` (caminho local) não é enviada ao navegador. A aba ausente aparece como indisponível, sem derrubar a leitura.
+
+A aba EQUIPE continua sendo a fonte do elenco: papel, cadência ("1h :MM America/Sao_Paulo") e frentes aparecem como estiverem na Tower. Linhas com estado CORE4, histórico, aposentada ou arquivada saem da contagem. Várias linhas que postam sob o mesmo nome no Mural (as automações da Lumia) são exibidas sem atividade atribuída.

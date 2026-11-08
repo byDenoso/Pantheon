@@ -27,7 +27,7 @@ test('tab availability is projected as an allowlisted state, never inferred from
   const input=board();
   input.availability={roadmap:'available',mural:'available',resumo:'unavailable',resultados:'available',equipe:'unavailable'};
   const projected=projectPrivateShadowBoard(input);
-  assert.deepEqual(projected.availability,input.availability);
+  assert.deepEqual(projected.availability,{...input.availability,manuscritos:'unknown'});
   assert.equal(projected.resultados.length,0);
   const older=board();delete older.availability;
   const unknown=projectPrivateShadowBoard(older);
