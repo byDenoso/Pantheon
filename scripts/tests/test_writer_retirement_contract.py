@@ -19,8 +19,8 @@ class WriterRetirementContractTest(unittest.TestCase):
         self.assertNotRegex(triggers, r"(?m)^  (schedule|push|pull_request):")
 
     def test_no_executable_writer_job(self):
-        self.assertRegex(self.workflow, r"(?m)^  shadow:\\n    if: \\$\\{\\{ false \\$\\}\\}")
-        self.assertRegex(self.workflow, r"(?m)^  write:\\n[^\\n]*\\n    if: \\$\\{\\{ false \\$\\}\\}")
+        self.assertRegex(self.workflow, r"(?m)^  shadow:\n    if: \$\{\{ false \$\}\}")
+        self.assertRegex(self.workflow, r"(?m)^  write:\n[^\n]*\n    if: \$\{\{ false \$\}\}")
 
 
 if __name__ == "__main__":
