@@ -4,7 +4,7 @@ import type {Bilingual} from './publicItems.ts';
 import type {Locale} from './api.ts';
 
 export type Activity = 'investigation' | 'robustness' | 'comparison' | 'validation';
-export type CampaignBrief = {summary: Bilingual; limits: Bilingual; basis: Bilingual; activity: Activity};
+export type CampaignBrief = {data?: Bilingual; summary: Bilingual; limits: Bilingual; basis: Bilingual; activity: Activity};
 export type CampaignCondition = {key: string; label: Bilingual; value: Bilingual; shared: boolean};
 const bilingual = (pt: string, en = pt): Bilingual => ({'pt-BR': pt, en});
 const reviewed = catalog as Record<string, CampaignBrief>;

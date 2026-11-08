@@ -7,6 +7,7 @@ import {researchEntries,publicActivity,filterResearch,questionHref} from '../src
 import {retainVerifiedPublic} from '../src/atlas/ui/usePublicResearch.ts';
 import {publicAtlasProjection} from '../worker/public-tests.mjs';
 import {publicEditorialProjection} from '../worker/public-editorial.mjs';
+import {cosmologyPublicProjection} from '../worker/public-cosmology.mjs';
 import {visualPublicProjection} from '../worker/public-visuals.mjs';
 const bi=t=>({'pt-BR':t,en:t}),at='2026-10-08T12:00:00Z';
 const fields=()=>({question:bi('Synthetic software fixture question'),answers:bi('Software fixture only; no scientific evidence.'),method:bi('Synthetic method for UI validation only.'),result:bi('Synthetic observation for software verification only.')});
@@ -23,3 +24,10 @@ test('plot ranges include uncertainty bounds, singleton ranges remain finite and
 test('client visual matching preserves four-field identity and rejects malformed contracts',async()=>{const t=guardTests([fields()])[0],v=visual();assert.equal(visualsForTest([v],t).length,1);assert.equal(visualsForTest([v],{...t,result:bi('Another result')} ).length,0);const body={contract:'ATLAS_PUBLIC_V1',items:[],links:[],tests:[fields()],visualsContract:'ATLAS_PUBLIC_VISUALS_V1',visuals:[v]};assert.equal((await loadPublic(async()=>Response.json(body))).visuals.length,1);assert.equal((await loadPublic(async()=>Response.json({...body,visualsContract:'wrong'}))).status,'unavailable');});
 test('public exploration retains all reviewed records, known dates, editorial identity and software boundaries',()=>{const pub={status:'ready',items:[],tests:guardTests(publicEditorialProjection(publicAtlasProjection()).tests)},entries=researchEntries(pub);assert.equal(entries.length,36);assert.equal(entries.reduce((n,e)=>n+e.tests,0),215);assert.ok(entries.every(e=>e.state==='published'&&e.stage===null&&e.nextStep===null));const software=filterResearch(entries,{topic:'software',locale:'pt-BR'});assert.ok(software.length>0&&software.length<entries.length);const events=publicActivity(pub,'pt-BR');assert.ok(events.length>0&&events.every(e=>e.label==='Estudo publicado'));assert.equal(questionHref('question-a:b'),'/?pergunta=question-a%3Ab#/');});
 test('failed updates retain verified state; a valid empty publication removes old records',()=>{const old={status:'ready',items:[],tests:guardTests([fields()])},bad={status:'unavailable',items:[],tests:[]},empty={status:'empty',items:[],tests:[]};assert.equal(retainVerifiedPublic(old,bad),old);assert.equal(retainVerifiedPublic(old,empty),empty);assert.equal(retainVerifiedPublic({status:'loading',items:[],tests:[]},bad),bad);});
+test('the published cosmology comparison includes sourced data names and leaves unknown inputs unset',()=>{
+  const catalog=cosmologyPublicProjection(publicEditorialProjection(publicAtlasProjection()));
+  const entries=researchEntries({status:'ready',items:[],tests:guardTests(catalog.tests)});
+  assert.match(entries.find(e=>e.id==='question-faixas-supernovas').data['pt-BR'],/DES-SN5YR/);
+  assert.match(entries.find(e=>e.id==='question-versao-bao').data.en,/DESI DR1/);
+  assert.equal(entries.find(e=>e.id==='question-precedentes').data,undefined);
+});

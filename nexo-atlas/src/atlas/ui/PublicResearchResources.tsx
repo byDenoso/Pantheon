@@ -9,11 +9,12 @@ export function ResearchResources({locale}: {locale: Locale}) {
     <p>{en ? 'Explore the public sources and reproducibility packages used in this work.' : 'Consulte fontes públicas e pacotes de reprodutibilidade usados na pesquisa.'}</p>
     <ul className="nexo-resources-list">
       <li><a href="https://github.com/byDenoso/AAS77733-Reproducibility">{en ? 'Pantheon+ reproducibility package' : 'Pacote de reprodutibilidade Pantheon+'}</a><span>{en ? 'Tests, methods and provenance for the AAS77733 analysis.' : 'Testes, métodos e proveniência da análise AAS77733.'}</span></li>
-      <li><a href="https://github.com/byDenoso/AAS77733-Reproducibility/blob/main/science/aas77733/manifest.json">{en ? 'Pantheon+ input manifest' : 'Manifesto dos dados Pantheon+'}</a><span>{en ? 'The package records input versions and Git blob hashes in this manifest.' : 'O pacote registra neste manifesto as versões e os hashes Git dos arquivos de entrada.'}</span></li>
+      <li><a href="https://github.com/byDenoso/AAS77733-Reproducibility/blob/4b2cde38852bbcd3df147ebb65317e9fd4335746/science/aas77733/manifest.json">{en ? 'Pantheon+ input manifest' : 'Manifesto dos dados Pantheon+'}</a><span>{en ? 'Pinned input versions and Git blob hashes for AAS77733.' : 'Versões fixadas e hashes Git dos dados de entrada de AAS77733.'}</span></li>
       <li><a href="https://github.com/byDenoso/camb-native-windows-reproducibility">{en ? 'CAMB on Windows' : 'CAMB no Windows'}</a><span>{en ? 'Code and numerical reproducibility material.' : 'Código e material de reprodutibilidade numérica.'}</span></li>
-      <li><a href="https://zenodo.org/records/18306484">{en ? 'JADES DR5 catalog' : 'Catálogo JADES DR5'}</a><span>{en ? 'Public dataset by Hainline and collaborators.' : 'Dados públicos de Hainline e colaboradores.'}</span></li>
+      <li><a href="https://zenodo.org/records/23969287">{en ? 'Generalized Chaplygin gas reproducibility package' : 'Pacote reprodutível do gás de Chaplygin generalizado'}</a><span>{en ? 'Versioned archive with code, input snapshots and reference outputs.' : 'Arquivo versionado com código, cópias dos dados de entrada e saídas de referência.'} <code>10.5281/zenodo.23969287</code></span></li>
+      <li><a href="https://zenodo.org/records/18306484">{en ? 'JADES DR5 catalog' : 'Catálogo JADES DR5'}</a><span>{en ? 'Public catalog by Hainline and collaborators. The record lists file checksums.' : 'Catálogo público de Hainline e colaboradores. O registro lista os hashes dos arquivos.'} <code>10.5281/zenodo.18306484</code></span></li>
     </ul>
-    <p className="nexo-resources-note">{en ? 'Available provenance depends on each analysis; the manifest above applies to AAS77733.' : 'A proveniência disponível varia por análise; o manifesto acima se aplica ao AAS77733.'}</p>
+    <p className="nexo-resources-note">{en ? 'Individual result records show the input versions and hashes when the source provides them.' : 'A ficha de cada resultado mostra as versões e os hashes de entrada quando a fonte os informa.'}</p>
   </section>;
 }
 

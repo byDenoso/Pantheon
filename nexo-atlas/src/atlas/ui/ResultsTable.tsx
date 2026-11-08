@@ -19,7 +19,7 @@ export default function ResultsTable({entries,locale}:{entries:ResearchEntry[];l
   const value=(e:ResearchEntry,key:Column):string=>{
     switch(key){
       case 'question':return pick(e.question,locale);
-      case 'data':return missing;
+      case 'data':return e.data?pick(e.data,locale):missing;
       case 'test':return e.method?pick(e.method,locale):missing;
       case 'result':return e.summary?pick(e.summary,locale):missing;
       case 'limit':return e.limits.length?e.limits.map(v=>pick(v,locale)).join(' '):missing;
@@ -32,7 +32,8 @@ export default function ResultsTable({entries,locale}:{entries:ResearchEntry[];l
     // Unknown values stay at the end in both directions.
     if(!va||va===missing)return !vb||vb===missing?0:1;
     if(!vb||vb===missing)return -1;
-    return va.localeCompare(vb,locale,{numeric:true,sensitivity:'base'})*(sort.ascending?1:-1);
+    const comparison=sort.column==='date'?Date.parse(va)-Date.parse(vb):va.localeCompare(vb,locale,{numeric:true,sensitivity:'base'});
+    return comparison*(sort.ascending?1:-1);
   }),[entries,locale,sort]);
   const change=(column:Column)=>setSort(old=>({column,ascending:old.column===column?!old.ascending:true}));
   return <section className="nexo-results-table" aria-labelledby="nexo-results-table-title">
