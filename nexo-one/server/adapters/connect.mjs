@@ -80,7 +80,8 @@ let driveRead;
 function retryDelay(response){
   const value=response.headers.get('Retry-After');
   const seconds=value&&/^\d+$/.test(value)?Number(value)*1000:Date.parse(value)-Date.now();
-  return Number.isFinite(seconds)?Math.max(60000,seconds):60000;
+  // Retry-After is advisory and unbounded; a multi-hour value froze the Cockpit on a day-old read.
+  return Number.isFinite(seconds)?Math.min(900000,Math.max(60000,seconds)):60000;
 }
 
 export async function googleConnectToken(env,signal,{scopes=GOOGLE_READ_SCOPES,reuseDriveRead=false}={}){

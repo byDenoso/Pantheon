@@ -87,7 +87,7 @@ export function cachedShadowReader({store, readShadow, secret, now = () => Date.
       return annotate(board, fetchedAt, false, null);
     } catch (error) {
       if (isRateLimited(error) && error.retryDelayMs !== undefined) {
-        const seconds = Math.ceil(Math.max(60000, Number(error.retryDelayMs) || 60000) / 1000) + jitter();
+        const seconds = Math.ceil(Math.min(900000, Math.max(60000, Number(error.retryDelayMs) || 60000)) / 1000) + jitter();
         await safe('SET', SHADOW_COOLDOWN_KEY, '1', 'EX', seconds);
       }
       if (cached) return annotate(cached.board, cached.fetchedAt, true, diagnostic(error));

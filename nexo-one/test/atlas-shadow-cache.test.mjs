@@ -4,7 +4,7 @@ import {cachedShadowReader, openBoard, sealBoard, SHADOW_CACHE_KEY, SHADOW_COOLD
 
 const BOARD = {contract: 'NEXO_SHADOW_BOARD_V1', mural: [{data: '2026-11-06', texto: 'linha'}]};
 function memory() {
-  const data = new Map();
+  const data = new Map(), ttl = new Map();
   const store = async (command, key, value, ...rest) => {
     if (command === 'GET') return data.get(key) ?? null;
     if (command === 'EVAL') {
@@ -16,11 +16,11 @@ function memory() {
     if (command === 'DEL') { data.delete(key); return 1; }
     if (command === 'SET') {
       if (rest.includes('NX') && data.has(key)) return null;
-      data.set(key, value); return 'OK';
+      data.set(key, value); if (rest[0] === 'EX') ttl.set(key, rest[1]); return 'OK';
     }
     throw new Error(`unexpected ${command}`);
   };
-  return {store, data};
+  return {store, data, ttl};
 }
 const limited = (ms = 120000) => Object.assign(new Error('RATE_LIMITED'), {code: 'RATE_LIMITED', googleDiagnostic: 'CONNECT_RATE_LIMITED', retryDelayMs: ms});
 
@@ -125,4 +125,14 @@ test('finishing after the lease expires cannot delete a successor lease', async 
   }});
   await read();
   assert.equal(data.get(SHADOW_LOCK_KEY), 'successor');
+});
+
+test('an oversized Retry-After cannot hold the cooldown beyond 15 minutes', async () => {
+  const {store, ttl} = memory();
+  let t = 1000000, fail = false;
+  const reader = () => cachedShadowReader({store, secret: 's', now: () => t, readShadow: async () => { if (fail) throw limited(7 * 24 * 3600 * 1000); return BOARD; }});
+  await reader()();
+  t += 600000; fail = true;
+  await reader()();
+  assert.equal(ttl.get(SHADOW_COOLDOWN_KEY), 900);
 });
