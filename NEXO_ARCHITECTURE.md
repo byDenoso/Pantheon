@@ -1,6 +1,6 @@
 # NEXO Canonical Architecture
 
-The sole scientific and operational state owner is:
+> **OPERATING POLICY UPDATE — 2026-11-08:** The current private NEXO_ARQUIVO_MESTRE (Drive `1w1PMU7mgFlEqP_SajZXydwfRqKZDlla2`), NEXO_REGRAS_COMUNS (Drive `15-NOXXL_gbg-0iUgjy96Pc-dOfO0B9ZP`) and the observed scheduler supersede historical role counts, writer ownership and spool guidance below. The 12 current S1–S11/P scientific Tasks write directly to Tower spreadsheet `1wizywUGEMd_8KrNqMcz5PQig3KgOTbZd8ENkTW8nRKw` through server-side `appendCells`, deterministic event IDs and exact readback. Writer/`SHADOW_V2` are archival; do not enqueue or replay them. The `.github/workflows/nexo-writer-robot.yml` scheduled and push triggers and writer job were disabled on 2026-11-08. Generated binary artifacts use the authorized Google Drive connector with a real local `file_uri`, explicit destination and post-upload receipt. Scientific criteria, frozen inputs and publication approvals are unchanged. Treat subsequent historical architecture text as history wherever it conflicts with this rule.\n\nThe sole scientific and operational state owner is:
 
 `TOWER_V06@GOOGLE_DRIVE_PRIVATE`
 
