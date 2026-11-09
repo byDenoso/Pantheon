@@ -3,7 +3,6 @@ import {agentName} from '../private-workspace/liveEvents.ts';
 import CockpitLive from './CockpitLive.tsx';
 import CockpitTeam from './CockpitTeam.tsx';
 import CockpitArchitecture from './CockpitArchitecture.tsx';
-import {motion,useReducedMotion} from 'motion/react';
 import './experience.css';
 import MotionToggle from '../atlas/ui/MotionToggle.tsx';
 import {tone} from './team.ts';
@@ -75,6 +74,31 @@ function Login({onDone}: {onDone: () => void}) {
   </main>;
 }
 
+function CockpitLoading() {
+  return <main className="ck-main ck-loading">
+    <p className="ck-loading-status" role="status">Carregando dados do cockpit…</p>
+    <div aria-hidden="true">
+      <div className="ck-loading-hero">
+        <span className="ck-skeleton-line title"/>
+        <span className="ck-skeleton-line text"/>
+      </div>
+      <div className="ck-kpis">
+        {Array.from({length: 5}, (_, index) => <div key={index} className="ck-kpi">
+          <span className="ck-skeleton-line label"/>
+          <span className="ck-skeleton-line value"/>
+        </div>)}
+      </div>
+      <div className="ck-overview">
+        {[0, 1].map(index => <div key={index} className="ck-panel ck-skeleton-panel">
+          <span className="ck-skeleton-line label"/>
+          <span className="ck-skeleton-line title"/>
+          <span className="ck-skeleton-line text"/>
+        </div>)}
+      </div>
+    </div>
+  </main>;
+}
+
 function draftFrom(selection: Selection | null, data: Cockpit): Draft {
   if (!selection) return {catalog: data.catalog.available ? data.catalog.rows.map(r => r.key) : [], tower: {}, campaigns: {}};
   return {
@@ -100,12 +124,11 @@ function Switch({checked, onChange, label}: {checked: boolean; onChange: (v: boo
   return <label className="ck-switch"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}/><span className="track" aria-hidden="true"/><span>{label}</span></label>;
 }
 function Section({id, n, title, lead, children, aside}: {id: string; n: string; title: string; lead?: ReactNode; children: ReactNode; aside?: ReactNode}) {
-  const reduced=useReducedMotion();
-  return <motion.section initial={reduced?false:{opacity:.6,y:16}} whileInView={{opacity:1,y:0}} viewport={{once:true,amount:.04}} transition={{duration:reduced?0:.35}} className="ck-section" id={id} aria-labelledby={`${id}-h`}>
+  return <section className="ck-section" id={id} aria-labelledby={`${id}-h`}>
     <p className="ck-eyebrow">{n} / {id === 'publico' ? 'público' : id === 'equipe' ? 'automações' : id}</p>
     <div className="ck-section-head"><h2 id={`${id}-h`}>{title}</h2>{lead && <p>{lead}</p>}{aside}</div>
     {children}
-  </motion.section>;
+  </section>;
 }
 
 function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refreshError, onAccessFailure}: {onAccessFailure: (status: number) => void; refreshing: boolean; refreshError: string; data: Cockpit; reload: () => Promise<void>; onLogout: () => void; theme: Theme; setTheme: (t: Theme) => void}) {
@@ -273,10 +296,15 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
     <a className="visually-hidden" href="#agora">Ir para o conteúdo</a>
     <Header theme={theme} setTheme={setTheme} onLogout={onLogout} active={active}/>
     <SubNav active={active}/>
-    <main className="ck-main">
+    <main className="ck-main ck-dashboard">
       <div className="ck-hero" id="agora" style={{scrollMarginTop: 84}}>
         <div><p className="ck-eyebrow">Cockpit privado</p><h1>Estado da pesquisa, <em>agora.</em></h1><p>Equipe, frentes e resultados lidos da Tower SHADOW, e o controle do que aparece em nexoresearch.org.</p></div>
-        <div className="ck-stamp"><span className="ck-state" data-tone={shadow ? (unreadTabs.length || shadow.cache?.stale ? 'warn' : 'ok') : 'bad'}>{shadow ? (shadow.cache?.stale ? 'SHADOW: última leitura válida' : unreadTabs.length ? 'SHADOW: leitura parcial' : 'SHADOW consultada') : 'SHADOW indisponível'}</span><br/>Consulta iniciada: {when(data.generatedAt)}<br/>Modificação da fonte: {shadow ? when(shadow.modifiedAt) : 'indisponível'}<br/>{shadow?.cache && <>Linhas lidas da Tower em: {when(shadow.cache.fetchedAt)}<br/></>}<button type="button" className="ck-btn" disabled={refreshing || dirty || saving} style={{marginTop: 8}} onClick={() => void reload()}>{refreshing ? 'Atualizando…' : 'Atualizar leitura'}</button></div>
+        <div className="ck-stamp">
+          <span className="ck-state" data-tone={shadow ? (unreadTabs.length || shadow.cache?.stale ? 'warn' : 'ok') : 'bad'}>{shadow ? (shadow.cache?.stale ? 'SHADOW: última leitura válida' : unreadTabs.length ? 'SHADOW: leitura parcial' : 'SHADOW consultada') : 'SHADOW indisponível'}</span><br/>Consulta iniciada: {when(data.generatedAt)}<br/>Modificação da fonte: {shadow ? when(shadow.modifiedAt) : 'indisponível'}<br/>
+          {shadow?.cache && <>Linhas lidas da Tower em: {when(shadow.cache.fetchedAt)}<br/></>}
+          <button type="button" className="ck-btn ck-refresh-button" disabled={refreshing || dirty || saving} data-reading={refreshing || undefined} onClick={() => void reload()}>{refreshing ? 'Atualizando…' : 'Atualizar leitura'}</button>
+          <span role="status" className="visually-hidden">{refreshing ? 'Atualizando leitura…' : ''}</span>
+        </div>
       </div>
       <div className="ck-livebar"><label><input type="checkbox" checked={automatic} onChange={e => setAutomatic(e.target.checked)}/> Atualizar a cada 5 minutos</label><span>{dirty ? 'Atualização pausada durante a edição. Publique ou descarte o rascunho para continuar.' : shadowRateLimited ? 'Atualização automática pausada pelo limite da conexão.' : automatic ? 'Atualizações enquanto esta página estiver visível.' : 'Atualização manual.'}</span></div>
       {refreshError && <p className="ck-note" data-tone="warn" role="alert">A última atualização falhou. Os dados abaixo são da leitura de {when(data.generatedAt)}. Tente atualizar novamente.</p>}
@@ -342,9 +370,10 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         {data.drift.length > 0 && <p className="ck-note" data-tone="warn" style={{marginBottom: 14}}><strong>{data.drift.length} {data.drift.length === 1 ? 'item apresenta diferença ou não foi localizado' : 'itens apresentam diferença ou não foram localizados'} neste recorte.</strong> Uma ausência pode ocorrer pelo limite da janela ou pelos filtros. O texto aprovado continua no ar até uma decisão do responsável.</p>}
         {!data.catalog.available && <p className="ck-note" data-tone="warn" style={{marginBottom: 14}}>Catálogo publicado indisponível ({data.catalog.reason}). As marcações atuais do catálogo são mantidas.</p>}
         <div className="ck-tabs" role="group" aria-label="Partes da seleção">
-          {([['catalog', 'Catálogo revisado', `${draft.catalog.length}/${data.catalog.available ? catalogRows.length : '—'}`], ['tower', 'Resultados escolhidos', Object.keys(draft.tower).length], ['campaigns', 'Frentes escolhidas', Object.keys(draft.campaigns).length], ['audit', 'Histórico', data.audit.length]] as const).map(([id, label, n]) => <button key={id} type="button" aria-pressed={tab === id} onClick={() => setTab(id)}>{label}<span className="n">{n}</span></button>)}
+          {([['catalog', 'Catálogo revisado', `${draft.catalog.length}/${data.catalog.available ? catalogRows.length : '—'}`], ['tower', 'Resultados escolhidos', Object.keys(draft.tower).length], ['campaigns', 'Frentes escolhidas', Object.keys(draft.campaigns).length], ['audit', 'Histórico', data.audit.length]] as const).map(([id, label, n]) => <button key={id} type="button" aria-pressed={tab === id} aria-controls="ck-publication-content" onClick={() => setTab(id)}>{label}<span className="n">{n}</span></button>)}
           <button type="button" aria-pressed={showEn} onClick={() => setShowEn(v => !v)} style={{marginLeft: 'auto'}}>Textos em inglês</button>
         </div>
+        <div className="ck-tab-content" id="ck-publication-content" key={tab}>
         {tab === 'catalog' && <div className="ck-panel">
           <div className="ck-toolbar"><input className="ck-search" type="search" placeholder="Buscar pergunta" value={query} onChange={e => setQuery(e.target.value)} aria-label="Buscar no catálogo"/>
             <button type="button" className="ck-btn" onClick={() => setDraft(d => ({...d, catalog: [...new Set([...d.catalog, ...catalogView.map(r => r.key)])]}))}>Marcar {q ? 'filtrados' : 'todos'}</button>
@@ -355,6 +384,7 @@ function Workspace({data, reload, onLogout, theme, setTheme, refreshing, refresh
         {tab === 'tower' && <div className="ck-panel ck-list">{Object.keys(draft.tower).map(id => { const src = towerCands.find(c => c.id === id); const isOpen = open === `t:${id}`; return <div className="ck-item" key={id}><div className="ck-item-row"><span className="ck-state" data-tone={drift.get(id) ? 'warn' : 'live'}>{drift.get(id) === 'MISSING' ? 'não localizado no recorte' : drift.get(id) ? 'alterado' : publicationState(true, approvedResults.has(id))}</span><div><h3>{draft.tower[id].question['pt-BR'] || (src ? humanizeResult(src.source).title : '') || 'Resultado sem título em linguagem corrente'}</h3><button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `t:${id}`)}>{isOpen ? 'Fechar' : 'Editar'}</button></div><Switch checked onChange={() => toggleTower(id, false)} label="Selecionar para publicar"/></div>{isOpen && towerEditor(id, src?.source)}</div>; })}{!Object.keys(draft.tower).length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>Nenhum resultado da Tower escolhido. Ligue um em “Resultados recentes”.</p>}</div>}
         {tab === 'campaigns' && <div className="ck-panel ck-list">{Object.keys(draft.campaigns).map(id => { const src = campCands.find(c => c.id === id); const isOpen = open === `c:${id}`; return <div className="ck-item" key={id}><div className="ck-item-row"><span className="ck-state" data-tone={drift.get(id) ? 'warn' : 'live'}>{publicationState(true, approvedFronts.has(id))} · {draft.campaigns[id].state === 'completed' ? 'concluída' : 'andamento'}</span><div><h3>{draft.campaigns[id].public.question['pt-BR'] || humanTitle(src?.source.titulo || '', 'Frente sem título em linguagem corrente')}</h3><button type="button" className="ck-btn quiet" style={{marginTop: 8}} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : `c:${id}`)}>{isOpen ? 'Fechar' : 'Editar'}</button></div><Switch checked onChange={() => toggleCampaign(id, false)} label="Selecionar para publicar"/></div>{isOpen && campaignEditor(id, src?.source)}</div>; })}{!Object.keys(draft.campaigns).length && <p style={{padding: 16, margin: 0, color: 'var(--fg-2)'}}>Nenhuma frente escolhida. Ligue uma em “Frentes e campanhas”.</p>}</div>}
         {tab === 'audit' && <div className="ck-panel ck-scroll"><table className="ck-table"><thead><tr><th>Quando</th><th>Versão</th><th>Catálogo</th><th>Resultados</th><th>Frentes</th></tr></thead><tbody>{data.audit.map(a => <tr key={a.version}><td className="mono">{when(a.at)}</td><td className="mono">v{a.version}</td><td className="mono">{a.catalog.count} (+{a.catalog.added} −{a.catalog.removed})</td><td className="mono">{a.tower.count} (+{a.tower.added} −{a.tower.removed})</td><td className="mono">{a.campaigns.count} (+{a.campaigns.added} −{a.campaigns.removed})</td></tr>)}{!data.audit.length && <tr><td colSpan={5}>Nenhuma publicação ainda.</td></tr>}</tbody></table></div>}
+        </div>
       </Section>
     </main>
     <div className="ck-savebar" role="region" aria-label="Publicação">
@@ -413,8 +443,10 @@ export default function CockpitApp() {
   };
   if (phase === 'ready' && data) return <Workspace data={data} onAccessFailure={onAccessFailure} refreshing={refreshing} refreshError={error} reload={load} onLogout={() => void out()} theme={theme} setTheme={setTheme}/>;
   return <div className="ck-app"><Header theme={theme} setTheme={setTheme}/>
-    {(phase === 'checking' || phase === 'leaving') && <main className="ck-login"><p role="status">{phase === 'leaving' ? 'Encerrando a sessão…' : 'Verificando a sessão…'}</p></main>}
-    {phase === 'login' && <Login onDone={() => void load()}/>}
-    {phase === 'error' && <main className="ck-login"><h1>Cockpit indisponível.</h1><p>Não foi possível ler o cockpit agora ({error}).</p><button type="button" className="ck-btn primary" onClick={() => void load()}>Tentar de novo</button></main>}
+    {refreshing && phase !== 'leaving' ? <CockpitLoading/> : <>
+      {(phase === 'checking' || phase === 'leaving') && <main className="ck-login"><p role="status">{phase === 'leaving' ? 'Encerrando a sessão…' : 'Verificando a sessão…'}</p></main>}
+      {phase === 'login' && <Login onDone={() => void load()}/>}
+      {phase === 'error' && <main className="ck-login"><h1>Cockpit indisponível.</h1><p>Não foi possível ler o cockpit agora ({error}).</p><button type="button" className="ck-btn primary" onClick={() => void load()}>Tentar de novo</button></main>}
+    </>}
   </div>;
 }

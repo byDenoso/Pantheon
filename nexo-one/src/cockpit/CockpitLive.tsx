@@ -4,9 +4,8 @@ import type {Row} from './api.ts';
 import {COMPLAINT, agentName, liveEvents, type Kind} from '../private-workspace/liveEvents.ts';
 import type {MuralRow, ResultadoRow, ResumoRow} from '../private-workspace/shadow.ts';
 
-// "Ao vivo" in the cockpit: who is working, what was posted on the Mural and which
-// results just landed. Reads the SHADOW rows the cockpit already loaded; the cockpit's
-// own one-minute refresh brings new items, which arrive animated.
+// Activity comes from the SHADOW snapshot. Only records newly observed on a later
+// read receive the arrival animation.
 const ACTIVE_MS = 90 * 60_000;
 const LABEL: Record<Kind, string> = {mural: 'Mural', resultado: 'Resultado', resumo: 'Mudança'};
 export const hue = (name: string) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
@@ -21,9 +20,22 @@ export const ago = (t: number | null, now: number) => {
 
 export default function CockpitLive({mural, resultados, resumo, equipe, activityComplete}: {mural: Row[]; resultados: Row[]; resumo: Row[]; equipe: Row[]; activityComplete: boolean}) {
   const [filter, setFilter] = useState<'all' | Kind | 'complaints'>('all'), [limit, setLimit] = useState(12), [now, setNow] = useState(() => Date.now());
-  const events = useMemo(() => liveEvents(mural as unknown as MuralRow[], resultados as unknown as ResultadoRow[], resumo as unknown as ResumoRow[]), [mural, resultados, resumo]);
+  const events = useMemo(() => {
+    // Source row positions shift when a new record enters the bounded read.
+    const occurrences = new Map<string, number>();
+    return liveEvents(mural as unknown as MuralRow[], resultados as unknown as ResultadoRow[], resumo as unknown as ResumoRow[]).map(({key: _position, ...event}) => {
+      const signature = JSON.stringify(event);
+      const occurrence = (occurrences.get(signature) ?? 0) + 1;
+      occurrences.set(signature, occurrence);
+      return {...event, key: `${signature}:${occurrence}`};
+    });
+  }, [mural, resultados, resumo]);
   const seen = useRef<Set<string> | null>(null);
-  const fresh = useMemo(() => { const before = seen.current; seen.current = new Set(events.map(e => e.key)); return before ? new Set(events.filter(e => !before.has(e.key)).map(e => e.key)) : new Set<string>(); }, [events]);
+  const fresh = useMemo(() => {
+    const before = seen.current;
+    return new Set(before ? events.filter(e => !before.has(e.key)).map(e => e.key) : []);
+  }, [events]);
+  useEffect(() => { seen.current = new Set(events.map(e => e.key)); }, [events]);
   useEffect(() => { const tick = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(tick); }, []);
 
   const agents = useMemo(() => {
