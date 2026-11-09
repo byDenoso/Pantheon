@@ -37,11 +37,13 @@ class C01WriterPinBindingTests(unittest.TestCase):
         self.assertNotIn("secrets.", "\n".join(bound.values()))
         self.assertIn("Missing or mismatched admin-managed pins leave C01 fail-closed/OFF.", step)
 
-    def test_registry_edits_reenter_the_writer_path_and_ci_checks_bindings(self):
+    def test_registry_edits_run_binding_checks_in_selection_ci(self):
         writer = WRITER_WORKFLOW.read_text(encoding="utf-8")
         selection_ci = SELECTION_CI.read_text(encoding="utf-8")
-        registry_path = '"nexo-control/execution-assessment-approvals.json"'
-        self.assertIn(registry_path, writer)
+        registry_path = "nexo-control/execution-assessment-approvals.json"
+        writer_triggers = writer.split("\npermissions:", 1)[0]
+        self.assertNotIn(registry_path, writer_triggers)
+        self.assertIn(f"'{registry_path}'", selection_ci)
         self.assertTrue("'scripts/**'" in selection_ci or "scripts/tests/test_c01_writer_pin_binding.py" in selection_ci)
         self.assertIn("python -m unittest discover -s scripts/tests", selection_ci)
 
