@@ -31,8 +31,12 @@ try {
   assert.equal(await page.locator('.atlas-campaign-test').count(), 0, 'closed campaign details must not mount hidden test DOM');
   await page.getByRole('button', {name: 'Próxima', exact: true}).click(); assert.equal(await page.locator('.atlas-public-campaign').count(), 6);
   await page.getByRole('button', {name: 'Próxima', exact: true}).click(); assert.equal(await page.locator('.atlas-public-campaign').count(), 1);
-  await page.getByLabel('Buscar pergunta').fill('expansão'); assert.equal(await page.locator('.atlas-public-campaign').count(), 1);
+  await page.getByLabel('Buscar pergunta').fill('expansão');
+  await page.locator('.atlas-campaign-pagination').waitFor({state: 'hidden'});
+  await page.locator('#campaign-study-12').waitFor();
+  assert.equal(await page.locator('.atlas-public-campaign').count(), 1);
   await page.getByLabel('Buscar pergunta').fill(''); await page.getByRole('button', {name: 'Concluídas (1)', exact: true}).click();
+  await page.locator('#campaign-study-13').waitFor();
   assert.equal(await page.locator('.atlas-public-campaign').count(), 1); assert.match(await page.locator('.atlas-public-campaign').innerText(), /Resultado inconclusivo/);
   await page.getByRole('button', {name: 'Em andamento (13)', exact: true}).click();
   await page.locator('.atlas-campaign-tests summary').first().click(); assert.match(await page.locator('.atlas-campaign-test').first().innerText(), /Aguardando revisão/); assert.equal(await page.locator('.atlas-campaign-test .atlas-campaign-result').count(), 0);
