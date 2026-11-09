@@ -3,15 +3,12 @@
 .nx-chart-period{display:flex;border:1px solid var(--chart-line);border-radius:9px;padding:3px;gap:2px}.nx-activity-chart button{min-height:36px;cursor:pointer;color:inherit;background:transparent;border:1px solid transparent;border-radius:6px;padding:6px 10px;font:inherit;font-size:12px}.nx-chart-period button[aria-pressed=true]{background:color-mix(in srgb,var(--cyan) 12%,var(--chart-bg));color:var(--cyan);border-color:var(--chart-line)}.nx-chart-filters{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 0}.nx-chart-filters button{opacity:.6;display:flex;align-items:center;gap:6px}.nx-chart-filters button[aria-pressed=true]{opacity:1;border-color:var(--chart-line)}.nx-chart-filters i{width:7px;height:7px;border-radius:50%}
 .nx-chart-canvas{min-height:210px;width:100%;overflow:hidden}.nx-chart-canvas svg{max-width:100%;height:auto}.nx-chart-canvas svg [aria-label="tip"]{color:#102033}.nx-chart-caption{font-size:12px!important;color:var(--chart-muted);margin:8px 0!important;max-width:85ch}.nx-chart-table{border-top:1px solid var(--chart-line);margin-top:14px;padding-top:7px;font-size:12px}.nx-chart-table summary{cursor:pointer;min-height:36px;padding:8px 0}.nx-chart-table>div{overflow:auto;max-height:260px}.nx-chart-table table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.nx-chart-table th,.nx-chart-table td{padding:8px 12px;border-bottom:1px solid var(--chart-line);text-align:left}.nx-chart-table caption{text-align:left;padding:8px 12px;color:var(--chart-muted)}
 :root[data-theme="dark"]{--bg:#000000;--bg-2:#11151b;--fg:#f4f6f9;--fg-2:#b7c0cd;--line:#718398;--cyan:#a9c5ff;--on-cyan:#091325;--orange:#a9c5ff;--focus:#a9c5ff}
-.ck-section{scroll-margin-top:100px}.ck-kpis{border-radius:14px}.ck-kpi dd{color:var(--cyan)}.ck-kpi[data-tone=warn] dd{color:var(--warn)}.ck-header{box-shadow:0 10px 36px #00101f16}.ck-crew-card{transition:border-color .2s,background .2s}.ck-crew-card:hover{border-color:var(--cyan)}.ck-nav a[aria-current=true]{background:color-mix(in srgb,var(--cyan) 8%,transparent);padding-inline:8px;border-radius:7px 7px 0 0}.ck-btn{transition:border-color .15s,transform .15s}.ck-btn:active:not(:disabled){transform:translateY(1px)}
+.ck-section{scroll-margin-top:100px}.ck-kpis{border-radius:14px}.ck-kpi dd{color:var(--cyan)}.ck-kpi[data-tone=warn] dd{color:var(--warn)}.ck-header{box-shadow:0 10px 36px #00101f16}.ck-nav a[aria-current=true]{background:color-mix(in srgb,var(--cyan) 8%,transparent);border-radius:7px 7px 0 0}
 .pw[data-theme="dark"]{--pw-bg:#04101f;--pw-surface:#0a1c30;--pw-line:#243d55;--pw-blue:#51d1ef;--pw-action:#51d1ef}.pw-header nav a{border-radius:8px}.pw-header nav a[aria-current=page]{background:color-mix(in srgb,var(--pw-action) 12%,transparent)}.pw-domain{transition:border-color .2s,background .2s}.pw-domain:hover{background:color-mix(in srgb,var(--pw-action) 6%,var(--pw-bg))}
 @media(max-width:600px){.nx-activity-chart{padding:18px 14px;margin:18px 0}.nx-chart-heading h2{font-size:23px!important}.nx-chart-filters{gap:2px}.nx-activity-chart button{min-height:40px;padding:6px 8px}.nx-chart-caption{line-height:1.6!important}.ck-section{scroll-margin-top:150px}}
-@media(prefers-reduced-motion:reduce){.ck-crew-card,.ck-btn,.pw-domain{transition:none}}
-:root[data-motion=paused] :is(.ck-feed-item,.ck-live-dot,.pw-live-dot,.ck-agent,.ck-avatar,.pw-agent-avatar){animation:none!important;transition:none!important}
-:root[data-motion=paused] .ck-section{transform:none!important;opacity:1!important}
-:root[data-motion=paused] :is(.ck-avatar,.pw-agent-avatar)::after{animation:none!important;transition:none!important}
-:root[data-motion=paused] .nx-activity-chart{transform:none!important;opacity:1!important}
-:root[data-motion=paused] :is(.ck-app,.pw) *,:root[data-motion=paused] :is(.ck-app,.pw) *::before,:root[data-motion=paused] :is(.ck-app,.pw) *::after{animation-play-state:paused!important;transition:none!important;scroll-behavior:auto!important}
+@media(prefers-reduced-motion:reduce){.pw-domain{transition:none}}
+:root[data-motion=paused] :is(.pw-live-dot,.pw-agent-avatar),:root[data-motion=paused] .pw-agent-avatar::after{animation:none!important;transition:none!important}
+:root[data-motion=paused] .pw *,:root[data-motion=paused] .pw *::before,:root[data-motion=paused] .pw *::after{animation-play-state:paused!important;transition:none!important;scroll-behavior:auto!important}
 .nx-motion-toggle{font-size:12px!important;min-height:36px!important;padding:7px 10px!important}
 @media(max-width:1100px){.ck-tools{flex-wrap:wrap;justify-content:flex-end}.ck-header{gap:10px}.nx-motion-toggle{min-height:32px!important}}
 
@@ -42,4 +39,119 @@
   .ck-app .ck-savebar-inner>div:last-child{justify-content:flex-end}
   .ck-app .ck-savebar .mono{font-size:13px}
   .ck-app .ck-main{padding-bottom:220px}
+}
+
+.ck-app {
+  --ck-control-duration: 150ms;
+  --ck-enter-duration: 240ms;
+  --ck-ease: cubic-bezier(.2,.65,.35,1);
+}
+
+.ck-app .ck-seg button:focus-visible { outline-offset: -3px; }
+.ck-app .ck-seg button[aria-pressed=true]:focus-visible { outline-color: var(--on-cyan); }
+.ck-app :is(.ck-search, .ck-field textarea, .ck-control select):focus-visible { outline: 2px solid var(--focus); }
+.ck-app details > summary {
+  position: relative;
+  padding-inline-start: 1.25em;
+  list-style: none;
+}
+.ck-app details > summary::-webkit-details-marker { display: none; }
+.ck-app details > summary::before {
+  content: "";
+  position: absolute;
+  inset-block-start: calc(.6em + var(--ck-summary-offset, 0px));
+  inset-inline-start: .18em;
+  inline-size: .43em;
+  block-size: .43em;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+}
+.ck-app details[open] > summary::before { transform: rotate(45deg); }
+.ck-app .nx-chart-table > summary { --ck-summary-offset: 8px; }
+
+.ck-loading-status { margin: 0 0 16px; color: var(--fg-2); }
+.ck-loading-hero { min-block-size: 90px; border-block-end: 1px solid var(--line); }
+.ck-app .ck-skeleton-panel { padding-block: 20px; min-block-size: 140px; }
+.ck-skeleton-line {
+  display: block;
+  margin-block-end: 10px;
+  block-size: .75rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--line) 27%, var(--bg-2));
+}
+.ck-skeleton-line.label { inline-size: min(82%, 10rem); }
+.ck-skeleton-line.title { inline-size: min(75%, 32rem); block-size: clamp(1.4rem, 5vw, 2.4rem); }
+.ck-skeleton-line.text { inline-size: min(92%, 33rem); }
+.ck-skeleton-line.value { inline-size: min(64%, 4rem); block-size: 1.8rem; }
+.nx-chart-loading { min-block-size: 210px; display: grid; align-content: center; }
+.nx-chart-loading p { color: var(--chart-muted); }
+.nx-chart-loading .ck-skeleton-line.title { block-size: 1rem; }
+
+.ck-refresh-button {
+  position: relative;
+  justify-content: center;
+  min-inline-size: 144px;
+  margin-block-start: 8px;
+}
+.ck-refresh-button[data-reading]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 6px;
+  inset-block-end: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--cyan);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ck-app :is(.ck-nav, .ck-subnav) a:hover { color: var(--fg); border-color: var(--cyan); }
+  .ck-app :is(.ck-btn:not(:disabled), .ck-tabs button, .nx-activity-chart button):hover { border-color: var(--cyan); }
+  .ck-app :is(.ck-btn:not(.primary):not(:disabled), .ck-seg button[aria-pressed=false], .ck-tabs button[aria-pressed=false]):hover {
+    background-color: color-mix(in srgb, var(--cyan) 8%, var(--bg-2));
+  }
+  .ck-app .ck-btn.primary:not(:disabled):hover { background-color: color-mix(in srgb, var(--cyan) 88%, var(--fg)); }
+  .ck-app .nx-chart-filters button:hover { opacity: 1; }
+  .ck-app details > summary:hover { color: var(--cyan); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ck-app :is(.ck-nav a, .ck-subnav a, .ck-btn, .ck-seg button, .ck-tabs button, .nx-activity-chart button, details > summary) {
+    transition: color var(--ck-control-duration), background-color var(--ck-control-duration),
+      border-color var(--ck-control-duration), opacity var(--ck-control-duration), transform var(--ck-control-duration);
+  }
+  .ck-app :is(.ck-search, .ck-field textarea, .ck-control select) {
+    transition: border-color var(--ck-control-duration), box-shadow var(--ck-control-duration);
+  }
+  .ck-app .ck-switch .track { transition: background-color var(--ck-control-duration); }
+  .ck-app .ck-switch .track::after, .ck-app details > summary::before {
+    transition: transform var(--ck-control-duration) var(--ck-ease);
+  }
+  .ck-app .ck-dial .arc { transition: stroke-dashoffset 280ms var(--ck-ease); }
+  :root:not([data-motion=paused]) .ck-app .ck-btn:active:not(:disabled) { transform: translateY(1px); }
+
+  .ck-app :is(.ck-dashboard > .ck-hero, .ck-dashboard > .ck-kpis, .ck-overview > article,
+    .ck-tab-content, .ck-editor, .ck-feed-item[data-fresh], details[open] > :not(summary)) {
+    animation: ck-enter var(--ck-enter-duration) var(--ck-ease);
+  }
+  .ck-app .ck-dashboard > .ck-kpis { animation-delay: 35ms; }
+  .ck-app .ck-overview > article { animation-delay: 70ms; }
+  .ck-app .nx-chart-enter { animation: ck-chart-enter var(--ck-enter-duration) var(--ck-ease); }
+  .ck-app .ck-skeleton-line, .ck-app .ck-refresh-button[data-reading]::after { animation: ck-loading-pulse 1s ease-in-out 2; }
+}
+
+:root[data-motion=paused] .ck-app *,
+:root[data-motion=paused] .ck-app *::before,
+:root[data-motion=paused] .ck-app *::after { animation: none; transition: none; }
+
+@keyframes ck-enter {
+  from { opacity: .84; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ck-chart-enter {
+  from { opacity: .7; }
+  to { opacity: 1; }
+}
+@keyframes ck-loading-pulse {
+  50% { opacity: .55; }
 }

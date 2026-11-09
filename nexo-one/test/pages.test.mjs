@@ -395,9 +395,9 @@ test('Pages no longer republishes private Tower updates on writer events or an h
   assert.doesNotMatch(workflow, /repository_dispatch:|nexo-public-projection-updated|schedule:|cron:/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /METALEARNING_CURRENT\.json|PEER_DETECTION_BATTERY_V1\.json/);
-  // Writer execution remains independent of the public site's permission.
-  assert.match(writer, /cron:\s*'2,7,12,17,22,27,32,37,42,47,52,57 \* \* \* \*'/);
-  assert.match(writer, /nexo-wake\/\*\.json/);
+  // The retired Writer keeps a manual archival trigger and no automatic schedule.
+  assert.match(writer, /^ {2}workflow_dispatch:/m);
+  assert.doesNotMatch(writer, /^ {2}(?:schedule|repository_dispatch|push|pull_request(?:_target)?):/m);
   // Existing client cache/freshness behavior is retained; its presence cannot
   // authorize static data exports and will not override an unavailable source.
   assert.match(hook, /setInterval/);
