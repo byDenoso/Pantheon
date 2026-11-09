@@ -80,11 +80,22 @@ async function verifyMotion(){
     holdPlot=false;
     assert.ok(plotRequests>0,'the chart stays pending while its script loads');
     assert.equal(await page.locator('.ck-feed-item[data-fresh]').count(),0,'the initial snapshot does not mark the feed as a delta');
+    const plotAnimationAfter=async action=>{
+      const previous=await chart.locator('.nx-chart-canvas svg').elementHandle();
+      assert.ok(previous);
+      await action();
+      const animation=await page.waitForFunction(oldPlot=>{
+        const plot=document.querySelector('.nx-activity-chart .nx-chart-canvas svg');
+        return plot && plot!==oldPlot ? getComputedStyle(plot).animationName : '';
+      },previous);
+      await previous.dispose();
+      return animation.jsonValue();
+    };
     const windowButton=chart.getByRole('button',{name:'6 h',exact:true});
-    await windowButton.press('Enter');
+    const windowAnimation=await plotAnimationAfter(()=>windowButton.press('Enter'));
     assert.equal(await windowButton.getAttribute('aria-pressed'),'true');
     await chart.getByRole('img',{name:'1 registros em 6 h'}).waitFor();
-    assert.notEqual(await chart.locator('svg').evaluate(node=>getComputedStyle(node).animationName),'none','changing the time window animates the chart');
+    assert.equal(windowAnimation,'ck-chart-enter','changing the time window animates the chart');
 
     const filter=page.getByRole('group',{name:'Filtrar linha do tempo'}).getByRole('button',{name:'Tudo',exact:true});
     await filter.press('Enter');
@@ -105,8 +116,8 @@ async function verifyMotion(){
     await page.getByRole('button',{name:'Pausar animações'}).click();
     assert.equal(await detail.evaluate(node=>getComputedStyle(node).animationName),'none');
     assert.equal(await detail.evaluate(node=>getComputedStyle(node).opacity),'1');
-    await chart.getByRole('button',{name:'24 h',exact:true}).click();
-    assert.equal(await chart.locator('svg').evaluate(node=>getComputedStyle(node).animationName),'none','manual pause also covers chart changes');
+    const pausedAnimation=await plotAnimationAfter(()=>chart.getByRole('button',{name:'24 h',exact:true}).click());
+    assert.equal(pausedAnimation,'none','manual pause also covers chart changes');
     await page.getByRole('button',{name:'Animar',exact:true}).click();
     await page.emulateMedia({reducedMotion:'reduce'});
     await page.getByRole('button',{name:'Movimento reduzido'}).waitFor();
