@@ -1,0 +1,102 @@
+/* Identity of nexoresearch.org applied to the private Cockpit. Labels stay at 13px or more and
+   reading text at 16px, the sizes the Cockpit already guarantees. Imported last: it restates the
+   tokens and the surface treatment, and leaves layout, data and behaviour to the layers above.
+   Three faces (serif for titles, sans for interface, mono for labels and figures), paper and
+   deep-space neutrals, one blue, hairlines instead of framed panels, square corners. */
+:root{
+  --bg:#f7f6f2;--bg-2:#ffffff;--fg:#0c1017;--fg-2:#4a5160;--line:#d9d6cc;--control:#6b7280;--rule:#0c1017;
+  --cyan:#0033a0;--on-cyan:#ffffff;--orange:#0033a0;--focus:#0033a0;--ok:#136347;--warn:#784807;--bad:#a3203a;
+  --veil:transparent;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Source Serif 4 Variable","Source Serif 4",Georgia,"Times New Roman",serif;
+}
+:root[data-theme="dark"]{
+  --bg:#02050b;--bg-2:#0a0e16;--fg:#f3f4f6;--fg-2:#a8afbd;--line:#222938;--control:#69728a;--rule:#f3f4f6;
+  --cyan:#9bb9ff;--on-cyan:#0b1430;--orange:#9bb9ff;--focus:#bdd0ff;--ok:#78ddb6;--warn:#f8ce83;--bad:#fda4af;
+  --veil:transparent;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme]){
+    --bg:#02050b;--bg-2:#0a0e16;--fg:#f3f4f6;--fg-2:#a8afbd;--line:#222938;--control:#69728a;--rule:#f3f4f6;
+    --cyan:#9bb9ff;--on-cyan:#0b1430;--orange:#9bb9ff;--focus:#bdd0ff;--ok:#78ddb6;--warn:#f8ce83;--bad:#fda4af;
+    --veil:transparent;
+  }
+}
+
+/* Square corners everywhere; the few round things are restored by name. Pseudo-element dots
+   are not matched by the universal selector and stay round. */
+.ck-app *,.ck-login *{border-radius:0!important}
+.ck-app .ck-switch span.track{border-radius:999px!important}
+.ck-app .nx-chart-filters i{border-radius:50%!important}
+
+/* Type. */
+.ck-app,.ck-login{font-family:var(--sans)}
+.ck-app :is(.ck-hero h1,.ck-section h2,.ck-overview h2,.nx-chart-heading h2,.ck-item-row h3,.ck-feed-item h3,.ck-crew-id strong),.ck-login h1{
+  font-family:var(--display);font-weight:400;letter-spacing:-.022em;font-optical-sizing:auto
+}
+.ck-app .ck-hero h1{font-size:clamp(40px,6.2vw,88px);line-height:.97}
+.ck-app .ck-hero h1 em{font-style:italic;color:inherit}
+.ck-app .ck-hero p{font-size:clamp(17px,1.4vw,20px);line-height:1.5;max-width:52ch}
+.ck-app .ck-section h2{font-size:clamp(30px,3.8vw,52px);line-height:1.03}
+.ck-app .ck-overview h2{font-size:clamp(24px,2.4vw,32px);line-height:1.1}
+.ck-app .nx-chart-heading h2{font-size:clamp(26px,2.6vw,34px)!important;font-weight:400}
+.ck-app .ck-main :is(.ck-item-row h3,.ck-feed-item h3,.ck-crew-id strong){font-size:clamp(22px,1.8vw,26px);line-height:1.2}
+.ck-app :is(.ck-eyebrow,.nx-chart-kicker){font-family:var(--mono);font-size:13px!important;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.ck-app .ck-eyebrow::after{background:var(--line)}
+
+/* Header. */
+.ck-app .ck-header{box-shadow:none;border-bottom:1px solid var(--line)}
+.ck-app .ck-brand{align-items:center;gap:14px}
+.ck-app .ck-brand strong{font:600 13px/1 var(--sans);letter-spacing:.2em;text-transform:uppercase}
+.ck-app .ck-brand small{display:none}
+.ck-app .ck-brand .ck-tag{padding:0;border:0;color:var(--fg-2);font:500 13px/1 var(--mono);letter-spacing:.14em}
+.ck-app .ck-brand .ck-tag::before{content:"/";margin-inline-end:14px;opacity:.5}
+.ck-app .ck-nav a{font-size:14px;border-bottom-width:1px}
+.ck-app .ck-nav a[aria-current="true"]{background:none;border-color:var(--rule)}
+.ck-app :is(.ck-seg,.nx-chart-period){border-color:var(--control)}
+.ck-app .ck-seg button+button{border-left-color:var(--control)}
+
+/* Controls. */
+.ck-app .ck-btn,.ck-login .ck-btn{background:transparent;border-color:var(--control);font-weight:500}
+.ck-app .ck-btn:is(:hover,:focus-visible):not(:disabled),.ck-login .ck-btn:is(:hover,:focus-visible):not(:disabled){border-color:var(--fg)}
+.ck-app .ck-btn.primary,.ck-login .ck-btn.primary{background:var(--cyan);border-color:var(--cyan);color:var(--on-cyan)}
+.ck-app :is(.ck-search,.ck-field textarea,.ck-field input,.ck-control select),.ck-login input{border-color:var(--control);background:var(--bg-2)}
+.ck-app :is(.ck-tabs button,.ck-subnav a){border-color:var(--control)}
+
+/* Surfaces: rules, not frames. */
+.ck-app .ck-kpis{padding:24px 0;border:0;border-block:1px solid var(--rule);background:none}
+.ck-app .ck-kpi{border-left-color:var(--line)}
+.ck-app .ck-kpi dt{font:500 13px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--fg-2)}
+.ck-app .ck-kpi dd{margin-top:10px;color:var(--fg);font:400 clamp(38px,4.2vw,60px)/1 var(--display);letter-spacing:-.03em;font-variant-numeric:lining-nums tabular-nums}
+.ck-app .ck-kpi dd small{font:400 13px/1 var(--sans);letter-spacing:0}
+.ck-app .ck-kpi[data-tone="warn"] dd{color:var(--warn)}
+.ck-app .ck-panel{padding-inline:0;border:0;border-top:1px solid var(--rule);background:none}
+.ck-app .ck-overview{gap:0 clamp(24px,5vw,72px)}
+.ck-app .ck-overview .ck-panel{padding:22px 0 0}
+.ck-app .ck-note{padding:4px 0 4px 16px;border:0;border-left:1px solid var(--rule);background:none}
+.ck-app .ck-note[data-tone="warn"]{border-left-color:var(--warn)}
+.ck-app .ck-note[data-tone="bad"]{border-left-color:var(--bad)}
+.ck-app .nx-activity-chart{padding:24px 0;border:0;border-top:1px solid var(--rule);background:none}
+.ck-app .ck-savebar{border-top:1px solid var(--rule);box-shadow:none}
+.ck-app .ck-table th{font-family:var(--mono);border-bottom-color:var(--rule)}
+
+/* People and events: monograms in ink, kind in words, colour only for alerts. */
+.ck-app .ck-avatar{background:none!important;border:1px solid var(--control);color:var(--fg);font:500 11px/1 var(--mono);letter-spacing:.06em}
+.ck-app .ck-agent[data-active="true"] .ck-avatar{background:var(--cyan)!important;border-color:var(--cyan);color:var(--on-cyan)}
+.ck-app .ck-avatar::after{display:none!important}
+.ck-app .ck-feed-item{padding-left:0;box-shadow:none;border-top-color:var(--line)}
+.ck-app .ck-feed-item:is([data-kind="resultado"],[data-kind="resumo"]){box-shadow:none}
+.ck-app .ck-feed-item[data-alert]{padding-left:16px;box-shadow:inset 2px 0 0 var(--warn);background:none}
+.ck-app :is(.ck-chip,.ck-crew-fronts li){padding:0;background:none;color:var(--fg-2);font:500 13px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.ck-app .ck-crew-summary b{font:400 28px/1 var(--display);letter-spacing:-.02em}
+.ck-app .ck-crew-grid{gap:0 clamp(20px,3vw,40px)}
+.ck-app .ck-crew-card{padding:20px 0 24px;border:0;border-top:1px solid var(--rule);background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.ck-app .ck-crew-card::before{display:none}
+.ck-app .ck-crew-card[data-tone="warn"]{border-top-color:var(--warn)}
+.ck-app .ck-crew-card[data-tone="bad"]{border-top-color:var(--bad)}
+.ck-app .ck-dial text:not(.unit){font:500 17px/1 var(--mono)}
+.ck-app .ck-dial :is(.track,.arc){stroke-width:3}
+
+/* Catalogue rows are a label with the checkbox first: keep the question beside it. */
+.ck-app label.ck-item-row{grid-template-columns:auto minmax(0,1fr);padding-inline:0}
+.ck-app label.ck-item-row>.ck-check,.ck-app label.ck-item-row>.ck-check+div{justify-self:start}
