@@ -207,9 +207,10 @@ try {
     sample.candidates.tower=[{id:'r-synthetic',digest:'sha256:'+ '0'.repeat(64),source:row,draft:{question:{'pt-BR':'Questão sintética?',en:''},answers:{'pt-BR':'Limite sintético.',en:''},method:{'pt-BR':'',en:''},result:{'pt-BR':'Texto sintético.',en:''}}}];
     view=await open(sample,{theme,width});
     const styles=await view.page.evaluate(()=>{const style=selector=>getComputedStyle(document.querySelector(selector)),size=selector=>parseFloat(style(selector).fontSize),line=selector=>parseFloat(style(selector).lineHeight)/size(selector);return {accent:getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim(),background:getComputedStyle(document.body).backgroundColor,panel:style('.ck-panel').backgroundColor,overflow:document.documentElement.scrollWidth>innerWidth,resultText:size('#resultados .ck-item-row p'),feedText:size('.ck-feed-item p:not(.ck-feed-head)'),resultLine:line('#resultados .ck-item-row p'),feedLine:line('.ck-feed-item p:not(.ck-feed-head)'),metadata:size('#resultados .ck-meta'),summaryMetadata:size('.ck-activity-list summary .ck-meta'),summaryText:size('.ck-activity-list summary .ck-line-clamp'),heading:size('#resultados .ck-item-row h3')};});
-    assert.equal(styles.accent,theme==='light'?'#003087':'#a9c5ff');
-    assert.equal(styles.background,theme==='light'?'rgb(255, 255, 255)':'rgb(0, 0, 0)');
-    assert.equal(styles.panel,theme==='light'?'rgb(245, 247, 250)':'rgb(17, 21, 27)');
+    // Identity shared with nexoresearch.org: paper and deep-space grounds, one blue, ruled panels without a fill.
+    assert.equal(styles.accent,theme==='light'?'#0033a0':'#9bb9ff');
+    assert.equal(styles.background,theme==='light'?'rgb(247, 246, 242)':'rgb(2, 5, 11)');
+    assert.equal(styles.panel,'rgba(0, 0, 0, 0)');
     assert.equal(styles.overflow,false,`${theme}/${width} horizontal overflow`);
     assert.ok(styles.resultText>=16&&styles.feedText>=16,`${theme}/${width} reading text is at least 16px`);
     assert.ok(styles.resultLine>=1.55&&styles.feedLine>=1.55,`${theme}/${width} reading line height`);
