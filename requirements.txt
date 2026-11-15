@@ -1,0 +1,10 @@
+# pinned to the versions verified on the runner by the N2 campaign (byDenoso/Pantheon, branch nested/peer-n2)
+numpy==2.5.3
+scipy==1.18.1
+camb==1.6.6
+cobaya==3.6.2
+getdist==1.7.7
+astropy==8.0.2
+PyYAML==6.0.3
+mpi4py==4.0.3
+Py-BOBYQA==1.5.0

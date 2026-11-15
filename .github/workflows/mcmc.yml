@@ -1,0 +1,182 @@
+name: mcmc
+
+# PEER n=3 (CAMB EarlyQuintessence n=3) and LCDM, Planck 2018 only, Cobaya MCMC with 4 MPI chains per model.
+# One matrix leg = one model. A leg samples for <= 5.0 h, saves chains (actions/cache + artifact) and re-dispatches
+# itself until Cobaya stops on R-1 < 0.02 (Rminus1_cl < 0.2); then it runs the minimizer and writes results/<model>.json.
+
+on:
+  push:
+    branches: ["mcmc/peer-n3"]
+    paths: ["control/run.json"]
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "all | LCDM | P1 | P3"
+        default: "all"
+        type: choice
+        options: ["all", "LCDM", "P1", "P3"]
+      skip_smoke:
+        description: "skip the one-point smoke (used by the automatic re-dispatch)"
+        default: false
+        type: boolean
+      chunk:
+        description: "chunk counter (set by the re-dispatch)"
+        default: "0"
+        type: string
+      max_chunks:
+        description: "hard stop for the re-dispatch loop"
+        default: "40"
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  OMP_NUM_THREADS: "1"
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+      skip_smoke: ${{ steps.m.outputs.skip_smoke }}
+      chunk: ${{ steps.m.outputs.chunk }}
+      max_chunks: ${{ steps.m.outputs.max_chunks }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: m
+        shell: python
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUTS: ${{ toJson(inputs) }}
+        run: |
+          import json, os
+          c = json.loads(os.environ["INPUTS"]) if os.environ["EVENT"] == "workflow_dispatch" else json.load(open("control/run.json"))
+          mm = c.get("model", "all")
+          models = ["LCDM", "P1", "P3"] if mm == "all" else [mm]
+          out = {"matrix": json.dumps({"model": models}),
+                 "skip_smoke": str(str(c.get("skip_smoke", False)).lower() in ("true", "1")).lower(),
+                 "chunk": str(c.get("chunk", 0)), "max_chunks": str(c.get("max_chunks", 40))}
+          print(out)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              for k, v in out.items():
+                  f.write(k + "=" + v + "\n")
+
+  smoke:
+    needs: plan
+    if: ${{ needs.plan.outputs.skip_smoke != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: data/packages
+          key: planck18-${{ hashFiles('scripts/install_linux.sh', 'requirements.txt') }}
+      - run: scripts/install_linux.sh
+      - name: one-point smoke vs local Windows reference (|dlnL_total| < 1e-3)
+        env:
+          OMP_NUM_THREADS: "4"
+        run: python code/smoke.py --tol 1e-3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke
+          path: results/smoke.json
+
+  mcmc:
+    needs: [plan, smoke]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: mcmc-${{ matrix.model }}
+      cancel-in-progress: false
+    steps:
+      - name: job clock
+        run: echo "JOB_T0=$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: data/packages
+          key: planck18-${{ hashFiles('scripts/install_linux.sh', 'requirements.txt') }}
+      - run: scripts/install_linux.sh
+      - name: restore chains (latest of this model)
+        uses: actions/cache/restore@v4
+        with:
+          path: chains/${{ matrix.model }}
+          key: chains-${{ matrix.model }}-${{ github.run_id }}-restore
+          restore-keys: |
+            chains-${{ matrix.model }}-
+      - name: MCMC chunk (4 MPI chains)
+        id: run
+        shell: bash
+        run: |
+          set +e
+          SECS=$(python -c "import os,time; print(int(max(600, 5.0*3600-(time.time()-float(os.environ['JOB_T0'])))))")
+          echo "seconds for this chunk: $SECS"
+          python code/summary.py ${{ matrix.model }} || true
+          timeout -s INT -k 240 "$SECS" mpirun --oversubscribe -np 4 python code/run_mcmc.py ${{ matrix.model }}
+          RC=$?
+          echo "mpirun/timeout exit $RC"
+          if [ "$RC" = "0" ]; then echo "rc=0" >> "$GITHUB_OUTPUT"; elif [ "$RC" = "124" ] || [ "$RC" = "137" ]; then echo "rc=3" >> "$GITHUB_OUTPUT"; else echo "rc=$RC" >> "$GITHUB_OUTPUT"; fi
+          python code/summary.py ${{ matrix.model }} || true
+          exit 0
+      - name: progress notice (public annotations API)
+        if: always()
+        shell: bash
+        run: |
+          L=$(python code/summary.py ${{ matrix.model }} 2>/dev/null | tail -n 1 | tr -d '\r')
+          echo "::notice title=MCMC ${{ matrix.model }} chunk ${{ needs.plan.outputs.chunk }}::rc=${{ steps.run.outputs.rc }} | $L"
+          echo "${{ matrix.model }}: rc=${{ steps.run.outputs.rc }} | $L" >> "$GITHUB_STEP_SUMMARY"
+      - name: save chains
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: chains/${{ matrix.model }}
+          key: chains-${{ matrix.model }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: minimize and summarize (converged only)
+        if: always() && steps.run.outputs.rc == '0'
+        shell: bash
+        run: |
+          timeout 3600 mpirun --oversubscribe -np 4 python code/run_mcmc.py ${{ matrix.model }} --minimize || echo "::warning::minimizer failed or timed out"
+          python code/summary.py ${{ matrix.model }} --final
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"; cat results/${{ matrix.model }}.json >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: upload chains (artifact, 90 days)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chains-${{ matrix.model }}
+          path: |
+            chains/${{ matrix.model }}
+            results
+          retention-days: 90
+          overwrite: true
+          if-no-files-found: ignore
+      - name: re-dispatch next chunk
+        if: always() && steps.run.outputs.rc == '3'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NEXT=$(( ${{ needs.plan.outputs.chunk }} + 1 ))
+          if [ "$NEXT" -gt "${{ needs.plan.outputs.max_chunks }}" ]; then echo "max_chunks reached"; exit 0; fi
+          code=$(curl -s -o /tmp/disp.out -w '%{http_code}' -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/mcmc.yml/dispatches" \
+            -d '{"ref":"${{ github.ref_name }}","inputs":{"model":"${{ matrix.model }}","skip_smoke":"true","chunk":"'"$NEXT"'","max_chunks":"${{ needs.plan.outputs.max_chunks }}"}}')
+          echo "re-dispatch HTTP $code"; cat /tmp/disp.out
+          if [ "$code" != "204" ]; then echo "::error::re-dispatch failed (HTTP $code); push a new control/run.json to continue"; exit 1; fi
+      - name: fail on unexpected exit code
+        if: steps.run.outputs.rc != '0' && steps.run.outputs.rc != '3'
+        run: echo "MCMC exited with ${{ steps.run.outputs.rc }}" && exit 1

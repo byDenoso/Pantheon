@@ -1,0 +1,31 @@
+{
+ "LCDM": {
+  "planck_2018_lowl.TT": -11.752673736122972,
+  "planck_2018_lowl.EE": -198.07879321609093,
+  "planck_2018_highl_plik.TTTEEE_lite_native": -294.90827361036423,
+  "planck_2018_lensing.native": -4.437809196354161,
+  "TOTAL": -509.17754975893234
+ },
+ "P1": {
+  "planck_2018_lowl.TT": -11.798910414532628,
+  "planck_2018_lowl.EE": -198.06336297170049,
+  "planck_2018_highl_plik.TTTEEE_lite_native": -339.7583796862492,
+  "planck_2018_lensing.native": -4.227868993238718,
+  "TOTAL": -553.8485220657211
+ },
+ "P3": {
+  "planck_2018_lowl.TT": -11.79603177785711,
+  "planck_2018_lowl.EE": -198.05415575524123,
+  "planck_2018_highl_plik.TTTEEE_lite_native": -341.6079430938319,
+  "planck_2018_lensing.native": -4.21652057458684,
+  "TOTAL": -555.6746512015171
+ },
+ "_meta": {
+  "host": "Windows 11, Python 3.12.10",
+  "camb": "1.6.6",
+  "cobaya": "3.6.2",
+  "numpy": "2.5.3",
+  "date": "2026-11-14",
+  "note": "computed locally with code/build.py of this branch (sigma8/omegam derived requested); Planck components of the N2 S1 reference differ by <=1.1e-2 because N2 did not request the matter power spectrum"
+ }
+}
